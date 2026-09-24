@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { ClipboardList, Camera, BarChart3, Users } from 'lucide-react'
 import { usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
 
 export function Navbar() {
@@ -12,6 +12,7 @@ export function Navbar() {
 
   useEffect(() => {
     const checkAdmin = async () => {
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data } = await supabase.from('perfiles').select('rol').eq('id', user.id).single()
