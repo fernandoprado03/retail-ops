@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { createClient } from '@/utils/supabase/server';
 import { Store, Clock } from 'lucide-react';
+import { PushNotifier } from "@/components/PushNotifier";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -61,6 +62,7 @@ export default async function RootLayout({
             children
           )}
         </main>
+        {user && isAuthorized && <PushNotifier />}
       </body>
     </html>
   );
