@@ -23,11 +23,23 @@ export default function NuevaIncidencia() {
   const [uploadProgress, setUploadProgress] = useState(0)
   
   const [areas, setAreas] = useState<any[]>([])
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true)
   
   useEffect(() => {
     async function fetchAreas() {
-      const { data } = await supabase.from('areas').select('id, nombre_area').order('nombre_area')
-      if (data) setAreas(data)
+      try {
+        const { data, error } = await supabase.from('areas').select('id, nombre_area').order('nombre_area')
+        if (error) {
+          console.error("Error fetching areas:", error)
+          alert("Error conectando con la base de datos. Verifica Supabase.")
+        } else if (data) {
+          setAreas(data)
+        }
+      } catch (err) {
+        console.error("Fetch error:", err)
+      } finally {
+        setIsLoadingAreas(false)
+      }
     }
     fetchAreas()
   }, [])
@@ -153,10 +165,15 @@ export default function NuevaIncidencia() {
                   <SelectValue placeholder="Selecciona el área" />
                 </SelectTrigger>
                 <SelectContent>
-                  {areas.length === 0 && <SelectItem value="loading" disabled>Cargando áreas...</SelectItem>}
-                  {areas.map(a => (
-                    <SelectItem key={a.id} value={a.id}>{a.nombre_area}</SelectItem>
-                  ))}
+                  {isLoadingAreas ? (
+                    <SelectItem value="loading" disabled>Cargando áreas...</SelectItem>
+                  ) : areas.length === 0 ? (
+                    <SelectItem value="empty" disabled>No hay áreas disponibles</SelectItem>
+                  ) : (
+                    areas.map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.nombre_area}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
