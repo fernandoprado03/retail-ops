@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { createClient } from '@/utils/supabase/server';
 import { Store, Clock } from 'lucide-react';
 import { PushNotifier } from "@/components/PushNotifier";
+import { Toaster } from "sonner";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -73,6 +74,7 @@ export default async function RootLayout({
           )}
         </main>
         {user && isAuthorized && <PushNotifier />}
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import imageCompression from 'browser-image-compression'
+import { toast } from 'sonner'
 
 export default function NuevaIncidencia() {
   const router = useRouter()
@@ -19,9 +20,6 @@ export default function NuevaIncidencia() {
   
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null)
-  
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
   
   const [areas, setAreas] = useState<any[]>([])
   const [isLoadingAreas, setIsLoadingAreas] = useState(true)
@@ -59,74 +57,64 @@ export default function NuevaIncidencia() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!file) {
       alert("Debes tomar una foto de la incidencia.")
       return
     }
 
-    const formData = new FormData(e.currentTarget)
+    const formElement = e.currentTarget
+    const formData = new FormData(formElement)
     
-    setIsUploading(true)
-    setUploadProgress(10)
-    
-    try {
-      // 0. Comprimir la imagen antes de subirla
-      const options = {
-        maxSizeMB: 0.5, // Máximo 500 KB
-        maxWidthOrHeight: 1024,
-        useWebWorker: true,
+    // START BACKGROUND UPLOAD (fire and forget)
+    toast.promise(
+      new Promise(async (resolve, reject) => {
+        try {
+          const options = {
+            maxSizeMB: 0.5,
+            maxWidthOrHeight: 1024,
+            useWebWorker: true,
+          }
+          const compressedFile = await imageCompression(file, options)
+          
+          const fileExt = compressedFile.name.split('.').pop() || 'jpg'
+          const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+          const filePath = `antes/${fileName}`
+          
+          const { error: uploadError } = await supabase.storage
+            .from('evidencias-supermercado')
+            .upload(filePath, compressedFile)
+            
+          if (uploadError) throw new Error(`Error subiendo imagen: ${uploadError.message}`)
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('evidencias-supermercado')
+            .getPublicUrl(filePath)
+            
+          formData.append('fotoUrl', publicUrl)
+          
+          const result = await crearIncidencia(formData)
+          if (!result.success) throw new Error(result.error)
+          
+          resolve('Ticket creado con éxito')
+        } catch (error: any) {
+          console.error(error)
+          reject(error.message || 'Error al procesar el ticket')
+        }
+      }),
+      {
+        loading: 'Subiendo evidencia a la nube...',
+        success: '¡Ticket registrado correctamente!',
+        error: 'Error al subir el ticket.',
       }
-      setUploadProgress(20)
-      const compressedFile = await imageCompression(file, options)
-      
-      // 1. Subir a Supabase Storage
-      const fileExt = compressedFile.name.split('.').pop() || 'jpg'
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
-      const filePath = `antes/${fileName}`
-      
-      setUploadProgress(40)
-      
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from('evidencias-supermercado')
-        .upload(filePath, compressedFile)
-        
-      if (uploadError) {
-        throw new Error(`Error subiendo imagen: ${uploadError.message}`)
-      }
-      
-      setUploadProgress(70)
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('evidencias-supermercado')
-        .getPublicUrl(filePath)
-        
-      setUploadProgress(90)
-      
-      // 2. Guardar en Base de Datos
-      formData.append('fotoUrl', publicUrl)
-      
-      const result = await crearIncidencia(formData)
-      
-      if (!result.success) {
-        throw new Error(result.error)
-      }
-      
-      setUploadProgress(100)
-      
-      // Simular un pequeño delay de éxito
-      setTimeout(() => {
-        router.push('/')
-        router.refresh()
-      }, 500)
-      
-    } catch (error: any) {
-      console.error(error)
-      alert(error.message)
-      setIsUploading(false)
-      setUploadProgress(0)
-    }
+    )
+
+    // Inmediatamente limpiar el formulario y permitir seguir trabajando
+    setFile(null)
+    setPhotoPreview(null)
+    formElement.reset()
+    toast.success("Ticket encolado. Puedes registrar otro de inmediato.")
   }
 
   return (
@@ -214,17 +202,10 @@ export default function NuevaIncidencia() {
 
         <Button 
           type="submit" 
-          disabled={!file || isUploading} 
-          className={`w-full h-14 text-lg font-medium shadow-md transition-all ${isUploading ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
+          disabled={!file} 
+          className="w-full h-14 text-lg font-medium shadow-md transition-all bg-green-600 hover:bg-green-700"
         >
-          {isUploading ? (
-            <div className="w-full flex items-center justify-center gap-3">
-              <Upload className="w-5 h-5 animate-bounce" />
-              <span>Subiendo... {uploadProgress}%</span>
-            </div>
-          ) : (
-            <>Generar Ticket</>
-          )}
+          Generar Ticket Rápidamente
         </Button>
       </form>
     </div>
