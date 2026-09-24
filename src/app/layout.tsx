@@ -44,10 +44,10 @@ export default async function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${outfit.variable} font-sans antialiased bg-slate-50 text-slate-900 pb-28 md:pb-0 md:pt-16 min-h-screen flex flex-col`}
+        className={`${outfit.variable} font-sans antialiased bg-slate-50 text-slate-900 pb-28 md:pb-0 min-h-screen flex flex-col md:flex-row`}
       >
         {showNavbar && <Navbar />}
-        <main className="flex-1 w-full max-w-md mx-auto md:max-w-4xl p-4">
+        <main className="flex-1 w-full max-w-md mx-auto md:max-w-none md:p-8 p-4 overflow-y-auto h-screen">
           {!isAuthorized ? (
             <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4">
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
