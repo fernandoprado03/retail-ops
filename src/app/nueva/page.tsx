@@ -28,7 +28,11 @@ export default function NuevaIncidencia() {
   useEffect(() => {
     async function fetchAreas() {
       try {
-        const { data, error } = await supabase.from('areas').select('id, nombre_area').order('nombre_area')
+        const { data, error } = await supabase.from('areas').select(`
+          id, 
+          nombre_area,
+          perfiles!jefe_responsable_id(nombre_completo)
+        `).order('nombre_area')
         if (error) {
           console.error("Error fetching areas:", error)
           alert("Error conectando con la base de datos. Verifica Supabase.")
@@ -171,7 +175,9 @@ export default function NuevaIncidencia() {
                     <SelectItem value="empty" disabled>No hay áreas disponibles</SelectItem>
                   ) : (
                     areas.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.nombre_area}</SelectItem>
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.nombre_area} {a.perfiles?.nombre_completo ? `(${a.perfiles.nombre_completo})` : '(Sin Jefe)'}
+                      </SelectItem>
                     ))
                   )}
                 </SelectContent>

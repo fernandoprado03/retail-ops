@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, XCircle, Shield, User } from 'lucide-react'
 import ActivarUsuarioBoton from './ActivarUsuarioBoton'
+import AgregarUsuarioModal from './AgregarUsuarioModal'
 
 export const revalidate = 0
 
@@ -36,14 +37,23 @@ export default async function AdminUsuarios() {
     .select('*')
     .order('created_at', { ascending: false })
 
+  // 3. Get all areas for the modal
+  const { data: areas } = await supabase
+    .from('areas')
+    .select('id, nombre_area')
+    .order('nombre_area')
+
   return (
     <div className="pb-12">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-          <Shield className="w-6 h-6 text-green-600" />
-          Módulo Administrativo
-        </h1>
-        <p className="text-sm text-slate-500">Gestiona quién puede entrar a la aplicación.</p>
+      <div className="mb-6 flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <Shield className="w-6 h-6 text-green-600" />
+            Módulo Administrativo
+          </h1>
+          <p className="text-sm text-slate-500">Gestiona quién puede entrar a la aplicación.</p>
+        </div>
+        <AgregarUsuarioModal areas={areas || []} />
       </div>
 
       <div className="space-y-4">

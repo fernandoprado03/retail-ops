@@ -52,9 +52,9 @@ export default async function RootLayout({
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
                 <Clock className="w-8 h-8 text-yellow-600" />
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Cuenta en Revisión</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Usuario no autorizado</h1>
               <p className="text-slate-500 mb-6">
-                Has iniciado sesión correctamente, pero tu cuenta debe ser aprobada por un Administrador antes de acceder a la plataforma.
+                Tu correo electrónico no se encuentra en el listado de personal autorizado. Debes ser agregado por un Administrador.
               </p>
             </div>
           ) : (

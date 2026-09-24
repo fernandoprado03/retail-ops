@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Clock, MapPin, AlertTriangle } from 'lucide-react'
@@ -28,11 +28,29 @@ function formatTime(dateString: string) {
   })
 }
 
+import { createClient } from '@/utils/supabase/server'
+
 export default async function Pendientes() {
-  const { data: incidencias } = await supabase
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  const { data: perfilActual } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', user?.id)
+    .single()
+
+  let query = supabase
     .from('observaciones')
-    .select('*, areas(nombre_area)')
+    .select('*, areas!inner(nombre_area, jefe_responsable_id)')
     .order('fecha_reporte', { ascending: false })
+
+  // Si es un jefe de área, solo ve las de su área asignada
+  if (perfilActual?.rol === 'jefe_area' && user) {
+    query = query.eq('areas.jefe_responsable_id', user.id)
+  }
+
+  const { data: incidencias } = await query
 
   return (
     <div className="pb-8">
