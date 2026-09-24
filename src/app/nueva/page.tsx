@@ -174,72 +174,39 @@ export default function NuevaIncidencia() {
           <CardContent className="p-5 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="area">Área / Departamento</Label>
-              <Select name="area_id" required>
-                <SelectTrigger id="area" className="w-full bg-slate-50">
-                  <SelectValue placeholder="Selecciona el área" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoadingAreas ? (
-                    <SelectItem value="loading" disabled>Cargando áreas...</SelectItem>
-                  ) : areas.length === 0 ? (
-                    <SelectItem value="empty" disabled>No hay áreas disponibles</SelectItem>
-                  ) : (
-                    areas.map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.nombre_area} {a.perfiles?.nombre_completo ? `(${a.perfiles.nombre_completo})` : '(Sin Jefe)'}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <select 
+                name="area_id" 
+                id="area" 
+                required 
+                defaultValue=""
+                className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="" disabled hidden>Selecciona el área</option>
+                {isLoadingAreas ? (
+                  <option value="loading" disabled>Cargando áreas...</option>
+                ) : areas.length === 0 ? (
+                  <option value="empty" disabled>No hay áreas disponibles</option>
+                ) : (
+                  areas.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre_area} {a.perfiles?.nombre_completo ? `(${a.perfiles.nombre_completo})` : '(Sin Jefe)'}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de Falla</Label>
-                <Select name="tipo_incidencia" required>
-                  <SelectTrigger id="tipo" className="bg-slate-50">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Precios y Flejes">Precios y Flejes</SelectItem>
-                    <SelectItem value="Quiebre de Stock">Quiebre de Stock</SelectItem>
-                    <SelectItem value="Limpieza">Limpieza</SelectItem>
-                    <SelectItem value="Merchandising">Merchandising</SelectItem>
-                    <SelectItem value="Mobiliario Averiado">Mobiliario Averiado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="prioridad">Prioridad</Label>
-                <Select name="prioridad" defaultValue="Media">
-                  <SelectTrigger id="prioridad" className="bg-slate-50">
-                    <SelectValue placeholder="Prioridad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Alta">
-                      <span className="flex items-center text-red-600 font-medium">Alta</span>
-                    </SelectItem>
-                    <SelectItem value="Media">
-                      <span className="flex items-center text-yellow-600 font-medium">Media</span>
-                    </SelectItem>
-                    <SelectItem value="Baja">
-                      <span className="flex items-center text-green-600 font-medium">Baja</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {/* Hidden fields that were previously visible */}
+            <input type="hidden" name="tipo_incidencia" value="General" />
+            <input type="hidden" name="prioridad" value="Media" />
 
             <div className="space-y-2">
-              <Label htmlFor="descripcion">Descripción Breve</Label>
+              <Label htmlFor="descripcion">Descripción Breve <span className="text-slate-400 font-normal">(Opcional)</span></Label>
               <Textarea 
                 id="descripcion" 
                 name="descripcion" 
                 placeholder="Ej. Faltan precios en la cabecera de góndola..." 
                 className="resize-none bg-slate-50 h-24"
-                required
               />
             </div>
           </CardContent>
