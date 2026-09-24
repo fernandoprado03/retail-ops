@@ -19,7 +19,13 @@ function getEstadoColor(estado: string) {
 
 function formatTime(dateString: string) {
   const date = new Date(dateString)
-  return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleDateString('es-ES', { 
+    timeZone: 'America/Lima', 
+    day: '2-digit', 
+    month: 'short', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
 }
 
 export default async function Pendientes() {

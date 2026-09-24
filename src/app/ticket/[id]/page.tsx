@@ -35,7 +35,13 @@ export default async function TicketDetalle({ params }: { params: Promise<{ id: 
   }
 
   const date = new Date(incidencia.fecha_reporte)
-  const fechaFormateada = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const fechaFormateada = date.toLocaleDateString('es-ES', { 
+    timeZone: 'America/Lima',
+    day: '2-digit', 
+    month: 'short', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
 
   return (
     <div className="pb-12">
@@ -94,7 +100,13 @@ export default async function TicketDetalle({ params }: { params: Promise<{ id: 
               <CheckCircle2 className="w-5 h-5 text-green-500" /> Evidencia de Solución
             </h3>
             <span className="text-xs text-slate-500 font-medium">
-              {new Date(incidencia.fecha_subsanacion).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}
+              {new Date(incidencia.fecha_subsanacion).toLocaleDateString('es-ES', {
+                timeZone: 'America/Lima',
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
             </span>
           </div>
           
