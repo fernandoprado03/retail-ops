@@ -14,6 +14,16 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Retail Ops - Gestión de Incidencias",
   description: "Sistema de gestión de incidencias en piso de venta",
+  manifest: "/manifest.json",
+  themeColor: "#16a34a",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Retail Ops",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default async function RootLayout({
