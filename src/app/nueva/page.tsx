@@ -103,7 +103,7 @@ export default function NuevaIncidencia() {
       
       // Simular un pequeño delay de éxito
       setTimeout(() => {
-        router.push('/pendientes')
+        router.push('/')
         router.refresh()
       }, 500)
       
