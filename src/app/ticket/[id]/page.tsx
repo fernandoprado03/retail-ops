@@ -21,11 +21,13 @@ function getEstadoColor(estado: string) {
   }
 }
 
-export default async function TicketDetalle({ params }: { params: { id: string } }) {
+export default async function TicketDetalle({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
   const { data: incidencia, error } = await supabase
     .from('observaciones')
     .select('*, areas(nombre_area)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !incidencia) {
