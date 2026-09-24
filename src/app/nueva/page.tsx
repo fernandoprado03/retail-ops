@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import imageCompression from 'browser-image-compression'
 
 export default function NuevaIncidencia() {
   const router = useRouter()
@@ -71,8 +72,17 @@ export default function NuevaIncidencia() {
     setUploadProgress(10)
     
     try {
+      // 0. Comprimir la imagen antes de subirla
+      const options = {
+        maxSizeMB: 0.5, // Máximo 500 KB
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      }
+      setUploadProgress(20)
+      const compressedFile = await imageCompression(file, options)
+      
       // 1. Subir a Supabase Storage
-      const fileExt = file.name.split('.').pop()
+      const fileExt = compressedFile.name.split('.').pop() || 'jpg'
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
       const filePath = `antes/${fileName}`
       
@@ -80,7 +90,7 @@ export default function NuevaIncidencia() {
       
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('evidencias-supermercado')
-        .upload(filePath, file)
+        .upload(filePath, compressedFile)
         
       if (uploadError) {
         throw new Error(`Error subiendo imagen: ${uploadError.message}`)

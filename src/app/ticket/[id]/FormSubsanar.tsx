@@ -8,6 +8,7 @@ import { subsanarIncidencia } from '@/actions/incidencias'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import imageCompression from 'browser-image-compression'
 
 export default function FormSubsanar({ incidenciaId }: { incidenciaId: string }) {
   const router = useRouter()
@@ -37,13 +38,20 @@ export default function FormSubsanar({ incidenciaId }: { incidenciaId: string })
     setIsUploading(true)
     
     try {
-      const fileExt = file.name.split('.').pop()
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      }
+      const compressedFile = await imageCompression(file, options)
+
+      const fileExt = compressedFile.name.split('.').pop() || 'jpg'
       const fileName = `${incidenciaId}_${Date.now()}.${fileExt}`
       const filePath = `despues/${fileName}`
       
       const { error: uploadError } = await supabase.storage
         .from('evidencias-supermercado')
-        .upload(filePath, file)
+        .upload(filePath, compressedFile)
         
       if (uploadError) throw new Error(uploadError.message)
       
