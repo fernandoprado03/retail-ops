@@ -64,10 +64,10 @@ export default function FormSubsanar({ incidenciaId }: { incidenciaId: string })
   }
 
   return (
-    <Card className="border-0 shadow-md bg-white border-t-4 border-t-blue-500 overflow-hidden">
+    <Card className="border-0 shadow-md bg-white border-t-4 border-t-green-500 overflow-hidden">
       <div className="p-4 bg-slate-50 border-b border-slate-100">
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-blue-500" /> Resolver Incidencia
+          <CheckCircle2 className="w-5 h-5 text-green-500" /> Resolver Incidencia
         </h3>
         <p className="text-xs text-slate-500 mt-1">Sube la evidencia fotográfica de la solución.</p>
       </div>
@@ -83,7 +83,7 @@ export default function FormSubsanar({ incidenciaId }: { incidenciaId: string })
           ) : (
             <div className="text-slate-400 flex flex-col items-center gap-3">
               <div className="bg-white p-4 rounded-full shadow-sm">
-                <Camera className="w-8 h-8 text-blue-500" />
+                <Camera className="w-8 h-8 text-green-500" />
               </div>
               <span className="font-medium text-slate-600">Tomar Foto (Después)</span>
             </div>
@@ -110,7 +110,7 @@ export default function FormSubsanar({ incidenciaId }: { incidenciaId: string })
           <Button 
             type="submit" 
             disabled={!file || isUploading} 
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 shadow-md text-base"
+            className="w-full h-12 bg-green-600 hover:bg-green-700 shadow-md text-base"
           >
             {isUploading ? (
               <span className="flex items-center gap-2"><Upload className="w-4 h-4 animate-bounce" /> Guardando...</span>

@@ -60,7 +60,7 @@ export default async function KPIs() {
 
         <Card className="bg-white border-0 shadow-sm">
           <CardContent className="p-5">
-            <ClipboardCheck className="w-6 h-6 text-blue-500 mb-3" />
+            <ClipboardCheck className="w-6 h-6 text-green-500 mb-3" />
             <p className="text-xs font-medium text-slate-500 mb-1">Solucionados</p>
             <h3 className="text-2xl font-bold text-slate-900">{cerradas}</h3>
           </CardContent>
@@ -78,7 +78,7 @@ export default async function KPIs() {
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
               <div 
-                className={`h-2 rounded-full ${Math.round((metrica.cerradas / metrica.total) * 100) >= 80 ? 'bg-green-500' : 'bg-blue-500'}`}
+                className={`h-2 rounded-full ${Math.round((metrica.cerradas / metrica.total) * 100) >= 80 ? 'bg-green-500' : 'bg-green-500'}`}
                 style={{ width: `${Math.round((metrica.cerradas / metrica.total) * 100)}%` }}
               ></div>
             </div>

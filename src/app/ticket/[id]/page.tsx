@@ -14,7 +14,7 @@ function getEstadoColor(estado: string) {
   switch (estado) {
     case 'Pendiente': return 'bg-red-100 text-red-700 border-red-200'
     case 'En Proceso': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
-    case 'Subsanado': return 'bg-blue-100 text-blue-700 border-blue-200'
+    case 'Subsanado': return 'bg-green-100 text-green-700 border-green-200'
     case 'Aprobado': return 'bg-green-100 text-green-700 border-green-200'
     case 'Rechazado': return 'bg-slate-100 text-slate-700 border-slate-200'
     default: return 'bg-slate-100 text-slate-700'
@@ -69,11 +69,11 @@ export default async function TicketDetalle({ params }: { params: { id: string }
           
           <div className="flex flex-wrap gap-4 mb-4 text-sm text-slate-500">
             <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
-              <MapPin className="w-4 h-4 text-blue-500" />
+              <MapPin className="w-4 h-4 text-green-500" />
               <span className="font-medium">{incidencia.areas?.nombre_area}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
-              <Clock className="w-4 h-4 text-blue-500" />
+              <Clock className="w-4 h-4 text-green-500" />
               <span>{fechaFormateada}</span>
             </div>
           </div>
@@ -86,10 +86,10 @@ export default async function TicketDetalle({ params }: { params: { id: string }
 
       {/* Si hay foto de después, la mostramos */}
       {incidencia.foto_despues_url && (
-        <Card className="border-0 shadow-sm overflow-hidden mb-6 border-l-4 border-l-blue-500">
+        <Card className="border-0 shadow-sm overflow-hidden mb-6 border-l-4 border-l-green-500">
           <div className="p-4 bg-slate-50 flex items-center justify-between border-b border-slate-100">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-blue-500" /> Evidencia de Solución
+              <CheckCircle2 className="w-5 h-5 text-green-500" /> Evidencia de Solución
             </h3>
             <span className="text-xs text-slate-500 font-medium">
               {new Date(incidencia.fecha_subsanacion).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}

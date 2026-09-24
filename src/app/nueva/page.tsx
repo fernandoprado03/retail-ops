@@ -141,7 +141,7 @@ export default function NuevaIncidencia() {
             ) : (
               <div className="text-slate-400 flex flex-col items-center gap-3">
                 <div className="bg-white p-4 rounded-full shadow-sm">
-                  <Camera className="w-8 h-8 text-blue-500" />
+                  <Camera className="w-8 h-8 text-green-500" />
                 </div>
                 <span className="font-medium text-slate-600">Tomar Foto (Antes)</span>
               </div>
@@ -232,7 +232,7 @@ export default function NuevaIncidencia() {
         <Button 
           type="submit" 
           disabled={!file || isUploading} 
-          className={`w-full h-14 text-lg font-medium shadow-md transition-all ${isUploading ? 'bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+          className={`w-full h-14 text-lg font-medium shadow-md transition-all ${isUploading ? 'bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
         >
           {isUploading ? (
             <div className="w-full flex items-center justify-center gap-3">

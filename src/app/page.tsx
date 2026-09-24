@@ -10,7 +10,7 @@ function getEstadoColor(estado: string) {
   switch (estado) {
     case 'Pendiente': return 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200'
     case 'En Proceso': return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-200'
-    case 'Subsanado': return 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200'
+    case 'Subsanado': return 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200'
     case 'Aprobado': return 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200'
     case 'Rechazado': return 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
     default: return 'bg-slate-100 text-slate-700'
