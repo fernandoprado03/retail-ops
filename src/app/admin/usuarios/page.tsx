@@ -8,7 +8,7 @@ import ActivarUsuarioBoton from './ActivarUsuarioBoton'
 export const revalidate = 0
 
 export default async function AdminUsuarios() {
-  const supabase = createClient()
+  const supabase = await createClient()
   
   // 1. Check if current user is admin
   const { data: { user } } = await supabase.auth.getUser()

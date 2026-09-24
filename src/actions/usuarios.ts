@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function toggleUsuarioActivo(id: string, nuevoEstado: boolean) {
-  const supabase = createClient()
+  const supabase = await createClient()
   
   // Verificar si el usuario que ejecuta la acción es admin
   const { data: { user } } = await supabase.auth.getUser()
