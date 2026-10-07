@@ -226,16 +226,17 @@ export default function HorariosPro() {
         while (prog[t] < req) {
           faltantes = true
           
+          let inicio = t
           let fin = t
           
-          while (fin < 22 && (fin - t) < 4.5) {
+          while (fin < 22 && (fin - inicio) < 4.5) {
             const h_fin = Math.floor(fin)
             const req_fin = dia.requeridoPorHora[h_fin] || 0
             
             if (prog[fin] < req_fin) {
               fin += 0.25
             } else {
-              if (fin - t < 1) {
+              if (fin - inicio < 1.5) {
                 fin += 0.25
               } else {
                 break
@@ -243,13 +244,20 @@ export default function HorariosPro() {
             }
           }
           
-          if (fin === t) fin += 0.25
+          if (fin - inicio < 1.5) {
+            fin = inicio + 1.5
+          }
+
+          if (fin > 22) {
+            fin = 22
+            inicio = Math.max(8, 22 - 1.5)
+          }
 
           newReporte[diaIndex].empleados.push({
             id: `auto-${Date.now()}-${Math.random()}`,
             nombre: 'Soporte Automático',
             rol: 'Multifuncional',
-            inicio: t,
+            inicio: inicio,
             fin: fin,
             isMultifuncional: true
           })
@@ -263,7 +271,7 @@ export default function HorariosPro() {
       // Reordenar después de añadir
       newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
       setReporte(newReporte)
-      toast.success('Se agregaron horas de multifuncionales agrupadas (máx 4.5h)')
+      toast.success('Se agregaron multifuncionales agrupados (min 1.5h, máx 4.5h)')
     } else {
       toast.info('No hay brechas que cubrir')
     }
