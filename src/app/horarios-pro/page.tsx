@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileSpreadsheet, Calculator, Users, Plus, Edit2 } from 'lucide-react'
+import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import * as XLSX from 'xlsx'
@@ -126,6 +126,9 @@ export default function HorariosPro() {
             }
           }
         }
+        
+        // Ordenamos los empleados originales por hora de inicio
+        empleados.sort((a, b) => a.inicio - b.inicio)
 
         reportes.push({
           fecha: fechaDemanda.toUpperCase(),
@@ -156,7 +159,7 @@ export default function HorariosPro() {
     const emp = newReporte[diaIndex].empleados.find(e => e.id === empId)
     if (emp && emp.breakInicio !== undefined) {
       emp.breakInicio = newBreakStartFraction
-      emp.breakFin = newBreakStartFraction + 1 // asume break de 1 hora
+      emp.breakFin = newBreakStartFraction + 1
     }
     setReporte(newReporte)
   }
@@ -171,6 +174,40 @@ export default function HorariosPro() {
       fin: 13,
       isMultifuncional: true
     })
+    
+    // Sort again to place the new empty row in the right spot based on its start time
+    newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
+    setReporte(newReporte)
+  }
+  
+  const removeEmpleado = (diaIndex: number, empId: string) => {
+    const newReporte = [...reporte]
+    newReporte[diaIndex].empleados = newReporte[diaIndex].empleados.filter(e => e.id !== empId)
+    setReporte(newReporte)
+    toast.success('Turno eliminado')
+  }
+
+  const clearMultifuncionales = (diaIndex: number) => {
+    const newReporte = [...reporte]
+    newReporte[diaIndex].empleados = newReporte[diaIndex].empleados.filter(e => !e.isMultifuncional)
+    setReporte(newReporte)
+    toast.success('Se eliminaron todos los turnos de apoyo')
+  }
+
+  const moveEmpleadoOrder = (diaIndex: number, empId: string, direction: 'up' | 'down') => {
+    const newReporte = [...reporte]
+    const empIndex = newReporte[diaIndex].empleados.findIndex(e => e.id === empId)
+    if (empIndex < 0) return
+    
+    if (direction === 'up' && empIndex > 0) {
+      const temp = newReporte[diaIndex].empleados[empIndex - 1]
+      newReporte[diaIndex].empleados[empIndex - 1] = newReporte[diaIndex].empleados[empIndex]
+      newReporte[diaIndex].empleados[empIndex] = temp
+    } else if (direction === 'down' && empIndex < newReporte[diaIndex].empleados.length - 1) {
+      const temp = newReporte[diaIndex].empleados[empIndex + 1]
+      newReporte[diaIndex].empleados[empIndex + 1] = newReporte[diaIndex].empleados[empIndex]
+      newReporte[diaIndex].empleados[empIndex] = temp
+    }
     setReporte(newReporte)
   }
 
@@ -179,7 +216,6 @@ export default function HorariosPro() {
     const newReporte = [...reporte]
     let faltantes = false
 
-    // Iteramos por cada cuarto de hora del día
     for (const h of HORAS_ENTERAS) {
       for (const q of CUARTOS_DE_HORA) {
         const t = h + q
@@ -187,25 +223,18 @@ export default function HorariosPro() {
         
         let prog = calculateProgramado(newReporte[diaIndex].empleados)
         
-        // Mientras falte gente en este cuarto de hora específico
         while (prog[t] < req) {
           faltantes = true
           
-          // Creamos un nuevo turno empezando en 't'
           let fin = t
           
-          // Extendemos el turno hacia adelante mientras siga faltando gente
-          // Máximo 4.5 horas (18 cuartos de hora)
           while (fin < 22 && (fin - t) < 4.5) {
             const h_fin = Math.floor(fin)
             const req_fin = dia.requeridoPorHora[h_fin] || 0
             
-            // Verificamos si en este futuro cuarto de hora también falta gente
             if (prog[fin] < req_fin) {
               fin += 0.25
             } else {
-              // Si ya no falta gente, pero el turno dura menos de 1 hora, 
-              // forzamos mínimo 1 hora (o hasta las 22:00)
               if (fin - t < 1) {
                 fin += 0.25
               } else {
@@ -214,7 +243,6 @@ export default function HorariosPro() {
             }
           }
           
-          // Si por alguna razón no avanzó (ej. topó con las 22:00)
           if (fin === t) fin += 0.25
 
           newReporte[diaIndex].empleados.push({
@@ -226,13 +254,14 @@ export default function HorariosPro() {
             isMultifuncional: true
           })
           
-          // Recalculamos la programación con este nuevo empleado antes de ver si aún falta gente en 't'
           prog = calculateProgramado(newReporte[diaIndex].empleados)
         }
       }
     }
     
     if (faltantes) {
+      // Reordenar después de añadir
+      newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
       setReporte(newReporte)
       toast.success('Se agregaron horas de multifuncionales agrupadas (máx 4.5h)')
     } else {
@@ -294,6 +323,9 @@ export default function HorariosPro() {
                 <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                   <h3 className="font-bold">{dia.fecha}</h3>
                   <div className="flex gap-2">
+                    <Button variant="destructive" size="sm" onClick={() => clearMultifuncionales(idx)} className="h-8 text-xs border-none" title="Limpiar todos los apoyos agregados">
+                      <Eraser className="w-4 h-4 mr-1" /> Limpiar
+                    </Button>
                     <Button variant="secondary" size="sm" onClick={() => autoFillGaps(idx)} className="h-8 text-xs bg-slate-700 hover:bg-slate-600 text-white border-none">
                       Cubrir Brechas Automáticamente
                     </Button>
@@ -307,7 +339,7 @@ export default function HorariosPro() {
                   <div className="min-w-[1200px]">
                     {/* HEADER DE HORAS */}
                     <div className="flex bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
-                      <div className="w-56 shrink-0 p-3 border-r border-slate-200">Personal / Horas</div>
+                      <div className="w-64 shrink-0 p-3 border-r border-slate-200">Personal / Horas</div>
                       {HORAS_ENTERAS.map(h => (
                         <div key={h} className="flex-1 text-center py-2 border-r border-slate-200 last:border-0 border-l-2 border-l-slate-300">
                           {h}:00
@@ -317,7 +349,7 @@ export default function HorariosPro() {
 
                     {/* MATRIZ DE REQUERIMIENTOS Y BRECHA (Por cuarto de hora) */}
                     <div className="flex border-b-2 border-slate-300 bg-slate-100">
-                      <div className="w-56 shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center">
+                      <div className="w-64 shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center">
                         <span className="text-xs font-bold text-slate-700">Demanda (Cajas Lineal)</span>
                         <span className="text-[10px] font-medium text-slate-500">Proyección vs Real</span>
                       </div>
@@ -360,22 +392,36 @@ export default function HorariosPro() {
                     {/* EMPLEADOS PROGRAMADOS */}
                     <div className="divide-y divide-slate-100 bg-white">
                       {dia.empleados.map((emp) => (
-                        <div key={emp.id} className={`flex hover:bg-slate-50 transition-colors ${emp.isSCO ? 'bg-purple-50/30' : ''} ${emp.isMultifuncional ? 'bg-amber-50/30' : ''}`}>
-                          <div className="w-56 shrink-0 p-2 border-r border-slate-200 flex items-center gap-2">
-                            <div className="flex items-center gap-2">
+                        <div key={emp.id} className={`flex hover:bg-slate-50 transition-colors group/row ${emp.isSCO ? 'bg-purple-50/30' : ''} ${emp.isMultifuncional ? 'bg-amber-50/30' : ''}`}>
+                          <div className="w-64 shrink-0 p-2 border-r border-slate-200 flex items-center justify-between">
+                            <div className="flex items-center gap-2 overflow-hidden flex-1">
                               <Checkbox 
                                 checked={emp.isSCO} 
                                 onCheckedChange={() => toggleSCO(idx, emp.id)}
                                 id={`sco-${emp.id}`}
                               />
+                              <div className="flex flex-col overflow-hidden">
+                                <label htmlFor={`sco-${emp.id}`} className={`text-xs font-bold truncate cursor-pointer ${emp.isSCO ? 'text-purple-700' : 'text-slate-800'} ${emp.isMultifuncional ? 'text-amber-700' : ''}`} title={emp.nombre}>
+                                  {emp.nombre}
+                                </label>
+                                <span className="text-[10px] text-slate-500 truncate">
+                                  {emp.isSCO ? 'Autoservicio (SCO)' : emp.rol}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex flex-col overflow-hidden">
-                              <label htmlFor={`sco-${emp.id}`} className={`text-xs font-bold truncate cursor-pointer ${emp.isSCO ? 'text-purple-700' : 'text-slate-800'} ${emp.isMultifuncional ? 'text-amber-700' : ''}`} title={emp.nombre}>
-                                {emp.nombre}
-                              </label>
-                              <span className="text-[10px] text-slate-500 truncate">
-                                {emp.isSCO ? 'Autoservicio (SCO)' : emp.rol}
-                              </span>
+                            {/* Actions (Reorder and Delete) visible on hover */}
+                            <div className="flex flex-col opacity-0 group-hover/row:opacity-100 transition-opacity gap-1">
+                              <div className="flex gap-1">
+                                <button onClick={() => moveEmpleadoOrder(idx, emp.id, 'up')} className="p-0.5 text-slate-400 hover:text-slate-700 bg-slate-100 rounded">
+                                  <ArrowUp className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => moveEmpleadoOrder(idx, emp.id, 'down')} className="p-0.5 text-slate-400 hover:text-slate-700 bg-slate-100 rounded">
+                                  <ArrowDown className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <button onClick={() => removeEmpleado(idx, emp.id)} className="p-0.5 text-red-400 hover:text-red-600 bg-red-50 rounded flex justify-center">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
                             </div>
                           </div>
                           
@@ -401,7 +447,7 @@ export default function HorariosPro() {
                                     }}
                                   >
                                     {isWorking && (
-                                      <div className={`w-full h-full min-h-[20px] rounded-sm border-t border-b ${bg} ${q === 0 || t === emp.inicio ? 'border-l rounded-l-sm' : 'border-l-0 rounded-l-none'} ${q === 0.75 || t === emp.fin - 0.25 ? 'border-r rounded-r-sm' : 'border-r-0 rounded-r-none'} flex items-center justify-center transition-all hover:opacity-80`}>
+                                      <div className={`w-full h-full min-h-[24px] rounded-sm border-t border-b ${bg} ${q === 0 || t === emp.inicio ? 'border-l rounded-l-sm' : 'border-l-0 rounded-l-none'} ${q === 0.75 || t === emp.fin - 0.25 ? 'border-r rounded-r-sm' : 'border-r-0 rounded-r-none'} flex items-center justify-center transition-all hover:opacity-80`}>
                                       </div>
                                     )}
                                   </div>
