@@ -555,7 +555,7 @@ export default function HorariosPro() {
                       <Eraser className="w-4 h-4 mr-1" /> Limpiar
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => autoFillGaps(idx)} className="h-8 text-xs bg-slate-700 hover:bg-slate-600 text-white border-none">
-                      Cubrir Brechas Automáticamente
+                      Cubrir Brechas (v3)
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => addMultifuncional(idx)} className="h-8 text-xs bg-green-600 hover:bg-green-500 text-white border-none">
                       <Plus className="w-4 h-4 mr-1" /> Añadir Multifuncional
