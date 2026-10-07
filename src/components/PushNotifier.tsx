@@ -32,39 +32,50 @@ export function PushNotifier() {
     }
   }, [])
 
+  const [isDismissed, setIsDismissed] = useState(false)
+
   const subscribeButtonOnClick = async () => {
-    const permission = await Notification.requestPermission()
-    if (permission === 'granted') {
-      const registration = await navigator.serviceWorker.ready
-      
-      const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!publicVapidKey) {
-        console.error('No VAPID public key available')
-        return
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission === 'granted') {
+        const registration = await navigator.serviceWorker.ready
+        
+        const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        if (!publicVapidKey) {
+          console.error('No VAPID public key available')
+          alert('Error de configuración: Faltan las llaves de notificaciones (VAPID).')
+          setIsDismissed(true)
+          return
+        }
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
+        })
+
+        // Enviar suscripción a nuestro backend
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          body: JSON.stringify(subscription),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        setIsSubscribed(true)
+        alert('Notificaciones activadas correctamente.')
+      } else {
+        alert('Debes permitir las notificaciones en tu navegador.')
+        setIsDismissed(true)
       }
-
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
-      })
-
-      // Enviar suscripción a nuestro backend
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        body: JSON.stringify(subscription),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      setIsSubscribed(true)
-      alert('Notificaciones activadas correctamente.')
-    } else {
-      alert('Debes permitir las notificaciones en tu navegador.')
+    } catch (e) {
+      console.error(e)
+      alert('Hubo un error al activar las notificaciones.')
+      setIsDismissed(true)
     }
   }
 
-  if (!isSupported || isSubscribed) return null
+  if (!isSupported || isSubscribed || isDismissed) return null
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-5">
@@ -78,9 +89,14 @@ export function PushNotifier() {
             <p className="text-xs text-slate-400">Recibe notificaciones cuando te asignen un ticket.</p>
           </div>
         </div>
-        <Button onClick={subscribeButtonOnClick} size="sm" className="bg-green-600 hover:bg-green-700 text-white shrink-0">
-          Permitir
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setIsDismissed(true)} variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+            Ignorar
+          </Button>
+          <Button onClick={subscribeButtonOnClick} size="sm" className="bg-green-600 hover:bg-green-700 text-white shrink-0">
+            Permitir
+          </Button>
+        </div>
       </div>
     </div>
   )
