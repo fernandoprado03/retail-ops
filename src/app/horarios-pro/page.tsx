@@ -288,8 +288,75 @@ export default function HorariosPro() {
     const newReporte = [...reporte]
     let faltantes = false
 
-    // FASE 1: Optimización Inteligente de Breaks
+    // FASE 0: Asegurar Cobertura Continua de Cajas Preferenciales (13 y 12)
     let prog = calculateProgramado(newReporte[diaIndex].empleados)
+    
+    for (let pass = 0; pass < 2; pass++) {
+      for (const h of HORAS_ENTERAS) {
+        for (const q of CUARTOS_DE_HORA) {
+          const t = h + q
+          if (t >= 22.75) continue
+          
+          const isPrefGap = !newReporte[diaIndex].empleados.some(e => 
+            (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
+            t >= e.inicio && t < e.fin &&
+            !(e.breakInicio !== undefined && t >= e.breakInicio && t < e.breakFin)
+          )
+
+          if (isPrefGap) {
+            const prefOnBreak = newReporte[diaIndex].empleados.find(e => 
+              (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
+              e.breakInicio !== undefined && t >= e.breakInicio && t < e.breakFin
+            )
+
+            if (prefOnBreak) {
+              let bestNewBreak = -1
+              let minDamage = 999
+              const breakLength = prefOnBreak.breakFin! - prefOnBreak.breakInicio!
+              
+              for (let start = prefOnBreak.inicio; start <= prefOnBreak.fin - breakLength; start += 0.25) {
+                let canMove = true
+                let shortageCaused = 0
+                
+                for (let bt = start; bt < start + breakLength; bt += 0.25) {
+                  const otherPrefIsOpen = newReporte[diaIndex].empleados.some(other => 
+                    other.id !== prefOnBreak.id && 
+                    (other.caja?.trim() === '13' || other.caja?.trim() === '12') &&
+                    bt >= other.inicio && bt < other.fin &&
+                    !(other.breakInicio !== undefined && bt >= other.breakInicio && bt < other.breakFin)
+                  )
+                  if (!otherPrefIsOpen) {
+                    canMove = false
+                    break
+                  }
+                  
+                  const h_bt = Math.floor(bt)
+                  const req_bt = dia.requeridoPorHora[h_bt] || 0
+                  const isOldBreak = bt >= prefOnBreak.breakInicio! && bt < prefOnBreak.breakFin!
+                  const newProg = prog[bt] - (isOldBreak ? 0 : 1)
+                  if (newProg < req_bt) {
+                    shortageCaused += (req_bt - newProg)
+                  }
+                }
+                
+                if (canMove && shortageCaused < minDamage) {
+                  minDamage = shortageCaused
+                  bestNewBreak = start
+                }
+              }
+              
+              if (bestNewBreak !== -1 && bestNewBreak !== prefOnBreak.breakInicio) {
+                prefOnBreak.breakInicio = bestNewBreak
+                prefOnBreak.breakFin = bestNewBreak + breakLength
+                prog = calculateProgramado(newReporte[diaIndex].empleados)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // FASE 1: Optimización Inteligente de Breaks (General)
     let breaksMovidos = false
 
     for (let pass = 0; pass < 3; pass++) {
@@ -299,20 +366,10 @@ export default function HorariosPro() {
           const t = h + q
           const req = dia.requeridoPorHora[h] || 0
           
-          const isPrefGap = t >= 8 && t < 22.75 && !newReporte[diaIndex].empleados.some(e => 
-            (e.caja === '13' || e.caja === '12') &&
-            t >= e.inicio && t < e.fin &&
-            !(e.breakInicio !== undefined && t >= e.breakInicio && t < e.breakFin)
-          )
-
-          if (prog[t] < req || isPrefGap) {
+          if (prog[t] < req) {
             let candidatosBreak = newReporte[diaIndex].empleados.filter(
               e => !e.isSCO && e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin
             )
-            
-            if (isPrefGap && prog[t] >= req) {
-              candidatosBreak = candidatosBreak.filter(e => e.caja === '13' || e.caja === '12')
-            }
             
             for (const emp of candidatosBreak) {
               let bestNewBreak = -1
@@ -324,15 +381,14 @@ export default function HorariosPro() {
                 let minExcess = 999
                 
                 for (let bt = start; bt < start + breakLength; bt += 0.25) {
-                  // Preferencial rule check
-                  if (emp.caja === '13' || emp.caja === '12') {
+                  // If it's a preferencial, do not let it move to a spot that breaks preferencial coverage
+                  if (emp.caja?.trim() === '13' || emp.caja?.trim() === '12') {
                     const otherPrefIsOpen = newReporte[diaIndex].empleados.some(other => 
                       other.id !== emp.id && 
-                      (other.caja === '13' || other.caja === '12') &&
+                      (other.caja?.trim() === '13' || other.caja?.trim() === '12') &&
                       bt >= other.inicio && bt < other.fin &&
                       !(other.breakInicio !== undefined && bt >= other.breakInicio && bt < other.breakFin)
                     )
-
                     if (!otherPrefIsOpen) {
                       canMove = false
                       break
@@ -345,7 +401,7 @@ export default function HorariosPro() {
                   const isOldBreak = bt >= emp.breakInicio! && bt < emp.breakFin!
                   const newProg = prog[bt] - (isOldBreak ? 0 : 1)
                   
-                  if (newProg < req_bt && !isPrefGap) {
+                  if (newProg < req_bt) {
                     canMove = false
                     break
                   }
@@ -360,7 +416,6 @@ export default function HorariosPro() {
                 }
               }
               
-              // Only move if we found a valid spot, AND (it's a pref gap OR it actually improves things)
               if (bestNewBreak !== -1 && bestNewBreak !== emp.breakInicio) {
                 emp.breakInicio = bestNewBreak
                 emp.breakFin = bestNewBreak + breakLength
