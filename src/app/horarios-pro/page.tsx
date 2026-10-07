@@ -345,7 +345,7 @@ export default function HorariosPro() {
                   const isOldBreak = bt >= emp.breakInicio! && bt < emp.breakFin!
                   const newProg = prog[bt] - (isOldBreak ? 0 : 1)
                   
-                  if (newProg < req_bt) {
+                  if (newProg < req_bt && !isPrefGap) {
                     canMove = false
                     break
                   }
@@ -360,6 +360,7 @@ export default function HorariosPro() {
                 }
               }
               
+              // Only move if we found a valid spot, AND (it's a pref gap OR it actually improves things)
               if (bestNewBreak !== -1 && bestNewBreak !== emp.breakInicio) {
                 emp.breakInicio = bestNewBreak
                 emp.breakFin = bestNewBreak + breakLength
