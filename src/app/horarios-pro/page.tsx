@@ -326,22 +326,14 @@ export default function HorariosPro() {
                 for (let bt = start; bt < start + breakLength; bt += 0.25) {
                   // Preferencial rule check
                   if (emp.caja === '13' || emp.caja === '12') {
-                    // Check if another preferencial's break is too close (requires 15 min buffer)
-                    const otherPrefHasCloseBreak = newReporte[diaIndex].empleados.some(other => 
+                    const otherPrefIsOpen = newReporte[diaIndex].empleados.some(other => 
                       other.id !== emp.id && 
                       (other.caja === '13' || other.caja === '12') &&
-                      other.breakInicio !== undefined && 
-                      (start - 0.25 < other.breakFin!) && (start + breakLength + 0.25 > other.breakInicio!)
+                      bt >= other.inicio && bt < other.fin &&
+                      !(other.breakInicio !== undefined && bt >= other.breakInicio && bt < other.breakFin)
                     )
 
-                    // Check if another preferencial is actually working right now
-                    const otherPrefWorking = newReporte[diaIndex].empleados.some(other => 
-                      other.id !== emp.id && 
-                      (other.caja === '13' || other.caja === '12') &&
-                      bt >= other.inicio && bt < other.fin
-                    )
-
-                    if (otherPrefHasCloseBreak || !otherPrefWorking) {
+                    if (!otherPrefIsOpen) {
                       canMove = false
                       break
                     }
