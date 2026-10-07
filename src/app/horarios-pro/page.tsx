@@ -243,7 +243,7 @@ export default function HorariosPro() {
           let inicio = t
           let fin = t
           
-          while (fin < 22 && (fin - inicio) < 4.5) {
+          while (fin < 23 && (fin - inicio) < 4.5) {
             const h_fin = Math.floor(fin)
             const req_fin = dia.requeridoPorHora[h_fin] || 0
             
@@ -262,9 +262,9 @@ export default function HorariosPro() {
             fin = inicio + 1.5
           }
 
-          if (fin > 22) {
-            fin = 22
-            inicio = Math.max(8, 22 - 1.5)
+          if (fin > 23) {
+            fin = 23
+            inicio = Math.max(8, 23 - 1.5)
           }
 
           newReporte[diaIndex].empleados.push({
