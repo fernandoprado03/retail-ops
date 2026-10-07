@@ -47,10 +47,7 @@ const timeToFraction = (timeStr: string): number => {
     return 0
   }
 }
-// = (timeStr: string): number => {
-  const [h, m] = timeStr.split(':').map(Number)
-  return h + (m || 0) / 60
-}
+
 
 export default function HorariosPro() {
   const [demandaFile, setDemandaFile] = useState<File | null>(null)
