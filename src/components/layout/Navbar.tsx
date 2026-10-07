@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Camera, BarChart3, Users } from 'lucide-react'
+import { ClipboardList, Camera, BarChart3, Users, CalendarRange } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
@@ -59,6 +59,13 @@ export function Navbar() {
             <Link href="/kpis" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/kpis' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
               <BarChart3 className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/kpis' ? 'md:text-white' : ''}`} />
               <span className="text-[10px] font-medium md:text-sm md:font-semibold">KPIs</span>
+            </Link>
+          </li>
+
+          <li className="md:w-full hidden md:block">
+            <Link href="/horarios-pro" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horarios-pro' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+              <CalendarRange className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/horarios-pro' ? 'md:text-white' : ''}`} />
+              <span className="text-[10px] font-medium md:text-sm md:font-semibold">Malla Pro</span>
             </Link>
           </li>
 
