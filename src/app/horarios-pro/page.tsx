@@ -19,6 +19,7 @@ interface TurnoEmpleado {
   breakFin?: number
   isSCO?: boolean
   isMultifuncional?: boolean
+  caja?: string
 }
 
 interface ReporteDia {
@@ -30,7 +31,23 @@ interface ReporteDia {
 const HORAS_ENTERAS = Array.from({ length: 15 }, (_, i) => i + 8) // 8 a 22
 const CUARTOS_DE_HORA = [0, 0.25, 0.5, 0.75]
 
+const formatTime = (fraction: number): string => {
+  if (isNaN(fraction)) return '00:00'
+  const h = Math.floor(fraction) % 24
+  const m = Math.round((fraction - Math.floor(fraction)) * 60)
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+}
+
 const timeToFraction = (timeStr: string): number => {
+  try {
+    const [h, m] = timeStr.split(':').map(Number)
+    const result = h + (m || 0) / 60
+    return isNaN(result) ? 0 : result
+  } catch {
+    return 0
+  }
+}
+// = (timeStr: string): number => {
   const [h, m] = timeStr.split(':').map(Number)
   return h + (m || 0) / 60
 }
@@ -141,10 +158,18 @@ export default function HorariosPro() {
           }
         }
         
-        // Ordenamos los empleados originales por hora de inicio
-        empleados.sort((a, b) => a.inicio - b.inicio)
+
+        const poolCajas = ['13', '12', '11', '9', '7', '5', '3', '1', '10', '8', '6', '2']
+        let cajaIndex = 0
+        empleados.sort((a, b) => a.inicio - b.inicio).forEach(emp => {
+          if (!emp.isSCO && !emp.isMultifuncional && emp.rol !== 'Soporte Automático') {
+            emp.caja = poolCajas[cajaIndex % poolCajas.length]
+            cajaIndex++
+          }
+        })
 
         reportes.push({
+
           fecha: fechaDemanda.toUpperCase(),
           requeridoPorHora: requeridoMap,
           empleados
@@ -158,6 +183,26 @@ export default function HorariosPro() {
       toast.error('Error procesando archivos')
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+
+  const updateEmpleado = (diaIndex: number, empId: string, updates: Partial<TurnoEmpleado>) => {
+    const newReporte = [...reporte]
+    const emp = newReporte[diaIndex].empleados.find(e => e.id === empId)
+    if (emp) {
+      Object.assign(emp, updates)
+      setReporte(newReporte)
+    }
+  }
+
+  const handleHorarioChange = (diaIndex: number, empId: string, val: string) => {
+    const parts = val.split('-').map(s => s.trim())
+    if (parts.length === 2) {
+      const inicio = timeToFraction(parts[0])
+      let fin = timeToFraction(parts[1])
+      if (fin < inicio) fin += 24
+      updateEmpleado(diaIndex, empId, { inicio, fin })
     }
   }
 
@@ -429,7 +474,7 @@ export default function HorariosPro() {
                   <div className="min-w-[1200px]">
                     {/* HEADER DE HORAS */}
                     <div className="flex bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
-                      <div className="w-64 shrink-0 p-3 border-r border-slate-200">Personal / Horas</div>
+                      <div className="w-[360px] shrink-0 p-3 border-r border-slate-200">Personal / Horas</div>
                       {HORAS_ENTERAS.map(h => (
                         <div key={h} className="flex-1 text-center py-2 border-r border-slate-200 last:border-0 border-l-2 border-l-slate-300">
                           {h}:00
@@ -439,7 +484,7 @@ export default function HorariosPro() {
 
                     {/* MATRIZ DE REQUERIMIENTOS Y BRECHA (Por cuarto de hora) */}
                     <div className="flex border-b-2 border-slate-300 bg-slate-100">
-                      <div className="w-64 shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center">
+                      <div className="w-[360px] shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center">
                         <span className="text-xs font-bold text-slate-700">Demanda (Cajas Lineal)</span>
                         <span className="text-[10px] font-medium text-slate-500">Proyección vs Real</span>
                       </div>
@@ -483,22 +528,42 @@ export default function HorariosPro() {
                     <div className="divide-y divide-slate-100 bg-white">
                       {dia.empleados.map((emp) => (
                         <div key={emp.id} className={`flex hover:bg-slate-50 transition-colors group/row ${emp.isSCO ? 'bg-purple-50/30' : ''} ${emp.isMultifuncional ? 'bg-amber-50/30' : ''}`}>
-                          <div className="w-64 shrink-0 p-2 border-r border-slate-200 flex items-center justify-between">
+                          <div className="w-[360px] shrink-0 p-2 border-r border-slate-200 flex items-center justify-between">
                             <div className="flex items-center gap-2 overflow-hidden flex-1">
                               <Checkbox 
                                 checked={emp.isSCO} 
                                 onCheckedChange={() => toggleSCO(idx, emp.id)}
                                 id={`sco-${emp.id}`}
                               />
-                              <div className="flex flex-col overflow-hidden">
-                                <label htmlFor={`sco-${emp.id}`} className={`text-xs font-bold truncate cursor-pointer ${emp.isSCO ? 'text-purple-700' : 'text-slate-800'} ${emp.isMultifuncional ? 'text-amber-700' : ''}`} title={emp.nombre}>
-                                  {emp.nombre}
-                                </label>
-                                <span className="text-[10px] text-slate-500 truncate">
-                                  {emp.isSCO ? 'Autoservicio (SCO)' : emp.rol}
-                                </span>
+                              
+                                <div className="flex flex-col overflow-hidden flex-1">
+                                  <input 
+                                    className={`text-xs font-bold truncate cursor-text bg-transparent border-none p-0 outline-none focus:ring-1 focus:ring-slate-300 rounded ${emp.isSCO ? 'text-purple-700' : 'text-slate-800'} ${emp.isMultifuncional ? 'text-amber-700' : ''}`}
+                                    value={emp.nombre}
+                                    title={emp.nombre}
+                                    onChange={(e) => updateEmpleado(idx, emp.id, { nombre: e.target.value })}
+                                  />
+                                  <span className="text-[10px] text-slate-500 truncate">
+                                    {emp.isSCO ? 'Autoservicio (SCO)' : emp.rol}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
+                              <div className="flex flex-col gap-1 items-end shrink-0">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] font-medium text-slate-400">CAJA</span>
+                                  <input 
+                                    className="w-8 text-xs font-bold text-center bg-slate-100 border border-slate-200 rounded outline-none focus:ring-1 focus:ring-slate-400"
+                                    value={emp.caja || ''}
+                                    onChange={(e) => updateEmpleado(idx, emp.id, { caja: e.target.value })}
+                                  />
+                                </div>
+                                <input 
+                                  className="w-20 text-[10px] font-medium text-center bg-slate-100 border border-slate-200 rounded outline-none focus:ring-1 focus:ring-slate-400"
+                                  defaultValue={`${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`}
+                                  onBlur={(e) => handleHorarioChange(idx, emp.id, e.target.value)}
+                                />
+                              </div>
+
                             {/* Actions (Reorder and Delete) visible on hover */}
                             <div className="flex flex-col opacity-0 group-hover/row:opacity-100 transition-opacity gap-1">
                               <div className="flex gap-1">
