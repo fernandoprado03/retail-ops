@@ -230,12 +230,77 @@ export default function HorariosPro() {
     const newReporte = [...reporte]
     let faltantes = false
 
+    // FASE 1: Optimización Inteligente de Breaks
+    // Movemos los breaks a zonas de "exceso" de personal antes de contratar apoyo.
+    let prog = calculateProgramado(newReporte[diaIndex].empleados)
+    let breaksMovidos = false
+
+    for (let pass = 0; pass < 3; pass++) {
+      let movedInPass = false
+      for (const h of HORAS_ENTERAS) {
+        for (const q of CUARTOS_DE_HORA) {
+          const t = h + q
+          const req = dia.requeridoPorHora[h] || 0
+          
+          if (prog[t] < req) {
+            // Falta gente. Buscamos cajeros que estén en break justo en este momento.
+            const candidatosBreak = newReporte[diaIndex].empleados.filter(
+              e => !e.isSCO && e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin
+            )
+            
+            for (const emp of candidatosBreak) {
+              let bestNewBreak = -1
+              let maxExcess = -999
+              const breakLength = emp.breakFin! - emp.breakInicio!
+              
+              for (let start = emp.inicio; start <= emp.fin - breakLength; start += 0.25) {
+                let canMove = true
+                let minExcess = 999
+                
+                for (let bt = start; bt < start + breakLength; bt += 0.25) {
+                  const h_bt = Math.floor(bt)
+                  const req_bt = dia.requeridoPorHora[h_bt] || 0
+                  
+                  const isOldBreak = bt >= emp.breakInicio! && bt < emp.breakFin!
+                  const newProg = prog[bt] - (isOldBreak ? 0 : 1)
+                  
+                  if (newProg < req_bt) {
+                    canMove = false
+                    break
+                  }
+                  
+                  const excess = newProg - req_bt
+                  if (excess < minExcess) minExcess = excess
+                }
+                
+                if (canMove && minExcess > maxExcess) {
+                  maxExcess = minExcess
+                  bestNewBreak = start
+                }
+              }
+              
+              if (bestNewBreak !== -1 && bestNewBreak !== emp.breakInicio) {
+                emp.breakInicio = bestNewBreak
+                emp.breakFin = bestNewBreak + breakLength
+                prog = calculateProgramado(newReporte[diaIndex].empleados)
+                movedInPass = true
+                breaksMovidos = true
+                break 
+              }
+            }
+          }
+        }
+      }
+      if (!movedInPass) break
+    }
+
+    // FASE 2: Rellenar Brechas Restantes (Crear multifuncionales)
     for (const h of HORAS_ENTERAS) {
       for (const q of CUARTOS_DE_HORA) {
         const t = h + q
         const req = dia.requeridoPorHora[h] || 0
         
-        let prog = calculateProgramado(newReporte[diaIndex].empleados)
+        prog = calculateProgramado(newReporte[diaIndex].empleados)
         
         while (prog[t] < req) {
           faltantes = true
@@ -281,11 +346,14 @@ export default function HorariosPro() {
       }
     }
     
-    if (faltantes) {
-      // Reordenar después de añadir
+    if (faltantes || breaksMovidos) {
       newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
       setReporte(newReporte)
-      toast.success('Se agregaron multifuncionales agrupados (min 1.5h, máx 4.5h)')
+      if (breaksMovidos && !faltantes) {
+         toast.success('Se optimizaron los breaks para cubrir todo sin apoyo extra')
+      } else {
+         toast.success('Breaks optimizados y apoyos generados (min 1.5h, máx 4.5h)')
+      }
     } else {
       toast.info('No hay brechas que cubrir')
     }
