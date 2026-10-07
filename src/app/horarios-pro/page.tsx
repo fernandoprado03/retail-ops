@@ -88,21 +88,30 @@ export default function HorariosPro() {
           if (!row || row.length === 0) continue
           
           if (typeof row[0] === 'string' && row[0].trim().length > 5 && !row[0].toLowerCase().includes('tienda') && !row[0].toLowerCase().includes('seguimiento')) {
-            const times: string[] = []
+            const times: number[] = []
             for (const cell of row) {
               if (typeof cell === 'string' && timeRegex.test(cell.trim())) {
-                times.push(cell.trim())
+                times.push(timeToFraction(cell.trim()))
+              } else if (typeof cell === 'number' && cell > 0 && cell < 1) {
+                // Excel time fraction. 0.3333 -> 8.0
+                const fraction = cell * 24
+                // Redondeamos al cuarto de hora más cercano (0, 0.25, 0.5, 0.75) para evitar errores de precisión flotante
+                const roundedFraction = Math.round(fraction * 4) / 4
+                times.push(roundedFraction)
               }
             }
 
             if (times.length >= 2) {
-              let start = timeToFraction(times[0])
-              let end = timeToFraction(times[times.length - 1])
+              // Ordenamos los tiempos cronológicamente en caso vengan desordenados
+              times.sort((a, b) => a - b)
+
+              let start = times[0]
+              let end = times[times.length - 1]
               let breakStart, breakEnd
               
               if (times.length === 4) {
-                breakStart = timeToFraction(times[1])
-                breakEnd = timeToFraction(times[2])
+                breakStart = times[1]
+                breakEnd = times[2]
               }
 
               if (end < start) end += 24
