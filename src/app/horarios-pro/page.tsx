@@ -289,7 +289,6 @@ export default function HorariosPro() {
     let faltantes = false
 
     // FASE 1: Optimización Inteligente de Breaks
-    // Movemos los breaks a zonas de "exceso" de personal antes de contratar apoyo.
     let prog = calculateProgramado(newReporte[diaIndex].empleados)
     let breaksMovidos = false
 
@@ -300,11 +299,20 @@ export default function HorariosPro() {
           const t = h + q
           const req = dia.requeridoPorHora[h] || 0
           
-          if (prog[t] < req) {
-            // Falta gente. Buscamos cajeros que estén en break justo en este momento.
-            const candidatosBreak = newReporte[diaIndex].empleados.filter(
+          const isPrefGap = t >= 8 && t < 22.75 && !newReporte[diaIndex].empleados.some(e => 
+            (e.caja === '13' || e.caja === '12') &&
+            t >= e.inicio && t < e.fin &&
+            !(e.breakInicio !== undefined && t >= e.breakInicio && t < e.breakFin)
+          )
+
+          if (prog[t] < req || isPrefGap) {
+            let candidatosBreak = newReporte[diaIndex].empleados.filter(
               e => !e.isSCO && e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin
             )
+            
+            if (isPrefGap && prog[t] >= req) {
+              candidatosBreak = candidatosBreak.filter(e => e.caja === '13' || e.caja === '12')
+            }
             
             for (const emp of candidatosBreak) {
               let bestNewBreak = -1
@@ -316,6 +324,20 @@ export default function HorariosPro() {
                 let minExcess = 999
                 
                 for (let bt = start; bt < start + breakLength; bt += 0.25) {
+                  // Preferencial rule check
+                  if (emp.caja === '13' || emp.caja === '12') {
+                    const otherPrefWorking = newReporte[diaIndex].empleados.some(other => 
+                      other.id !== emp.id && 
+                      (other.caja === '13' || other.caja === '12') &&
+                      bt >= other.inicio && bt < other.fin &&
+                      !(other.breakInicio !== undefined && bt >= other.breakInicio && bt < other.breakFin)
+                    )
+                    if (!otherPrefWorking) {
+                      canMove = false
+                      break
+                    }
+                  }
+
                   const h_bt = Math.floor(bt)
                   const req_bt = dia.requeridoPorHora[h_bt] || 0
                   
