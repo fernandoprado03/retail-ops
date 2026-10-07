@@ -156,14 +156,30 @@ export default function HorariosPro() {
         }
         
 
+        // Ordenamos los empleados originales por hora de inicio
+        empleados.sort((a, b) => a.inicio - b.inicio)
+
         const poolCajas = ['13', '12', '11', '9', '7', '5', '3', '1', '10', '8', '6', '2']
+        const validEmps = empleados.filter(emp => !emp.isSCO && !emp.isMultifuncional && emp.rol !== 'Soporte Automático')
+        
+        let left = 0
+        let right = validEmps.length - 1
         let cajaIndex = 0
-        empleados.sort((a, b) => a.inicio - b.inicio).forEach(emp => {
-          if (!emp.isSCO && !emp.isMultifuncional && emp.rol !== 'Soporte Automático') {
-            emp.caja = poolCajas[cajaIndex % poolCajas.length]
-            cajaIndex++
+        
+        while (left <= right) {
+          if (left === right) {
+            validEmps[left].caja = poolCajas[cajaIndex % poolCajas.length]
+            break
           }
-        })
+          validEmps[left].caja = poolCajas[cajaIndex % poolCajas.length]
+          cajaIndex++
+          
+          validEmps[right].caja = poolCajas[cajaIndex % poolCajas.length]
+          cajaIndex++
+          
+          left++
+          right--
+        }
 
         reportes.push({
 
