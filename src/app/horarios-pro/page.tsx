@@ -116,6 +116,11 @@ export default function HorariosPro() {
 
               if (end < start) end += 24
 
+              // Ignoramos turnos de cero horas (ej. "00:00" a "00:00") 
+              // O turnos que están completamente fuera de la vista de 8:00 a 23:00
+              if (end === start) continue
+              if (end <= 8 || start >= 23) continue
+
               let isSCO = false
               const rowStr = row.join(' ').toLowerCase()
               if (rowStr.includes('sco') || rowStr.includes('selfcheckout') || rowStr.includes('self checkout')) {
