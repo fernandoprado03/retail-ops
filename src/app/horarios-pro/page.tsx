@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Upload, FileSpreadsheet, Calculator, Users, Plus, Edit2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ interface TurnoEmpleado {
   id: string
   nombre: string
   rol: string
-  inicio: number
+  inicio: number // Fracción de hora (ej: 8.25 = 08:15)
   fin: number
   breakInicio?: number
   breakFin?: number
@@ -27,7 +27,13 @@ interface ReporteDia {
   empleados: TurnoEmpleado[]
 }
 
-const HORAS_MOSTRAR = Array.from({ length: 15 }, (_, i) => i + 8) // 8:00 a 22:00
+const HORAS_ENTERAS = Array.from({ length: 15 }, (_, i) => i + 8) // 8 a 22
+const CUARTOS_DE_HORA = [0, 0.25, 0.5, 0.75]
+
+const timeToFraction = (timeStr: string): number => {
+  const [h, m] = timeStr.split(':').map(Number)
+  return h + (m || 0) / 60
+}
 
 export default function HorariosPro() {
   const [demandaFile, setDemandaFile] = useState<File | null>(null)
@@ -90,24 +96,32 @@ export default function HorariosPro() {
             }
 
             if (times.length >= 2) {
-              const startHour = parseInt(times[0].split(':')[0])
-              const endHour = parseInt(times[times.length - 1].split(':')[0])
-              let breakStartHour, breakEndHour
+              let start = timeToFraction(times[0])
+              let end = timeToFraction(times[times.length - 1])
+              let breakStart, breakEnd
               
               if (times.length === 4) {
-                breakStartHour = parseInt(times[1].split(':')[0])
-                breakEndHour = parseInt(times[2].split(':')[0])
+                breakStart = timeToFraction(times[1])
+                breakEnd = timeToFraction(times[2])
+              }
+
+              if (end < start) end += 24
+
+              let isSCO = false
+              const rowStr = row.join(' ').toLowerCase()
+              if (rowStr.includes('sco') || rowStr.includes('selfcheckout') || rowStr.includes('self checkout')) {
+                isSCO = true
               }
 
               empleados.push({
                 id: `${fechaDemanda}-${i}`,
                 nombre: row[0].trim(),
                 rol: typeof row[2] === 'string' ? row[2] : 'Cajero',
-                inicio: startHour,
-                fin: endHour,
-                breakInicio: breakStartHour,
-                breakFin: breakEndHour,
-                isSCO: false
+                inicio: start,
+                fin: end,
+                breakInicio: breakStart,
+                breakFin: breakEnd,
+                isSCO
               })
             }
           }
@@ -130,7 +144,6 @@ export default function HorariosPro() {
     }
   }
 
-  // Interacciones
   const toggleSCO = (diaIndex: number, empId: string) => {
     const newReporte = [...reporte]
     const emp = newReporte[diaIndex].empleados.find(e => e.id === empId)
@@ -138,12 +151,12 @@ export default function HorariosPro() {
     setReporte(newReporte)
   }
 
-  const moveBreak = (diaIndex: number, empId: string, newBreakStart: number) => {
+  const moveBreak = (diaIndex: number, empId: string, newBreakStartFraction: number) => {
     const newReporte = [...reporte]
     const emp = newReporte[diaIndex].empleados.find(e => e.id === empId)
     if (emp && emp.breakInicio !== undefined) {
-      emp.breakInicio = newBreakStart
-      emp.breakFin = newBreakStart + 1
+      emp.breakInicio = newBreakStartFraction
+      emp.breakFin = newBreakStartFraction + 1 // asume break de 1 hora
     }
     setReporte(newReporte)
   }
@@ -163,16 +176,22 @@ export default function HorariosPro() {
 
   const autoFillGaps = (diaIndex: number) => {
     const dia = reporte[diaIndex]
-    const prog = calculateProgramado(dia.empleados)
+    const progPorCuarto = calculateProgramado(dia.empleados)
     
     let faltantes = false
     const newReporte = [...reporte]
     
-    // Crear multifuncionales automáticamente para las horas donde falta gente
-    for (const h of HORAS_MOSTRAR) {
+    // Simplificación: agrupar los cuartos de hora donde falta gente en bloques enteros
+    for (const h of HORAS_ENTERAS) {
       const req = dia.requeridoPorHora[h] || 0
-      const actual = prog[h] || 0
-      if (req > actual) {
+      
+      let minProg = 999
+      for (const q of CUARTOS_DE_HORA) {
+        const actual = progPorCuarto[h + q] || 0
+        if (actual < minProg) minProg = actual
+      }
+
+      if (req > minProg) {
         faltantes = true
         newReporte[diaIndex].empleados.push({
           id: `auto-${Date.now()}-${h}`,
@@ -195,13 +214,16 @@ export default function HorariosPro() {
 
   const calculateProgramado = (empleados: TurnoEmpleado[]) => {
     const prog: Record<number, number> = {}
-    HORAS_MOSTRAR.forEach(h => prog[h] = 0)
+    HORAS_ENTERAS.forEach(h => {
+      CUARTOS_DE_HORA.forEach(q => prog[h + q] = 0)
+    })
     
     empleados.forEach(emp => {
       if (emp.isSCO) return
-      for (let h = emp.inicio; h < emp.fin; h++) {
-        if (emp.breakInicio && emp.breakFin && h >= emp.breakInicio && h < emp.breakFin) continue
-        prog[h] += 1
+      
+      for (let t = emp.inicio; t < emp.fin; t += 0.25) {
+        if (emp.breakInicio !== undefined && emp.breakFin !== undefined && t >= emp.breakInicio && t < emp.breakFin) continue
+        if (prog[t] !== undefined) prog[t] += 1
       }
     })
     return prog
@@ -210,8 +232,8 @@ export default function HorariosPro() {
   return (
     <div className="pb-12 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro</h1>
-        <p className="text-sm text-slate-500">Haz clic en el cuadro de un empleado para marcarlo como SCO, o haz clic en sus horas para mover su Break.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro (15 Min)</h1>
+        <p className="text-sm text-slate-500">Diseño ajustado a bloques de 15 minutos exactos según el archivo original.</p>
       </div>
 
       {reporte.length === 0 ? (
@@ -237,7 +259,7 @@ export default function HorariosPro() {
           <Button variant="outline" onClick={() => setReporte([])}>Volver a subir archivos</Button>
           
           {reporte.map((dia, idx) => {
-            const prog = calculateProgramado(dia.empleados)
+            const progPorCuarto = calculateProgramado(dia.empleados)
             
             return (
               <Card key={idx} className="overflow-hidden shadow-sm border-slate-200">
@@ -254,44 +276,54 @@ export default function HorariosPro() {
                 </div>
                 
                 <div className="p-0 overflow-x-auto">
-                  <div className="min-w-[800px]">
+                  <div className="min-w-[1200px]">
                     {/* HEADER DE HORAS */}
                     <div className="flex bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
                       <div className="w-56 shrink-0 p-3 border-r border-slate-200">Personal / Horas</div>
-                      {HORAS_MOSTRAR.map(h => (
-                        <div key={h} className="flex-1 text-center py-3 border-r border-slate-200 last:border-0">{h}:00</div>
+                      {HORAS_ENTERAS.map(h => (
+                        <div key={h} className="flex-1 text-center py-2 border-r border-slate-200 last:border-0 border-l-2 border-l-slate-300">
+                          {h}:00
+                        </div>
                       ))}
                     </div>
 
-                    {/* MATRIZ DE REQUERIMIENTOS Y BRECHA */}
+                    {/* MATRIZ DE REQUERIMIENTOS Y BRECHA (Por cuarto de hora) */}
                     <div className="flex border-b-2 border-slate-300 bg-slate-100">
                       <div className="w-56 shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center">
                         <span className="text-xs font-bold text-slate-700">Demanda (Cajas Lineal)</span>
                         <span className="text-[10px] font-medium text-slate-500">Proyección vs Real</span>
                       </div>
-                      {HORAS_MOSTRAR.map(h => {
+                      
+                      {HORAS_ENTERAS.map(h => {
                         const req = dia.requeridoPorHora[h] || 0
-                        const actual = prog[h] || 0
-                        const falta = req - actual
-                        
                         return (
-                          <div key={h} className="flex-1 border-r border-slate-200 flex flex-col items-center justify-center p-1 bg-white/50">
-                            <div className="text-sm font-bold text-slate-800">{req}</div>
-                            {falta > 0 && (
-                              <div className="mt-1 bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                Faltan {falta}
-                              </div>
-                            )}
-                            {falta < 0 && (
-                              <div className="mt-1 bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                Sobran {Math.abs(falta)}
-                              </div>
-                            )}
-                            {falta === 0 && req > 0 && (
-                              <div className="mt-1 bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                OK
-                              </div>
-                            )}
+                          <div key={h} className="flex-1 flex border-r border-slate-200 border-l-2 border-l-slate-300">
+                            {CUARTOS_DE_HORA.map(q => {
+                              const t = h + q
+                              const actual = progPorCuarto[t] || 0
+                              const falta = req - actual
+                              
+                              return (
+                                <div key={q} className="flex-1 border-r border-slate-200/50 flex flex-col items-center justify-start py-1 bg-white/50 last:border-r-0">
+                                  <div className="text-[11px] font-bold text-slate-800">{req}</div>
+                                  {falta > 0 && (
+                                    <div className="mt-1 w-full bg-red-100 text-red-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Faltan ${falta}`}>
+                                      -{falta}
+                                    </div>
+                                  )}
+                                  {falta < 0 && (
+                                    <div className="mt-1 w-full bg-blue-100 text-blue-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Sobran ${Math.abs(falta)}`}>
+                                      +{Math.abs(falta)}
+                                    </div>
+                                  )}
+                                  {falta === 0 && req > 0 && (
+                                    <div className="mt-1 w-full bg-green-100 text-green-700 text-[9px] font-bold py-0.5 text-center shadow-sm">
+                                      OK
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         )
                       })}
@@ -310,7 +342,7 @@ export default function HorariosPro() {
                               />
                             </div>
                             <div className="flex flex-col overflow-hidden">
-                              <label htmlFor={`sco-${emp.id}`} className={`text-xs font-bold truncate cursor-pointer ${emp.isSCO ? 'text-purple-700' : 'text-slate-800'} ${emp.isMultifuncional ? 'text-amber-700' : ''}`}>
+                              <label htmlFor={`sco-${emp.id}`} className={`text-xs font-bold truncate cursor-pointer ${emp.isSCO ? 'text-purple-700' : 'text-slate-800'} ${emp.isMultifuncional ? 'text-amber-700' : ''}`} title={emp.nombre}>
                                 {emp.nombre}
                               </label>
                               <span className="text-[10px] text-slate-500 truncate">
@@ -319,33 +351,36 @@ export default function HorariosPro() {
                             </div>
                           </div>
                           
-                          {HORAS_MOSTRAR.map(h => {
-                            const isWorking = h >= emp.inicio && h < emp.fin
-                            const isBreak = emp.breakInicio && emp.breakFin && h >= emp.breakInicio && h < emp.breakFin
-                            
-                            let bg = ''
-                            if (isBreak) bg = 'bg-yellow-200 border-yellow-400 text-yellow-800'
-                            else if (emp.isSCO && isWorking) bg = 'bg-purple-400 border-purple-500 text-white'
-                            else if (emp.isMultifuncional && isWorking) bg = 'bg-amber-400 border-amber-500 text-amber-900'
-                            else if (isWorking) bg = 'bg-green-500 border-green-600 text-white'
-                            
-                            return (
-                              <div 
-                                key={h} 
-                                className="flex-1 border-r border-slate-100 p-1 cursor-pointer relative group"
-                                onClick={() => {
-                                  if (isWorking && emp.breakInicio !== undefined) moveBreak(idx, emp.id, h)
-                                }}
-                              >
-                                {isWorking && (
-                                  <div className={`w-full h-full min-h-[28px] rounded-sm border ${bg} shadow-sm flex items-center justify-center transition-all hover:opacity-80`}>
-                                    {isBreak && <span className="text-[10px] font-bold">BRK</span>}
-                                    {!isBreak && emp.isSCO && <span className="text-[9px] font-medium opacity-80">SCO</span>}
+                          {HORAS_ENTERAS.map(h => (
+                            <div key={h} className="flex-1 flex border-r border-slate-200 border-l-2 border-l-slate-300">
+                              {CUARTOS_DE_HORA.map(q => {
+                                const t = h + q
+                                const isWorking = t >= emp.inicio && t < emp.fin
+                                const isBreak = emp.breakInicio !== undefined && emp.breakFin !== undefined && t >= emp.breakInicio && t < emp.breakFin
+                                
+                                let bg = ''
+                                if (isBreak) bg = 'bg-yellow-300 border-yellow-400 z-10 shadow-sm'
+                                else if (emp.isSCO && isWorking) bg = 'bg-purple-400 border-purple-500'
+                                else if (emp.isMultifuncional && isWorking) bg = 'bg-amber-400 border-amber-500'
+                                else if (isWorking) bg = 'bg-green-500 border-green-600'
+                                
+                                return (
+                                  <div 
+                                    key={q} 
+                                    className="flex-1 border-r border-slate-100/50 p-[1px] cursor-pointer relative group last:border-r-0"
+                                    onClick={() => {
+                                      if (isWorking && emp.breakInicio !== undefined) moveBreak(idx, emp.id, t)
+                                    }}
+                                  >
+                                    {isWorking && (
+                                      <div className={`w-full h-full min-h-[20px] rounded-sm border-t border-b ${bg} ${q === 0 || t === emp.inicio ? 'border-l rounded-l-sm' : 'border-l-0 rounded-l-none'} ${q === 0.75 || t === emp.fin - 0.25 ? 'border-r rounded-r-sm' : 'border-r-0 rounded-r-none'} flex items-center justify-center transition-all hover:opacity-80`}>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            )
-                          })}
+                                )
+                              })}
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
