@@ -176,37 +176,65 @@ export default function HorariosPro() {
 
   const autoFillGaps = (diaIndex: number) => {
     const dia = reporte[diaIndex]
-    const progPorCuarto = calculateProgramado(dia.empleados)
-    
-    let faltantes = false
     const newReporte = [...reporte]
-    
-    // Simplificación: agrupar los cuartos de hora donde falta gente en bloques enteros
-    for (const h of HORAS_ENTERAS) {
-      const req = dia.requeridoPorHora[h] || 0
-      
-      let minProg = 999
-      for (const q of CUARTOS_DE_HORA) {
-        const actual = progPorCuarto[h + q] || 0
-        if (actual < minProg) minProg = actual
-      }
+    let faltantes = false
 
-      if (req > minProg) {
-        faltantes = true
-        newReporte[diaIndex].empleados.push({
-          id: `auto-${Date.now()}-${h}`,
-          nombre: 'Soporte Automático',
-          rol: 'Multifuncional',
-          inicio: h,
-          fin: h + 1,
-          isMultifuncional: true
-        })
+    // Iteramos por cada cuarto de hora del día
+    for (const h of HORAS_ENTERAS) {
+      for (const q of CUARTOS_DE_HORA) {
+        const t = h + q
+        const req = dia.requeridoPorHora[h] || 0
+        
+        let prog = calculateProgramado(newReporte[diaIndex].empleados)
+        
+        // Mientras falte gente en este cuarto de hora específico
+        while (prog[t] < req) {
+          faltantes = true
+          
+          // Creamos un nuevo turno empezando en 't'
+          let fin = t
+          
+          // Extendemos el turno hacia adelante mientras siga faltando gente
+          // Máximo 4.5 horas (18 cuartos de hora)
+          while (fin < 22 && (fin - t) < 4.5) {
+            const h_fin = Math.floor(fin)
+            const req_fin = dia.requeridoPorHora[h_fin] || 0
+            
+            // Verificamos si en este futuro cuarto de hora también falta gente
+            if (prog[fin] < req_fin) {
+              fin += 0.25
+            } else {
+              // Si ya no falta gente, pero el turno dura menos de 1 hora, 
+              // forzamos mínimo 1 hora (o hasta las 22:00)
+              if (fin - t < 1) {
+                fin += 0.25
+              } else {
+                break
+              }
+            }
+          }
+          
+          // Si por alguna razón no avanzó (ej. topó con las 22:00)
+          if (fin === t) fin += 0.25
+
+          newReporte[diaIndex].empleados.push({
+            id: `auto-${Date.now()}-${Math.random()}`,
+            nombre: 'Soporte Automático',
+            rol: 'Multifuncional',
+            inicio: t,
+            fin: fin,
+            isMultifuncional: true
+          })
+          
+          // Recalculamos la programación con este nuevo empleado antes de ver si aún falta gente en 't'
+          prog = calculateProgramado(newReporte[diaIndex].empleados)
+        }
       }
     }
     
     if (faltantes) {
       setReporte(newReporte)
-      toast.success('Se agregaron horas de multifuncionales automáticamente')
+      toast.success('Se agregaron horas de multifuncionales agrupadas (máx 4.5h)')
     } else {
       toast.info('No hay brechas que cubrir')
     }
