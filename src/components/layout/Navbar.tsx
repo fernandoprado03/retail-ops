@@ -69,6 +69,13 @@ export function Navbar() {
             </Link>
           </li>
 
+          <li className="md:w-full hidden md:block">
+            <Link href="/apoyo" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+              <Users className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/apoyo' ? 'md:text-white' : ''}`} />
+              <span className="text-[10px] font-medium md:text-sm md:font-semibold">Malla Apoyo</span>
+            </Link>
+          </li>
+
           {isAdmin && (
             <li className="md:w-full">
               <Link href="/admin/usuarios" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/admin/usuarios' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
