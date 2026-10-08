@@ -599,7 +599,7 @@ export default function HorariosPro() {
       // Construir cuerpo
       const body = dia.empleados.map(emp => {
         const rowData: any[] = []
-        rowData.push(' \n ')
+        rowData.push(`${emp.nombre}\n `)
         rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : ''), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
         
         HORAS_ENTERAS.forEach(h => {
@@ -672,10 +672,6 @@ export default function HorariosPro() {
               doc.setFontSize(7)
               doc.setFont("helvetica", "bold")
               doc.setTextColor(0, 0, 0)
-              
-              const textX = data.cell.x + 1
-              const textY = data.cell.y + 1.5
-              doc.text(emp.nombre, textX, textY, { align: 'left', baseline: 'top' })
               
               const timeText = `${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`
               const timeX = data.cell.x + data.cell.width - 1
