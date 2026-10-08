@@ -184,9 +184,11 @@ export default function ApoyoModule() {
                         <div key={b.id} className="flex border border-black/20">
                           {/* Columna Horario y Nombre */}
                           <div className={`flex flex-col flex-1 p-1 ${areaColor} border-r border-black/10 relative group`}>
-                            <button onClick={() => deleteBloque(diaIndex, b.id)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden group-hover:block shadow-md">
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                            {!String(b.id).startsWith('auto-') && (
+                              <button onClick={() => deleteBloque(diaIndex, b.id)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 hidden group-hover:block shadow-md">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
                             <div className="flex items-center text-[9px] mb-0.5 font-mono">
                               <input 
                                 type="text" 
