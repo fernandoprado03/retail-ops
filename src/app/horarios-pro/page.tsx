@@ -314,7 +314,11 @@ export default function HorariosPro() {
               let minDamage = 999
               const breakLength = prefOnBreak.breakFin! - prefOnBreak.breakInicio!
               
-              for (let start = prefOnBreak.inicio; start <= prefOnBreak.fin - breakLength; start += 0.25) {
+              const minBuffer = 1; // 1 hour minimum before and after break
+              const maxStart = prefOnBreak.fin - breakLength - minBuffer;
+              const minStart = prefOnBreak.inicio + minBuffer;
+              
+              for (let start = minStart; start <= maxStart; start += 0.25) {
                 let canMove = true
                 let shortageCaused = 0
                 
@@ -376,7 +380,11 @@ export default function HorariosPro() {
               let maxExcess = -999
               const breakLength = emp.breakFin! - emp.breakInicio!
               
-              for (let start = emp.inicio; start <= emp.fin - breakLength; start += 0.25) {
+              const minBuffer = 1;
+              const maxStart = emp.fin - breakLength - minBuffer;
+              const minStart = emp.inicio + minBuffer;
+              
+              for (let start = minStart; start <= maxStart; start += 0.25) {
                 let canMove = true
                 let minExcess = 999
                 
