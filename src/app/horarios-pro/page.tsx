@@ -562,7 +562,10 @@ export default function HorariosPro() {
       const dia = reporte[idx]
       
       // Construir cabeceras
-      const headRow1: any[] = [{ content: 'Personal / Horas', rowSpan: 2, styles: { halign: 'left', valign: 'middle', cellWidth: 35 } }]
+      const headRow1: any[] = [
+        { content: 'Personal', rowSpan: 2, styles: { halign: 'left', valign: 'middle', cellWidth: 35 } },
+        { content: 'Caja', rowSpan: 2, styles: { halign: 'center', valign: 'middle', cellWidth: 10 } }
+      ]
       const headRow2: any[] = []
       
       HORAS_ENTERAS.forEach(h => {
@@ -570,10 +573,36 @@ export default function HorariosPro() {
         headRow2.push('00', '15', '30', '45')
       })
       
+      const prog = calculateProgramado(dia.empleados)
+      
+      const headRow3: any[] = [{ content: 'Demanda (Cajas Lineal)', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [241, 245, 249], halign: 'right' } }]
+      HORAS_ENTERAS.forEach(h => {
+        const req = dia.requeridoPorHora[h] || 0
+        headRow3.push({ content: req.toString(), colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } })
+      })
+      
+      const headRow4: any[] = [{ content: 'Proyección vs Real', colSpan: 2, styles: { fontStyle: 'italic', fontSize: 4, fillColor: [248, 250, 252], halign: 'right' } }]
+      HORAS_ENTERAS.forEach(h => {
+        CUARTOS_DE_HORA.forEach(q => {
+          const t = h + q
+          const req = dia.requeridoPorHora[h] || 0
+          const actual = prog[t] || 0
+          const diff = actual - req
+          let text = diff === 0 ? 'OK' : (diff > 0 ? `+${diff}` : `${diff}`)
+          let color = diff === 0 ? [34, 197, 94] : (diff > 0 ? [59, 130, 246] : [239, 68, 68])
+          
+          headRow4.push({ 
+            content: text, 
+            styles: { halign: 'center', textColor: color, fontSize: 4, fontStyle: 'bold', fillColor: [248, 250, 252] } 
+          })
+        })
+      })
+
       // Construir cuerpo
       const body = dia.empleados.map(emp => {
         const rowData: any[] = []
-        rowData.push(`${emp.nombre}\nCaja: ${emp.caja || (emp.isSCO ? 'SCO' : 'Apoyo')}\n${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`)
+        rowData.push(`${emp.nombre}\n${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`)
+        rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : 'Apoyo'), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
         
         HORAS_ENTERAS.forEach(h => {
           CUARTOS_DE_HORA.forEach(q => {
@@ -600,7 +629,7 @@ export default function HorariosPro() {
 
       autoTable(pdf, {
         startY: 15,
-        head: [headRow1, headRow2],
+        head: [headRow1, headRow2, headRow3, headRow4],
         body: body,
         theme: 'grid',
         styles: {
@@ -616,7 +645,7 @@ export default function HorariosPro() {
           fontStyle: 'bold'
         },
         didParseCell: function (data: any) {
-          if (data.section === 'body' && data.column.index > 0) {
+          if (data.section === 'body' && data.column.index > 1) {
             const val = data.cell.raw
             data.cell.text = [''] // Ocultar texto
             if (val === 'B') data.cell.styles.fillColor = [253, 224, 71] // yellow-300
