@@ -563,7 +563,7 @@ export default function HorariosPro() {
       
       // Construir cabeceras
       const headRow1: any[] = [
-        { content: 'Personal', rowSpan: 1, styles: { halign: 'left', valign: 'middle', cellWidth: 35 } },
+        { content: 'Personal', rowSpan: 1, styles: { halign: 'left', valign: 'middle', cellWidth: 45 } },
         { content: 'Caja', rowSpan: 1, styles: { halign: 'center', valign: 'middle', cellWidth: 10 } }
       ]
       
@@ -599,7 +599,7 @@ export default function HorariosPro() {
       // Construir cuerpo
       const body = dia.empleados.map(emp => {
         const rowData: any[] = []
-        rowData.push(`${emp.nombre}\n${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`)
+        rowData.push(`${emp.nombre} (${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)})`)
         rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : ''), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
         
         HORAS_ENTERAS.forEach(h => {
@@ -622,13 +622,14 @@ export default function HorariosPro() {
         return rowData
       })
 
-      pdf.setFontSize(14)
-      pdf.text(`Programación de Cajas - ${fecha}`, 10, 10)
+      pdf.setFontSize(10)
+      pdf.text(`Programación de Cajas - ${fecha}`, 1, 3.5)
 
       const breakTextsToDraw: { text: string, x: number, y: number }[] = []
 
       autoTable(pdf, {
-        startY: 15,
+        startY: 5,
+        margin: { top: 2, bottom: 2, left: 1, right: 1 },
         head: [headRow1, headRow3, headRow4],
         body: body,
         theme: 'grid',
