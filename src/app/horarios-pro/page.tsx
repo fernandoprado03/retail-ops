@@ -20,6 +20,7 @@ interface TurnoEmpleado {
   isSCO?: boolean
   isMultifuncional?: boolean
   caja?: string
+  customRoles?: Record<number, 'SCO' | 'CAJA'>
 }
 
 interface ReporteDia {
@@ -233,6 +234,26 @@ export default function HorariosPro() {
       emp.breakInicio = newBreakStartFraction
       emp.breakFin = newBreakStartFraction + 1
     }
+    setReporte(newReporte)
+  }
+
+  const toggleCustomRole = (diaIndex: number, empId: string, t: number) => {
+    const newReporte = [...reporte]
+    const emp = newReporte[diaIndex].empleados.find(e => e.id === empId)
+    if (!emp) return
+    
+    if (!emp.customRoles) emp.customRoles = {}
+    
+    const defaultRole = emp.isSCO ? 'SCO' : 'CAJA'
+    const currentRole = emp.customRoles[t] || defaultRole
+    const newRole = currentRole === 'SCO' ? 'CAJA' : 'SCO'
+    
+    if (newRole === defaultRole) {
+      delete emp.customRoles[t]
+    } else {
+      emp.customRoles[t] = newRole
+    }
+    
     setReporte(newReporte)
   }
 
@@ -512,10 +533,12 @@ export default function HorariosPro() {
     })
     
     empleados.forEach(emp => {
-      if (emp.isSCO) return
-      
       for (let t = emp.inicio; t < emp.fin; t += 0.25) {
         if (emp.breakInicio !== undefined && emp.breakFin !== undefined && t >= emp.breakInicio && t < emp.breakFin) continue
+        
+        const currentRole = emp.customRoles?.[t] || (emp.isSCO ? 'SCO' : 'CAJA')
+        if (currentRole === 'SCO') continue // Morado no cuenta
+        
         if (prog[t] !== undefined) prog[t] += 1
       }
     })
@@ -689,10 +712,14 @@ export default function HorariosPro() {
                                 const isBreak = emp.breakInicio !== undefined && emp.breakFin !== undefined && t >= emp.breakInicio && t < emp.breakFin
                                 
                                 let bg = ''
-                                if (isBreak) bg = 'bg-yellow-300 border-yellow-400 z-10 shadow-sm'
-                                else if (emp.isSCO && isWorking) bg = 'bg-purple-400 border-purple-500'
-                                else if (emp.isMultifuncional && isWorking) bg = 'bg-amber-400 border-amber-500'
-                                else if (isWorking) bg = 'bg-green-500 border-green-600'
+                                if (isBreak) {
+                                  bg = 'bg-yellow-300 border-yellow-400 z-10 shadow-sm'
+                                } else if (isWorking) {
+                                  const currentRole = emp.customRoles?.[t] || (emp.isSCO ? 'SCO' : 'CAJA')
+                                  if (currentRole === 'SCO') bg = 'bg-purple-400 border-purple-500'
+                                  else if (emp.isMultifuncional) bg = 'bg-amber-400 border-amber-500'
+                                  else bg = 'bg-green-500 border-green-600'
+                                }
                                 
                                 return (
                                   <div 
@@ -701,9 +728,13 @@ export default function HorariosPro() {
                                     onClick={() => {
                                       if (isWorking && emp.breakInicio !== undefined) moveBreak(idx, emp.id, t)
                                     }}
+                                    onContextMenu={(e) => {
+                                      e.preventDefault()
+                                      if (isWorking && !isBreak) toggleCustomRole(idx, emp.id, t)
+                                    }}
                                   >
                                     {isWorking && (
-                                      <div className={`w-full h-full min-h-[24px] rounded-sm border-t border-b ${bg} ${q === 0 || t === emp.inicio ? 'border-l rounded-l-sm' : 'border-l-0 rounded-l-none'} ${q === 0.75 || t === emp.fin - 0.25 ? 'border-r rounded-r-sm' : 'border-r-0 rounded-r-none'} flex items-center justify-center transition-all hover:opacity-80`}>
+                                      <div title="Click izq: Mover break | Click der: Cambiar rol (Caja / SCO)" className={`w-full h-full min-h-[24px] rounded-sm border-t border-b ${bg} ${q === 0 || t === emp.inicio ? 'border-l rounded-l-sm' : 'border-l-0 rounded-l-none'} ${q === 0.75 || t === emp.fin - 0.25 ? 'border-r rounded-r-sm' : 'border-r-0 rounded-r-none'} flex items-center justify-center transition-all hover:opacity-80`}>
                                       </div>
                                     )}
                                   </div>
