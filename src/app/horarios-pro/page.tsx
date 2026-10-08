@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,8 +10,6 @@ import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { Input } from '@/components/ui/input'
 
 // ----- TIPOS -----
 interface TurnoEmpleado {
@@ -61,6 +59,27 @@ export default function HorariosPro() {
   const [mallaFile, setMallaFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [reporte, setReporte] = useState<ReporteDia[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const saved = localStorage.getItem('horarios_pro_reporte')
+    if (saved) {
+      try {
+        setReporte(JSON.parse(saved))
+      } catch (e) {}
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (reporte.length > 0) {
+      localStorage.setItem('horarios_pro_reporte', JSON.stringify(reporte))
+    } else {
+      localStorage.removeItem('horarios_pro_reporte')
+    }
+  }, [reporte, mounted])
+
 
   const processFiles = async () => {
     if (!demandaFile || !mallaFile) return
@@ -757,56 +776,7 @@ export default function HorariosPro() {
         </div>
       ) : (
         <div className="space-y-12 animate-in fade-in duration-500">
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={() => setReporte([])}>Volver a subir archivos</Button>
-            <Sheet>
-              <SheetTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200">
-                <Users className="w-4 h-4 mr-2" /> Asignar Soportes
-              </SheetTrigger>
-              <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
-                <SheetHeader>
-                  <SheetTitle>Asignación de Soportes Automáticos</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 space-y-6">
-                  {reporte.map((dia, diaIndex) => {
-                    const soportes = dia.empleados.filter(e => e.isMultifuncional && String(e.id).startsWith('auto-'))
-                    if (soportes.length === 0) return null
-                    
-                    return (
-                      <div key={dia.fecha} className="space-y-3">
-                        <h3 className="font-semibold text-slate-800 border-b pb-2">{dia.fecha}</h3>
-                        {soportes.map(sop => (
-                          <div key={sop.id} className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                            <div className="col-span-2 text-xs text-slate-500 font-medium mb-1">
-                              Horario: {formatTime(sop.inicio)} - {formatTime(sop.fin > 24 ? sop.fin - 24 : sop.fin)}
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Nombre</label>
-                              <Input 
-                                value={sop.nombre === 'Soporte Automático' ? '' : sop.nombre} 
-                                placeholder="Ej: Juan Perez" 
-                                onChange={(e) => updateEmpleado(diaIndex, sop.id, { nombre: e.target.value || 'Soporte Automático' })}
-                                className="h-8 text-sm bg-white"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Área</label>
-                              <Input 
-                                value={sop.area || ''} 
-                                placeholder="Ej: Textil" 
-                                onChange={(e) => updateEmpleado(diaIndex, sop.id, { area: e.target.value })}
-                                className="h-8 text-sm bg-white"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })}
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+          <Button variant="outline" onClick={() => setReporte([])}>Volver a subir archivos</Button>
           
           {reporte.map((dia, idx) => {
             const progPorCuarto = calculateProgramado(dia.empleados)
