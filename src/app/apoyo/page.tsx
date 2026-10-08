@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-type Area = 'FOOD' | 'NON FOOD' | 'NO PROCES' | 'ASISTENTE'
+type Area = 'PGC' | 'NON FOOD' | 'NO PROC' | 'ASISTENTE'
 
 interface TurnoEmpleado {
   id: string
@@ -24,10 +24,10 @@ interface ReporteDia {
 }
 
 const AREAS_COLORS: Record<string, string> = {
-  'FOOD': 'bg-[#8fce61] border-[#7ab352] text-green-900', 
-  'NON FOOD': 'bg-[#8eaadb] border-[#7992be] text-blue-900', 
-  'NO PROCES': 'bg-[#f4b084] border-[#d29771] text-orange-900', 
-  'ASISTENTE': 'bg-slate-100 border-slate-300 text-slate-800'
+  'PGC': 'bg-[#8eaadb] border-[#7992be] text-blue-900', 
+  'NON FOOD': 'bg-[#8fce61] border-[#7ab352] text-green-900', 
+  'NO PROC': 'bg-[#f4b084] border-[#d29771] text-orange-900', 
+  'ASISTENTE': 'bg-white border-slate-300 text-slate-800'
 }
 
 const formatHours = (hours: number) => {
@@ -50,9 +50,9 @@ export default function ApoyoModule() {
   const [reporte, setReporte] = useState<ReporteDia[]>([])
   const [mounted, setMounted] = useState(false)
   const [personasArea, setPersonasArea] = useState<Record<string, number>>({
-    'FOOD': 0,
+    'PGC': 0,
     'NON FOOD': 0,
-    'NO PROCES': 0,
+    'NO PROC': 0,
     'ASISTENTE': 0
   })
 
@@ -133,9 +133,9 @@ export default function ApoyoModule() {
 
   // Calculate totals
   const totalesArea: Record<string, number> = {
-    'FOOD': 0,
+    'PGC': 0,
     'NON FOOD': 0,
-    'NO PROCES': 0,
+    'NO PROC': 0,
     'ASISTENTE': 0
   }
   let totalSemana = 0
@@ -251,9 +251,9 @@ export default function ApoyoModule() {
                               className="text-[8px] font-semibold bg-white/30 border border-black/10 p-0 outline-none w-full mt-1 appearance-none rounded-none text-black cursor-pointer"
                             >
                               <option value="" disabled hidden></option>
-                              <option value="FOOD">FOOD</option>
+                              <option value="PGC">PGC</option>
                               <option value="NON FOOD">NON FOOD</option>
-                              <option value="NO PROCES">NO PROCES</option>
+                              <option value="NO PROC">NO PROC</option>
                               <option value="ASISTENTE">ASISTENTE</option>
                             </select>
                           </div>
@@ -280,9 +280,19 @@ export default function ApoyoModule() {
           <div className="bg-[#ffff00] px-2 py-1 border-b border-black/20">
             <h3 className="text-[12px] font-bold text-black tracking-wide">DISTRIBUCION DE HORAS</h3>
           </div>
+          <div className="flex h-6 bg-[#ffff00] border-b border-black/20">
+            <div className="w-[30px] border-r border-black/20" />
+            <div className="w-[80px] border-r border-black/20" />
+            <div className="w-[50px] border-r border-black/20 flex items-center justify-center text-[9px] font-bold text-black">
+              META
+            </div>
+            <div className="flex-1 flex items-center justify-center text-[9px] font-bold text-black">
+              AVANCE
+            </div>
+          </div>
           <CardContent className="p-0">
             <div className="divide-y divide-black/20">
-              {['FOOD', 'NON FOOD', 'NO PROCES', 'ASISTENTE'].map(area => {
+              {['PGC', 'NON FOOD', 'NO PROC', 'ASISTENTE'].map(area => {
                 const targetHoras = totalPersonas > 0 ? (totalSemana * ((Number(personasArea[area]) || 0) / totalPersonas)) : 0
                 return (
                   <div key={area} className="flex h-8">
@@ -298,11 +308,11 @@ export default function ApoyoModule() {
                     <div className={`w-[80px] px-2 py-1 text-[9px] font-bold flex items-center border-r border-black/20 ${AREAS_COLORS[area]}`}>
                       {area}
                     </div>
-                    <div className="w-[50px] px-2 py-1 text-[11px] font-bold flex items-center justify-end bg-white border-r border-black/20" title={`Asignado: ${totalesArea[area] || 0} hrs`}>
+                    <div className="w-[50px] px-2 py-1 text-[11px] font-bold flex items-center justify-center bg-white border-r border-black/20">
                       {targetHoras > 0 ? targetHoras.toFixed(1) : ''}
                     </div>
-                    <div className="flex-1 px-2 py-1 text-[9px] text-black bg-[#fce4d6] flex items-center leading-tight">
-                      Distribuir entre el total de colaboradores
+                    <div className="flex-1 px-2 py-1 text-[11px] font-bold text-black bg-white flex items-center justify-center">
+                      {(totalesArea[area] && totalesArea[area] > 0) ? totalesArea[area].toFixed(1) : ''}
                     </div>
                   </div>
                 )
