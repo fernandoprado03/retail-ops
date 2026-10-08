@@ -10,7 +10,7 @@ import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
-
+import { supabase } from '@/lib/supabase'
 // ----- TIPOS -----
 interface TurnoEmpleado {
   id: string
@@ -60,9 +60,20 @@ export default function HorariosPro() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [reporte, setReporte] = useState<ReporteDia[]>([])
   const [mounted, setMounted] = useState(false)
+  
+  const [semanasGuardadas, setSemanasGuardadas] = useState<{id: string, nombre_semana: string}[]>([])
+  const [semanaCargando, setSemanaCargando] = useState(false)
+
+  const cargarSemanas = async () => {
+    try {
+      const { data } = await supabase.from('semanas_planificadas').select('id, nombre_semana').order('created_at', { ascending: false })
+      if (data) setSemanasGuardadas(data)
+    } catch(e) {}
+  }
 
   useEffect(() => {
     setMounted(true)
+    cargarSemanas()
     const saved = localStorage.getItem('horarios_pro_reporte')
     if (saved) {
       try {
@@ -744,16 +755,84 @@ export default function HorariosPro() {
     } catch (err) {
       console.error('Error generating PDF table:', err)
       toast.error("Hubo un error al generar la tabla PDF")
-    } finally {
       setIsExporting(null)
+    }
+  }
+
+  const guardarSemana = async () => {
+    const nombre = prompt('¿Qué nombre le quieres dar a esta semana? (Ej: Semana 42)')
+    if (!nombre) return
+    setSemanaCargando(true)
+    try {
+      const personasStr = localStorage.getItem('apoyo_personas_area')
+      let personasObj = {}
+      if (personasStr) {
+        try { personasObj = JSON.parse(personasStr) } catch(e){}
+      }
+      const { error } = await supabase.from('semanas_planificadas').insert({
+        nombre_semana: nombre,
+        data_reporte: reporte,
+        data_personas: personasObj
+      })
+      if (error) throw error
+      toast.success('Semana guardada con éxito')
+      cargarSemanas()
+    } catch (e: any) {
+      toast.error('Error al guardar semana: ' + e.message)
+    } finally {
+      setSemanaCargando(false)
+    }
+  }
+
+  const cargarSemana = async (id: string) => {
+    if (!id) return
+    if (!confirm('¿Estás seguro? Si no has guardado tu avance actual, se perderá.')) return
+    setSemanaCargando(true)
+    try {
+      const { data, error } = await supabase.from('semanas_planificadas').select('*').eq('id', id).single()
+      if (error) throw error
+      if (data) {
+        setReporte(data.data_reporte)
+        if (data.data_personas) {
+          localStorage.setItem('apoyo_personas_area', JSON.stringify(data.data_personas))
+        }
+        toast.success('Semana cargada exitosamente')
+      }
+    } catch (e: any) {
+      toast.error('Error al cargar semana')
+    } finally {
+      setSemanaCargando(false)
     }
   }
 
   return (
     <div className="pb-12 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro (15 Min)</h1>
-        <p className="text-sm text-slate-500">Diseño ajustado a bloques de 15 minutos exactos según el archivo original.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro (15 Min)</h1>
+          <p className="text-sm text-slate-500">Diseño ajustado a bloques de 15 minutos exactos según el archivo original.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select 
+            className="text-sm border border-slate-300 rounded-md px-3 py-2 h-10 bg-white min-w-[200px]"
+            onChange={(e) => {
+              if (e.target.value) cargarSemana(e.target.value)
+              e.target.value = ''
+            }}
+            value=""
+            disabled={semanaCargando}
+          >
+            <option value="">Cargar guardado...</option>
+            {semanasGuardadas.map(s => (
+              <option key={s.id} value={s.id}>{s.nombre_semana}</option>
+            ))}
+          </select>
+          {reporte.length > 0 && (
+            <Button onClick={guardarSemana} disabled={semanaCargando} variant="outline" className="border-slate-300 h-10 bg-white">
+              {semanaCargando ? 'Guardando...' : 'Guardar Actual'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {reporte.length === 0 ? (
