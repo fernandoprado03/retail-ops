@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download } from 'lucide-react'
+import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { jsPDF } from 'jspdf'
@@ -10,6 +10,8 @@ import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Input } from '@/components/ui/input'
 
 // ----- TIPOS -----
 interface TurnoEmpleado {
@@ -24,6 +26,7 @@ interface TurnoEmpleado {
   isMultifuncional?: boolean
   caja?: string
   customRoles?: Record<number, 'SCO' | 'CAJA'>
+  area?: string
 }
 
 interface ReporteDia {
@@ -599,7 +602,8 @@ export default function HorariosPro() {
       // Construir cuerpo
       const body = dia.empleados.map(emp => {
         const rowData: any[] = []
-        rowData.push(`${emp.nombre}\n `)
+        const displayName = emp.area ? `${emp.nombre} (${emp.area})` : emp.nombre
+        rowData.push(`${displayName}\n `)
         rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : ''), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
         
         HORAS_ENTERAS.forEach(h => {
@@ -753,7 +757,56 @@ export default function HorariosPro() {
         </div>
       ) : (
         <div className="space-y-12 animate-in fade-in duration-500">
-          <Button variant="outline" onClick={() => setReporte([])}>Volver a subir archivos</Button>
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={() => setReporte([])}>Volver a subir archivos</Button>
+            <Sheet>
+              <SheetTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-950 disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200">
+                <Users className="w-4 h-4 mr-2" /> Asignar Soportes
+              </SheetTrigger>
+              <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Asignación de Soportes Automáticos</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-6">
+                  {reporte.map((dia, diaIndex) => {
+                    const soportes = dia.empleados.filter(e => e.isMultifuncional && String(e.id).startsWith('auto-'))
+                    if (soportes.length === 0) return null
+                    
+                    return (
+                      <div key={dia.fecha} className="space-y-3">
+                        <h3 className="font-semibold text-slate-800 border-b pb-2">{dia.fecha}</h3>
+                        {soportes.map(sop => (
+                          <div key={sop.id} className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="col-span-2 text-xs text-slate-500 font-medium mb-1">
+                              Horario: {formatTime(sop.inicio)} - {formatTime(sop.fin > 24 ? sop.fin - 24 : sop.fin)}
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Nombre</label>
+                              <Input 
+                                value={sop.nombre === 'Soporte Automático' ? '' : sop.nombre} 
+                                placeholder="Ej: Juan Perez" 
+                                onChange={(e) => updateEmpleado(diaIndex, sop.id, { nombre: e.target.value || 'Soporte Automático' })}
+                                className="h-8 text-sm bg-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Área</label>
+                              <Input 
+                                value={sop.area || ''} 
+                                placeholder="Ej: Textil" 
+                                onChange={(e) => updateEmpleado(diaIndex, sop.id, { area: e.target.value })}
+                                className="h-8 text-sm bg-white"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
           
           {reporte.map((dia, idx) => {
             const progPorCuarto = calculateProgramado(dia.empleados)
@@ -851,8 +904,9 @@ export default function HorariosPro() {
                                     title={emp.nombre}
                                     onChange={(e) => updateEmpleado(idx, emp.id, { nombre: e.target.value })}
                                   />
-                                  <span className="text-[10px] text-slate-500 truncate">
+                                  <span className="text-[10px] text-slate-500 truncate flex items-center gap-1">
                                     {emp.isSCO ? 'Autoservicio (SCO)' : emp.rol}
+                                    {emp.area && <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-medium">{emp.area}</span>}
                                   </span>
                                 </div>
                               </div>
