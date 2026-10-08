@@ -341,7 +341,7 @@ export default function HorariosPro() {
       for (const h of HORAS_ENTERAS) {
         for (const q of CUARTOS_DE_HORA) {
           const t = h + q
-          if (t >= 22.75) continue
+          if (t >= 22.5) continue
           
           const isPrefGap = !newReporte[diaIndex].empleados.some(e => 
             (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
@@ -489,8 +489,8 @@ export default function HorariosPro() {
     for (const h of HORAS_ENTERAS) {
       for (const q of CUARTOS_DE_HORA) {
         const t = h + q
-        // El usuario solicitó no llenar demanda a las 22:45 (22.75)
-        const req = t >= 22.75 ? 0 : (dia.requeridoPorHora[h] || 0)
+        // El usuario solicitó no llenar demanda a las 22:45 (22.5)
+        const req = t >= 22.5 ? 0 : (dia.requeridoPorHora[h] || 0)
         
         prog = calculateProgramado(newReporte[diaIndex].empleados)
         
@@ -500,9 +500,9 @@ export default function HorariosPro() {
           let inicio = t
           let fin = t
           
-          while (fin < 22.75 && (fin - inicio) < 4.5) {
+          while (fin < 22.5 && (fin - inicio) < 4.5) {
             const h_fin = Math.floor(fin)
-            const req_fin = fin >= 22.75 ? 0 : (dia.requeridoPorHora[h_fin] || 0)
+            const req_fin = fin >= 22.5 ? 0 : (dia.requeridoPorHora[h_fin] || 0)
             
             if (prog[fin] < req_fin) {
               fin += 0.25
@@ -519,9 +519,9 @@ export default function HorariosPro() {
             fin = inicio + 1.5
           }
 
-          if (fin > 22.75) {
-            fin = 22.75
-            inicio = Math.max(8, 22.75 - 1.5)
+          if (fin > 22.5) {
+            fin = 22.5
+            inicio = Math.max(8, 22.5 - 1.5)
           }
 
           newReporte[diaIndex].empleados.push({
@@ -605,7 +605,7 @@ export default function HorariosPro() {
       HORAS_ENTERAS.forEach(h => {
         CUARTOS_DE_HORA.forEach(q => {
           const t = h + q
-          const req = (t === 22.75) ? 0 : (dia.requeridoPorHora[h] || 0)
+          const req = (t >= 22.5) ? 0 : (dia.requeridoPorHora[h] || 0)
           const actual = prog[t] || 0
           const diff = actual - req
           let text = diff === 0 ? ' ' : (diff > 0 ? `+${diff}` : `${diff}`)
@@ -825,13 +825,13 @@ export default function HorariosPro() {
                           <div key={h} className="flex-1 flex border-r border-slate-200 border-l-2 border-l-slate-300">
                             {CUARTOS_DE_HORA.map(q => {
                               const t = h + q
-                              const req = t >= 22.75 ? 0 : (dia.requeridoPorHora[h] || 0)
+                              const req = t >= 22.5 ? 0 : (dia.requeridoPorHora[h] || 0)
                               const actual = progPorCuarto[t] || 0
                               const falta = req - actual
                               
                               return (
                                 <div key={q} className="flex-1 border-r border-slate-200/50 flex flex-col items-center justify-start py-1 bg-white/50 last:border-r-0">
-                                  <div className={`text-[11px] font-bold ${t >= 22.75 ? 'text-slate-400' : 'text-slate-800'}`}>{req}</div>
+                                  <div className={`text-[11px] font-bold ${t >= 22.5 ? 'text-slate-400' : 'text-slate-800'}`}>{req}</div>
                                   {falta > 0 && (
                                     <div className="mt-1 w-full bg-red-100 text-red-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Faltan ${falta}`}>
                                       -{falta}
