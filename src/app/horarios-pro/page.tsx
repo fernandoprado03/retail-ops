@@ -579,7 +579,7 @@ export default function HorariosPro() {
         headRow3.push({ content: req.toString(), colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } })
       })
       
-      const headRow4: any[] = [{ content: 'Proyección vs Real', colSpan: 2, styles: { fontStyle: 'italic', fontSize: 4, fillColor: [248, 250, 252], halign: 'right' } }]
+      const headRow4: any[] = [{ content: 'Proyección vs Real', colSpan: 2, styles: { fontStyle: 'italic', fontSize: 6, fillColor: [248, 250, 252], halign: 'right' } }]
       HORAS_ENTERAS.forEach(h => {
         CUARTOS_DE_HORA.forEach(q => {
           const t = h + q
@@ -591,7 +591,7 @@ export default function HorariosPro() {
           
           headRow4.push({ 
             content: text, 
-            styles: { halign: 'center', textColor: color, fontSize: 4, fontStyle: 'bold', fillColor: [248, 250, 252] } 
+            styles: { halign: 'center', textColor: color, fontSize: 6, fontStyle: 'bold', fillColor: [248, 250, 252] } 
           })
         })
       })
