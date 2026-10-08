@@ -49,6 +49,12 @@ const timeToFraction = (timeStr: string): number => {
 export default function ApoyoModule() {
   const [reporte, setReporte] = useState<ReporteDia[]>([])
   const [mounted, setMounted] = useState(false)
+  const [personasArea, setPersonasArea] = useState<Record<string, number>>({
+    'FOOD': 0,
+    'NON FOOD': 0,
+    'NO PROCES': 0,
+    'ASISTENTE': 0
+  })
 
   // load from local storage
   useEffect(() => {
@@ -59,6 +65,12 @@ export default function ApoyoModule() {
         setReporte(JSON.parse(saved))
       } catch (e) {}
     }
+    const savedPersonas = localStorage.getItem('apoyo_personas_area')
+    if (savedPersonas) {
+      try {
+        setPersonasArea(JSON.parse(savedPersonas))
+      } catch (e) {}
+    }
   }, [])
 
   // save to local storage
@@ -66,7 +78,10 @@ export default function ApoyoModule() {
     if (mounted && reporte.length > 0) {
       localStorage.setItem('horarios_pro_reporte', JSON.stringify(reporte))
     }
-  }, [reporte, mounted])
+    if (mounted) {
+      localStorage.setItem('apoyo_personas_area', JSON.stringify(personasArea))
+    }
+  }, [reporte, personasArea, mounted])
 
   const updateEmpleado = (diaIndex: number, empId: string, updates: Partial<TurnoEmpleado>) => {
     const newReporte = [...reporte]
@@ -86,7 +101,7 @@ export default function ApoyoModule() {
       inicio: 9,
       fin: 13,
       isMultifuncional: true,
-      area: 'FOOD'
+      area: ''
     })
     setReporte(newReporte)
   }
@@ -130,14 +145,18 @@ export default function ApoyoModule() {
       if (b.isMultifuncional) {
         let duration = b.fin - b.inicio
         if (duration < 0) duration += 24
-        if (!isNaN(duration) && b.area) {
-          if (!totalesArea[b.area]) totalesArea[b.area] = 0
-          totalesArea[b.area] += duration
+        if (!isNaN(duration)) {
           totalSemana += duration
+          if (b.area) {
+            if (!totalesArea[b.area]) totalesArea[b.area] = 0
+            totalesArea[b.area] += duration
+          }
         }
       }
     })
   })
+
+  const totalPersonas = Object.values(personasArea).reduce((a, b) => a + (Number(b) || 0), 0)
 
   return (
     <div className="pb-12 space-y-6 animate-in fade-in">
@@ -227,10 +246,11 @@ export default function ApoyoModule() {
                               className="w-full text-[11px] font-bold uppercase bg-transparent border-none p-0 outline-none placeholder:text-black/30"
                             />
                             <select 
-                              value={b.area || 'FOOD'}
+                              value={b.area || ''}
                               onChange={e => updateEmpleado(diaIndex, b.id, { area: e.target.value })}
                               className="text-[8px] font-semibold bg-white/30 border border-black/10 p-0 outline-none w-full mt-1 appearance-none rounded-none text-black cursor-pointer"
                             >
+                              <option value="" disabled hidden></option>
                               <option value="FOOD">FOOD</option>
                               <option value="NON FOOD">NON FOOD</option>
                               <option value="NO PROCES">NO PROCES</option>
@@ -263,16 +283,25 @@ export default function ApoyoModule() {
           <CardContent className="p-0">
             <div className="divide-y divide-black/20">
               {['FOOD', 'NON FOOD', 'NO PROCES', 'ASISTENTE'].map(area => {
-                const horas = totalesArea[area] || 0
+                const targetHoras = totalPersonas > 0 ? (totalSemana * ((Number(personasArea[area]) || 0) / totalPersonas)) : 0
                 return (
                   <div key={area} className="flex h-8">
-                    <div className={`w-[90px] px-2 py-1 text-[10px] font-bold flex items-center border-r border-black/20 ${AREAS_COLORS[area]}`}>
+                    <div className="w-[30px] border-r border-black/20 bg-white">
+                      <input 
+                        type="number" 
+                        value={personasArea[area] || ''} 
+                        onChange={e => setPersonasArea({ ...personasArea, [area]: parseInt(e.target.value) || 0 })}
+                        className="w-full h-full text-[10px] font-bold text-center outline-none bg-transparent"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className={`w-[80px] px-2 py-1 text-[9px] font-bold flex items-center border-r border-black/20 ${AREAS_COLORS[area]}`}>
                       {area}
                     </div>
-                    <div className="w-[60px] px-2 py-1 text-[11px] font-bold flex items-center justify-end bg-white border-r border-black/20">
-                      {horas > 0 ? horas : ''}
+                    <div className="w-[50px] px-2 py-1 text-[11px] font-bold flex items-center justify-end bg-white border-r border-black/20" title={`Asignado: ${totalesArea[area] || 0} hrs`}>
+                      {targetHoras > 0 ? targetHoras.toFixed(1) : ''}
                     </div>
-                    <div className="flex-1 px-2 py-1 text-[10px] text-black bg-[#fce4d6] flex items-center">
+                    <div className="flex-1 px-2 py-1 text-[9px] text-black bg-[#fce4d6] flex items-center leading-tight">
                       Distribuir entre el total de colaboradores
                     </div>
                   </div>
