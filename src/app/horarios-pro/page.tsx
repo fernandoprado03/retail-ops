@@ -63,6 +63,7 @@ export default function HorariosPro() {
   
   const [semanasGuardadas, setSemanasGuardadas] = useState<{id: string, nombre_semana: string}[]>([])
   const [semanaCargando, setSemanaCargando] = useState(false)
+  const [currentSemanaId, setCurrentSemanaId] = useState<string | null>(null)
 
   const cargarSemanas = async () => {
     try {
@@ -80,6 +81,10 @@ export default function HorariosPro() {
         setReporte(JSON.parse(saved))
       } catch (e) {}
     }
+    const savedId = localStorage.getItem('horarios_pro_current_semana_id')
+    if (savedId) {
+      setCurrentSemanaId(savedId)
+    }
   }, [])
 
   useEffect(() => {
@@ -89,12 +94,18 @@ export default function HorariosPro() {
     } else {
       localStorage.removeItem('horarios_pro_reporte')
     }
-  }, [reporte, mounted])
+    if (currentSemanaId) {
+      localStorage.setItem('horarios_pro_current_semana_id', currentSemanaId)
+    } else {
+      localStorage.removeItem('horarios_pro_current_semana_id')
+    }
+  }, [reporte, currentSemanaId, mounted])
 
 
   const processFiles = async () => {
     if (!demandaFile || !mallaFile) return
     setIsProcessing(true)
+    setCurrentSemanaId(null)
     
     try {
       const demandaBuffer = await demandaFile.arrayBuffer()
@@ -760,8 +771,12 @@ export default function HorariosPro() {
   }
 
   const guardarSemana = async () => {
-    const nombre = prompt('¿Qué nombre le quieres dar a esta semana? (Ej: Semana 42)')
-    if (!nombre) return
+    let nombre = ''
+    if (!currentSemanaId) {
+      const resp = prompt('¿Qué nombre le quieres dar a esta semana nueva? (Ej: Semana 42)')
+      if (!resp) return
+      nombre = resp
+    }
     setSemanaCargando(true)
     try {
       const personasStr = localStorage.getItem('apoyo_personas_area')
@@ -769,13 +784,25 @@ export default function HorariosPro() {
       if (personasStr) {
         try { personasObj = JSON.parse(personasStr) } catch(e){}
       }
-      const { error } = await supabase.from('semanas_planificadas').insert({
-        nombre_semana: nombre,
-        data_reporte: reporte,
-        data_personas: personasObj
-      })
-      if (error) throw error
-      toast.success('Semana guardada con éxito')
+      
+      if (currentSemanaId) {
+        const { error } = await supabase.from('semanas_planificadas').update({
+          data_reporte: reporte,
+          data_personas: personasObj,
+          updated_at: new Date().toISOString()
+        }).eq('id', currentSemanaId)
+        if (error) throw error
+        toast.success('Semana sobreescrita y guardada con éxito')
+      } else {
+        const { data, error } = await supabase.from('semanas_planificadas').insert({
+          nombre_semana: nombre,
+          data_reporte: reporte,
+          data_personas: personasObj
+        }).select().single()
+        if (error) throw error
+        if (data) setCurrentSemanaId(data.id)
+        toast.success('Nueva semana guardada con éxito')
+      }
       cargarSemanas()
     } catch (e: any) {
       toast.error('Error al guardar semana: ' + e.message)
@@ -793,6 +820,7 @@ export default function HorariosPro() {
       if (error) throw error
       if (data) {
         setReporte(data.data_reporte)
+        setCurrentSemanaId(data.id)
         if (data.data_personas) {
           localStorage.setItem('apoyo_personas_area', JSON.stringify(data.data_personas))
         }
@@ -829,7 +857,7 @@ export default function HorariosPro() {
           </select>
           {reporte.length > 0 && (
             <Button onClick={guardarSemana} disabled={semanaCargando} variant="outline" className="border-slate-300 h-10 bg-white">
-              {semanaCargando ? 'Guardando...' : 'Guardar Actual'}
+              {semanaCargando ? 'Guardando...' : (currentSemanaId ? 'Guardar Cambios' : 'Guardar Nueva Semana')}
             </Button>
           )}
         </div>
