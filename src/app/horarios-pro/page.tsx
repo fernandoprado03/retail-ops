@@ -651,6 +651,27 @@ export default function HorariosPro() {
             else if (val === 'M') data.cell.styles.fillColor = [251, 191, 36] // amber-400
             else if (val === 'R') data.cell.styles.fillColor = [34, 197, 94] // green-500
           }
+        },
+        didDrawCell: function (data: any) {
+          if (data.section === 'body' && data.column.index > 1) {
+            if (data.cell.raw === 'B') {
+              const prevCell = data.row.cells[data.column.index - 1]
+              if (!prevCell || prevCell.raw !== 'B') {
+                const emp = dia.empleados[data.row.index]
+                if (emp && emp.breakInicio !== undefined && emp.breakFin !== undefined) {
+                  const numCells = (emp.breakFin - emp.breakInicio) * 4
+                  const doc = data.doc
+                  doc.setFontSize(4.5)
+                  doc.setTextColor(0, 0, 0)
+                  const breakText = `${formatTime(emp.breakInicio)} - ${formatTime(emp.breakFin > 24 ? emp.breakFin - 24 : emp.breakFin)}`
+                  const totalWidth = data.cell.width * numCells
+                  const startX = data.cell.x + totalWidth / 2
+                  const startY = data.cell.y + data.cell.height / 2
+                  doc.text(breakText, startX, startY, { align: 'center', baseline: 'middle' })
+                }
+              }
+            }
+          }
         }
       })
       
