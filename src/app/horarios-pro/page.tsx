@@ -586,7 +586,7 @@ export default function HorariosPro() {
           const req = (t === 22.75) ? 0 : (dia.requeridoPorHora[h] || 0)
           const actual = prog[t] || 0
           const diff = actual - req
-          let text = diff === 0 ? 'OK' : (diff > 0 ? `+${diff}` : `${diff}`)
+          let text = diff === 0 ? ' ' : (diff > 0 ? `+${diff}` : `${diff}`)
           let color = diff === 0 ? [34, 197, 94] : (diff > 0 ? [59, 130, 246] : [239, 68, 68])
           
           headRow4.push({ 
@@ -665,6 +665,17 @@ export default function HorariosPro() {
           }
         },
         didDrawCell: function (data: any) {
+          if (data.section === 'head' && data.row.index === 2 && data.column.index > 1) {
+            if (data.cell.raw === ' ') {
+              const doc = data.doc;
+              doc.setDrawColor(34, 197, 94); // Verde para el check
+              doc.setLineWidth(0.4);
+              const cx = data.cell.x + data.cell.width / 2;
+              const cy = data.cell.y + data.cell.height / 2;
+              doc.line(cx - 0.8, cy + 0.2, cx - 0.2, cy + 1);
+              doc.line(cx - 0.2, cy + 1, cx + 1, cy - 0.8);
+            }
+          }
           if (data.section === 'body' && data.column.index === 0) {
             const emp = dia.empleados[data.row.index]
             if (emp) {
