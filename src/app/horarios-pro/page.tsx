@@ -300,13 +300,13 @@ export default function HorariosPro() {
           const isPrefGap = !newReporte[diaIndex].empleados.some(e => 
             (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
             t >= e.inicio && t < e.fin &&
-            !(e.breakInicio !== undefined && t >= e.breakInicio && t < e.breakFin)
+            !(e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin)
           )
 
           if (isPrefGap) {
             const prefOnBreak = newReporte[diaIndex].empleados.find(e => 
               (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
-              e.breakInicio !== undefined && t >= e.breakInicio && t < e.breakFin
+              e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin
             )
 
             if (prefOnBreak) {
@@ -323,7 +323,7 @@ export default function HorariosPro() {
                     other.id !== prefOnBreak.id && 
                     (other.caja?.trim() === '13' || other.caja?.trim() === '12') &&
                     bt >= other.inicio && bt < other.fin &&
-                    !(other.breakInicio !== undefined && bt >= other.breakInicio && bt < other.breakFin)
+                    !(other.breakInicio !== undefined && other.breakFin !== undefined && bt >= other.breakInicio && bt < other.breakFin)
                   )
                   if (!otherPrefIsOpen) {
                     canMove = false
@@ -387,7 +387,7 @@ export default function HorariosPro() {
                       other.id !== emp.id && 
                       (other.caja?.trim() === '13' || other.caja?.trim() === '12') &&
                       bt >= other.inicio && bt < other.fin &&
-                      !(other.breakInicio !== undefined && bt >= other.breakInicio && bt < other.breakFin)
+                      !(other.breakInicio !== undefined && other.breakFin !== undefined && bt >= other.breakInicio && bt < other.breakFin)
                     )
                     if (!otherPrefIsOpen) {
                       canMove = false
