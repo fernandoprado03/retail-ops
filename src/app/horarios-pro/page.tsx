@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser } from 'lucide-react'
+import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -545,6 +547,40 @@ export default function HorariosPro() {
     return prog
   }
 
+  const [isExporting, setIsExporting] = useState<number | null>(null)
+
+  const exportToPDF = async (idx: number, fecha: string) => {
+    setIsExporting(idx)
+    const element = document.getElementById(`reporte-card-${idx}`)
+    if (!element) {
+      setIsExporting(null)
+      return
+    }
+
+    try {
+      const canvas = await html2canvas(element, { scale: 2 })
+      const imgData = canvas.toDataURL('image/png')
+      
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      })
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      pdf.save(`Programacion_Cajas_${fecha.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
+      toast.success("PDF exportado con éxito")
+    } catch (err) {
+      console.error('Error generating PDF:', err)
+      toast.error("Hubo un error al generar el PDF")
+    } finally {
+      setIsExporting(null)
+    }
+  }
+
   return (
     <div className="pb-12 space-y-6">
       <div>
@@ -578,10 +614,13 @@ export default function HorariosPro() {
             const progPorCuarto = calculateProgramado(dia.empleados)
             
             return (
-              <Card key={idx} className="overflow-hidden shadow-sm border-slate-200">
+              <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-sm border-slate-200">
                 <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                   <h3 className="font-bold">{dia.fecha}</h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" data-html2canvas-ignore="true">
+                    <Button variant="outline" size="sm" onClick={() => exportToPDF(idx, dia.fecha)} disabled={isExporting === idx} className="h-8 text-xs bg-white text-slate-900 border-none hover:bg-slate-200">
+                      <Download className="w-4 h-4 mr-1" /> {isExporting === idx ? "Exportando..." : "Exportar PDF"}
+                    </Button>
                     <Button variant="destructive" size="sm" onClick={() => clearMultifuncionales(idx)} className="h-8 text-xs border-none" title="Limpiar todos los apoyos agregados">
                       <Eraser className="w-4 h-4 mr-1" /> Limpiar
                     </Button>
