@@ -599,7 +599,7 @@ export default function HorariosPro() {
       // Construir cuerpo
       const body = dia.empleados.map(emp => {
         const rowData: any[] = []
-        rowData.push(`${emp.nombre}\n${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`)
+        rowData.push(' \n ')
         rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : ''), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
         
         HORAS_ENTERAS.forEach(h => {
@@ -665,6 +665,24 @@ export default function HorariosPro() {
           }
         },
         didDrawCell: function (data: any) {
+          if (data.section === 'body' && data.column.index === 0) {
+            const emp = dia.empleados[data.row.index]
+            if (emp) {
+              const doc = data.doc
+              doc.setFontSize(7)
+              doc.setFont("helvetica", "bold")
+              doc.setTextColor(0, 0, 0)
+              
+              const textX = data.cell.x + 1
+              const textY = data.cell.y + 1.5
+              doc.text(emp.nombre, textX, textY, { align: 'left', baseline: 'top' })
+              
+              const timeText = `${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`
+              const timeX = data.cell.x + data.cell.width - 1
+              const timeY = data.cell.y + data.cell.height - 1.5
+              doc.text(timeText, timeX, timeY, { align: 'right', baseline: 'bottom' })
+            }
+          }
           if (data.section === 'body' && data.column.index > 1) {
             if (data.cell.raw === 'B') {
               const prevCell = data.row.cells[data.column.index - 1]
