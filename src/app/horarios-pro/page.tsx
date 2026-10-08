@@ -645,9 +645,14 @@ export default function HorariosPro() {
           fontStyle: 'bold'
         },
         didParseCell: function (data: any) {
-          if (data.section === 'body' && data.column.index === 0) {
-            data.cell.styles.fontSize = 7
-            data.cell.styles.fontStyle = 'bold'
+          if (data.section === 'body') {
+            if (data.column.index === 0) {
+              data.cell.styles.fontSize = 7
+              data.cell.styles.fontStyle = 'bold'
+            } else if (data.column.index === 1) {
+              data.cell.styles.fontSize = 8
+              data.cell.styles.fontStyle = 'bold'
+            }
           }
           if (data.section === 'body' && data.column.index > 1) {
             const val = data.cell.raw
@@ -678,7 +683,7 @@ export default function HorariosPro() {
         }
       })
       
-      pdf.setFontSize(4.5)
+      pdf.setFontSize(6.5)
       pdf.setFont("helvetica", "bold")
       pdf.setTextColor(0, 0, 0)
       breakTextsToDraw.forEach(item => {
