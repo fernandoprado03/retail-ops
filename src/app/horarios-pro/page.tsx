@@ -5,6 +5,7 @@ import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Down
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -549,46 +550,88 @@ export default function HorariosPro() {
 
   const [isExporting, setIsExporting] = useState<number | null>(null)
 
-  const exportToPDF = async (idx: number, fecha: string) => {
+  const exportToPDF = (idx: number, fecha: string) => {
     setIsExporting(idx)
-    const element = document.getElementById(`reporte-card-${idx}`)
-    if (!element) {
-      setIsExporting(null)
-      return
-    }
-
     try {
-      const imgData = await htmlToImage.toPng(element, { 
-        quality: 1, 
-        pixelRatio: 2, 
-        backgroundColor: '#ffffff',
-        filter: (node) => {
-          if (node instanceof HTMLElement && node.dataset && node.dataset.html2canvasIgnore === 'true') {
-            return false;
-          }
-          return true;
-        }
-      })
-      
-      const img = new Image()
-      img.src = imgData
-      await new Promise((resolve) => { img.onload = resolve })
-
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       })
       
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (img.height * pdfWidth) / img.width
+      const dia = reporte[idx]
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+      // Construir cabeceras
+      const headRow1: any[] = [{ content: 'Personal / Horas', rowSpan: 2, styles: { halign: 'left', valign: 'middle', cellWidth: 35 } }]
+      const headRow2: any[] = []
+      
+      HORAS_ENTERAS.forEach(h => {
+        headRow1.push({ content: `${h}:00`, colSpan: 4, styles: { halign: 'center', fillColor: [241, 245, 249], textColor: [15, 23, 42] } })
+        headRow2.push('00', '15', '30', '45')
+      })
+      
+      // Construir cuerpo
+      const body = dia.empleados.map(emp => {
+        const rowData: any[] = []
+        rowData.push(`${emp.nombre}\nCaja: ${emp.caja || (emp.isSCO ? 'SCO' : 'Apoyo')}\n${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`)
+        
+        HORAS_ENTERAS.forEach(h => {
+          CUARTOS_DE_HORA.forEach(q => {
+            const t = h + q
+            const isWorking = t >= emp.inicio && t < emp.fin
+            const isBreak = emp.breakInicio !== undefined && emp.breakFin !== undefined && t >= emp.breakInicio && t < emp.breakFin
+            
+            if (isBreak) rowData.push('B')
+            else if (isWorking) {
+              const currentRole = emp.customRoles?.[t] || (emp.isSCO ? 'SCO' : 'CAJA')
+              if (currentRole === 'SCO') rowData.push('S')
+              else if (emp.isMultifuncional) rowData.push('M')
+              else rowData.push('R')
+            } else {
+              rowData.push('')
+            }
+          })
+        })
+        return rowData
+      })
+
+      pdf.setFontSize(14)
+      pdf.text(`Programación de Cajas - ${fecha}`, 10, 10)
+
+      autoTable(pdf, {
+        startY: 15,
+        head: [headRow1, headRow2],
+        body: body,
+        theme: 'grid',
+        styles: {
+          fontSize: 5,
+          cellPadding: 0.5,
+          lineColor: [226, 232, 240],
+          lineWidth: 0.1,
+        },
+        headStyles: {
+          fillColor: [248, 250, 252],
+          textColor: [100, 116, 139],
+          fontSize: 6,
+          fontStyle: 'bold'
+        },
+        didParseCell: function (data: any) {
+          if (data.section === 'body' && data.column.index > 0) {
+            const val = data.cell.raw
+            data.cell.text = [''] // Ocultar texto
+            if (val === 'B') data.cell.styles.fillColor = [253, 224, 71] // yellow-300
+            else if (val === 'S') data.cell.styles.fillColor = [192, 132, 252] // purple-400
+            else if (val === 'M') data.cell.styles.fillColor = [251, 191, 36] // amber-400
+            else if (val === 'R') data.cell.styles.fillColor = [34, 197, 94] // green-500
+          }
+        }
+      })
+      
       pdf.save(`Programacion_Cajas_${fecha.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
-      toast.success("PDF exportado con éxito")
+      toast.success("PDF exportado en formato tabla con éxito")
     } catch (err) {
-      console.error('Error generating PDF:', err)
-      toast.error("Hubo un error al generar el PDF")
+      console.error('Error generating PDF table:', err)
+      toast.error("Hubo un error al generar la tabla PDF")
     } finally {
       setIsExporting(null)
     }
