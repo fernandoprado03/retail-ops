@@ -5,7 +5,7 @@ import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Down
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+import * as htmlToImage from 'html-to-image'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -558,9 +558,22 @@ export default function HorariosPro() {
     }
 
     try {
-      const canvas = await html2canvas(element, { scale: 2 })
-      const imgData = canvas.toDataURL('image/png')
+      const imgData = await htmlToImage.toPng(element, { 
+        quality: 1, 
+        pixelRatio: 2, 
+        backgroundColor: '#ffffff',
+        filter: (node) => {
+          if (node instanceof HTMLElement && node.dataset && node.dataset.html2canvasIgnore === 'true') {
+            return false;
+          }
+          return true;
+        }
+      })
       
+      const img = new Image()
+      img.src = imgData
+      await new Promise((resolve) => { img.onload = resolve })
+
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -568,7 +581,7 @@ export default function HorariosPro() {
       })
       
       const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      const pdfHeight = (img.height * pdfWidth) / img.width
       
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
       pdf.save(`Programacion_Cajas_${fecha.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
