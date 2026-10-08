@@ -583,7 +583,7 @@ export default function HorariosPro() {
       HORAS_ENTERAS.forEach(h => {
         CUARTOS_DE_HORA.forEach(q => {
           const t = h + q
-          const req = dia.requeridoPorHora[h] || 0
+          const req = (t === 22.75) ? 0 : (dia.requeridoPorHora[h] || 0)
           const actual = prog[t] || 0
           const diff = actual - req
           let text = diff === 0 ? 'OK' : (diff > 0 ? `+${diff}` : `${diff}`)
@@ -625,6 +625,8 @@ export default function HorariosPro() {
       pdf.setFontSize(14)
       pdf.text(`Programación de Cajas - ${fecha}`, 10, 10)
 
+      const breakTextsToDraw: { text: string, x: number, y: number }[] = []
+
       autoTable(pdf, {
         startY: 15,
         head: [headRow1, headRow3, headRow4],
@@ -643,6 +645,10 @@ export default function HorariosPro() {
           fontStyle: 'bold'
         },
         didParseCell: function (data: any) {
+          if (data.section === 'body' && data.column.index === 0) {
+            data.cell.styles.fontSize = 7
+            data.cell.styles.fontStyle = 'bold'
+          }
           if (data.section === 'body' && data.column.index > 1) {
             const val = data.cell.raw
             data.cell.text = [''] // Ocultar texto
@@ -660,19 +666,23 @@ export default function HorariosPro() {
                 const emp = dia.empleados[data.row.index]
                 if (emp && emp.breakInicio !== undefined && emp.breakFin !== undefined) {
                   const numCells = (emp.breakFin - emp.breakInicio) * 4
-                  const doc = data.doc
-                  doc.setFontSize(4.5)
-                  doc.setTextColor(0, 0, 0)
                   const breakText = `${formatTime(emp.breakInicio)} - ${formatTime(emp.breakFin > 24 ? emp.breakFin - 24 : emp.breakFin)}`
                   const totalWidth = data.cell.width * numCells
                   const startX = data.cell.x + totalWidth / 2
                   const startY = data.cell.y + data.cell.height / 2
-                  doc.text(breakText, startX, startY, { align: 'center', baseline: 'middle' })
+                  breakTextsToDraw.push({ text: breakText, x: startX, y: startY })
                 }
               }
             }
           }
         }
+      })
+      
+      pdf.setFontSize(4.5)
+      pdf.setFont("helvetica", "bold")
+      pdf.setTextColor(0, 0, 0)
+      breakTextsToDraw.forEach(item => {
+        pdf.text(item.text, item.x, item.y, { align: 'center', baseline: 'middle' })
       })
       
       pdf.save(`Programacion_Cajas_${fecha.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
