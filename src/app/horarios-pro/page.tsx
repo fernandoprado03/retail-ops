@@ -563,14 +563,12 @@ export default function HorariosPro() {
       
       // Construir cabeceras
       const headRow1: any[] = [
-        { content: 'Personal', rowSpan: 2, styles: { halign: 'left', valign: 'middle', cellWidth: 35 } },
-        { content: 'Caja', rowSpan: 2, styles: { halign: 'center', valign: 'middle', cellWidth: 10 } }
+        { content: 'Personal', rowSpan: 1, styles: { halign: 'left', valign: 'middle', cellWidth: 35 } },
+        { content: 'Caja', rowSpan: 1, styles: { halign: 'center', valign: 'middle', cellWidth: 10 } }
       ]
-      const headRow2: any[] = []
       
       HORAS_ENTERAS.forEach(h => {
         headRow1.push({ content: `${h}:00`, colSpan: 4, styles: { halign: 'center', fillColor: [241, 245, 249], textColor: [15, 23, 42] } })
-        headRow2.push('00', '15', '30', '45')
       })
       
       const prog = calculateProgramado(dia.empleados)
@@ -602,7 +600,7 @@ export default function HorariosPro() {
       const body = dia.empleados.map(emp => {
         const rowData: any[] = []
         rowData.push(`${emp.nombre}\n${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`)
-        rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : 'Apoyo'), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
+        rowData.push({ content: emp.caja || (emp.isSCO ? 'SCO' : ''), styles: { halign: 'center', valign: 'middle', fontStyle: 'bold' } })
         
         HORAS_ENTERAS.forEach(h => {
           CUARTOS_DE_HORA.forEach(q => {
@@ -629,7 +627,7 @@ export default function HorariosPro() {
 
       autoTable(pdf, {
         startY: 15,
-        head: [headRow1, headRow2, headRow3, headRow4],
+        head: [headRow1, headRow3, headRow4],
         body: body,
         theme: 'grid',
         styles: {
