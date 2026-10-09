@@ -156,7 +156,8 @@ export default function ApoyoModule() {
     })
   })
 
-  const totalPersonas = Object.values(personasArea).reduce((a, b) => a + (Number(b) || 0), 0)
+  const AREAS_VALIDAS = ['PGC', 'NON FOOD', 'NO PROC', 'ASISTENTE']
+  const totalPersonas = AREAS_VALIDAS.reduce((a, b) => a + (Number(personasArea[b]) || 0), 0)
 
   return (
     <div className="pb-12 space-y-6 animate-in fade-in">
@@ -321,11 +322,16 @@ export default function ApoyoModule() {
                   </div>
                 )
               })}
-              <div className="flex h-12 bg-white">
-                <div className="w-[150px] px-2 py-1 text-[12px] font-bold text-black flex flex-col justify-end border-r border-black/20 pb-2 relative">
-                  <span className="text-[10px] absolute top-1 right-2 w-full text-right">{totalSemana}</span> 
+              <div className="flex h-8 bg-white border-t border-black/20">
+                <div className="w-[115px] px-2 py-1 text-[10px] font-bold text-black flex items-center justify-end border-r border-black/20">
+                  TOTAL
                 </div>
-                <div className="flex-1 px-2 py-1"></div>
+                <div className="w-[50px] px-2 py-1 text-[11px] font-bold text-black flex items-center justify-center bg-slate-50 border-r border-black/20">
+                  {totalSemana.toFixed(1)}
+                </div>
+                <div className="flex-1 px-2 py-1 text-[11px] font-bold text-black flex items-center justify-center bg-slate-50">
+                  {Object.values(totalesArea).reduce((a,b) => a+b, 0).toFixed(1)}
+                </div>
               </div>
             </div>
           </CardContent>
