@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Camera, BarChart3, Users, CalendarRange } from 'lucide-react'
+import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 export function Navbar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -25,31 +26,37 @@ export function Navbar() {
   if (pathname === '/login') return null
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 pb-8 pt-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:sticky md:top-0 md:left-0 md:h-screen md:w-64 md:bg-[#25282c] md:border-none md:pb-0 md:pt-6 md:flex md:flex-col md:text-slate-300">
+    <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 pb-8 pt-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:sticky md:top-0 md:left-0 md:h-screen ${isSidebarOpen ? 'md:w-64' : 'md:w-20'} md:bg-[#25282c] md:border-none md:pb-0 md:pt-6 md:flex md:flex-col md:text-slate-300 transition-all duration-300`}>
       <div className="max-w-md mx-auto md:max-w-none px-4 md:px-0 w-full h-full flex flex-col">
         {/* Desktop Header */}
-        <div className="hidden md:block px-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+        <div className="hidden md:flex px-6 mb-8 items-center justify-between">
+          <div className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+            <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center shrink-0">
               <ClipboardList className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-white tracking-wide text-lg">Retail Ops</span>
+            <span className="font-bold text-white tracking-wide text-lg whitespace-nowrap">Retail Ops</span>
           </div>
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
         </div>
 
-        <ul className="flex justify-between items-center h-16 md:flex-col md:items-start md:h-auto md:space-y-1 md:px-3 md:flex-1">
+        <ul className="flex justify-between items-center h-16 md:flex-col md:items-start md:justify-start md:h-auto md:space-y-2 md:px-3 md:flex-1">
           <li className="md:w-full">
             <Link href="/" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <ClipboardList className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/' ? 'md:text-white' : ''}`} />
-              <span className="text-[10px] font-medium md:text-sm md:font-semibold">Pendientes</span>
+              <ClipboardList className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Pendientes</span>
             </Link>
           </li>
           
           <li className="-mt-6 md:mt-4 md:w-full md:order-first md:mb-4">
             <Link href="/nueva" className="flex flex-col items-center justify-center md:block">
-              <div className="bg-green-600 text-white rounded-full p-4 shadow-lg hover:bg-green-700 active:bg-green-800 transition-colors md:rounded-md md:py-3 md:px-4 md:flex md:items-center md:justify-center md:gap-2">
-                <Camera className="h-7 w-7 md:h-5 md:w-5" />
-                <span className="hidden md:inline font-bold">NUEVO TICKET</span>
+              <div className={`bg-green-600 text-white rounded-full p-4 shadow-lg hover:bg-green-700 active:bg-green-800 transition-all md:rounded-md md:py-3 ${isSidebarOpen ? 'md:px-4' : 'md:px-0'} md:flex md:items-center md:justify-center md:gap-2`}>
+                <Camera className="h-7 w-7 md:h-5 md:w-5 shrink-0" />
+                <span className={`hidden md:inline font-bold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>NUEVO TICKET</span>
               </div>
               <span className="text-[10px] font-medium text-slate-700 mt-1 md:hidden">Nueva</span>
             </Link>
@@ -57,30 +64,30 @@ export function Navbar() {
           
           <li className="md:w-full">
             <Link href="/kpis" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/kpis' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <BarChart3 className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/kpis' ? 'md:text-white' : ''}`} />
-              <span className="text-[10px] font-medium md:text-sm md:font-semibold">KPIs</span>
+              <BarChart3 className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/kpis' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
             </Link>
           </li>
 
           <li className="md:w-full hidden md:block">
             <Link href="/horarios-pro" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horarios-pro' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <CalendarRange className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/horarios-pro' ? 'md:text-white' : ''}`} />
-              <span className="text-[10px] font-medium md:text-sm md:font-semibold">Malla Pro</span>
+              <CalendarRange className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/horarios-pro' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
             </Link>
           </li>
 
           <li className="md:w-full hidden md:block">
             <Link href="/apoyo" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <Users className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/apoyo' ? 'md:text-white' : ''}`} />
-              <span className="text-[10px] font-medium md:text-sm md:font-semibold">Malla Apoyo</span>
+              <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/apoyo' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Apoyo</span>
             </Link>
           </li>
 
           {isAdmin && (
             <li className="md:w-full">
               <Link href="/admin/usuarios" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/admin/usuarios' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <Users className={`h-6 w-6 mb-1 md:mb-0 md:mr-3 md:h-5 md:w-5 ${pathname === '/admin/usuarios' ? 'md:text-white' : ''}`} />
-                <span className="text-[10px] font-medium md:text-sm md:font-semibold">Usuarios</span>
+                <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/admin/usuarios' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Usuarios</span>
               </Link>
             </li>
           )}
@@ -92,7 +99,7 @@ export function Navbar() {
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
               <Users className="w-4 h-4 text-slate-300" />
             </div>
-            <div className="truncate">
+            <div className={`truncate transition-all duration-300 ${isSidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
               <p className="font-medium text-slate-200 truncate">{isAdmin ? 'Admin' : 'Jefe Área'}</p>
               <p className="text-xs text-slate-500 truncate">Soporte</p>
             </div>
