@@ -975,14 +975,14 @@ export default function HorariosPro() {
         <div className="animate-in fade-in duration-500">
           
           {/* TABS */}
-          <div className="flex overflow-x-auto pt-2 pl-2 pr-2">
+          <div className="flex flex-wrap gap-1 relative z-10">
             {reporte.map((dia, idx) => (
               <button
                 key={idx}
                 onClick={() => setActiveTabIndex(idx)}
-                className={`px-4 py-2 font-medium text-sm whitespace-nowrap transition-colors rounded-t-md border -mb-[1px] relative z-10 ${
+                className={`px-4 py-2 font-medium text-sm whitespace-nowrap transition-colors rounded-t-md border -mb-[1px] ${
                   activeTabIndex === idx 
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-none' 
+                    ? 'bg-slate-900 text-white border-slate-900 border-b-slate-900' 
                     : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200 border-b-transparent'
                 }`}
               >
