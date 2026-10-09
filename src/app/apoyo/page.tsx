@@ -28,7 +28,7 @@ const AREAS_COLORS: Record<string, string> = {
   'PGC': 'bg-[#8eaadb] border-[#7992be] text-blue-900', 
   'NON FOOD': 'bg-[#8fce61] border-[#7ab352] text-green-900', 
   'NO PROC': 'bg-[#f4b084] border-[#d29771] text-orange-900', 
-  'ASISTENTE': 'bg-white border-slate-300 text-slate-800'
+  'ASISTENTE': 'bg-[#df9ee0] border-[#c68bc7] text-fuchsia-900'
 }
 
 const formatHours = (hours: number) => {
