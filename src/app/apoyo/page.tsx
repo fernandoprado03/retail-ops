@@ -281,8 +281,12 @@ export default function ApoyoModule() {
             <h3 className="text-[12px] font-bold text-black tracking-wide">DISTRIBUCION DE HORAS</h3>
           </div>
           <div className="flex h-6 bg-[#ffff00] border-b border-black/20">
-            <div className="w-[30px] border-r border-black/20" />
-            <div className="w-[80px] border-r border-black/20" />
+            <div className="w-[35px] border-r border-black/20 flex items-center justify-center text-[7px] font-bold text-black leading-tight text-center">
+              DOTACIÓN
+            </div>
+            <div className="w-[80px] border-r border-black/20 flex items-center justify-center text-[8px] font-bold text-black">
+              ÁREA
+            </div>
             <div className="w-[50px] border-r border-black/20 flex items-center justify-center text-[9px] font-bold text-black">
               META
             </div>
@@ -296,7 +300,7 @@ export default function ApoyoModule() {
                 const targetHoras = totalPersonas > 0 ? (totalSemana * ((Number(personasArea[area]) || 0) / totalPersonas)) : 0
                 return (
                   <div key={area} className="flex h-8">
-                    <div className="w-[30px] border-r border-black/20 bg-white">
+                    <div className="w-[35px] border-r border-black/20 bg-white">
                       <input 
                         type="number" 
                         value={personasArea[area] || ''} 
