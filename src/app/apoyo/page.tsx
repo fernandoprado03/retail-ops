@@ -5,6 +5,7 @@ import { Plus, Trash2, CalendarRange } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase'
 
 type Area = 'PGC' | 'NON FOOD' | 'NO PROC' | 'ASISTENTE'
 
@@ -55,6 +56,10 @@ export default function ApoyoModule() {
     'NO PROC': 0,
     'ASISTENTE': 0
   })
+  
+  const [semanas, setSemanas] = useState<{id: string, nombre_semana: string}[]>([])
+  const [currentSemanaId, setCurrentSemanaId] = useState<string>('')
+  const [cargandoSemana, setCargandoSemana] = useState(false)
 
   // load from local storage
   useEffect(() => {
@@ -71,6 +76,17 @@ export default function ApoyoModule() {
         setPersonasArea(JSON.parse(savedPersonas))
       } catch (e) {}
     }
+
+    const currentId = localStorage.getItem('horarios_pro_current_semana_id')
+    if (currentId) setCurrentSemanaId(currentId)
+
+    const fetchSemanas = async () => {
+      try {
+        const { data } = await supabase.from('semanas_planificadas').select('id, nombre_semana').order('created_at', { ascending: false })
+        if (data) setSemanas(data)
+      } catch (e) {}
+    }
+    fetchSemanas()
   }, [])
 
   // save to local storage
@@ -81,7 +97,10 @@ export default function ApoyoModule() {
     if (mounted) {
       localStorage.setItem('apoyo_personas_area', JSON.stringify(personasArea))
     }
-  }, [reporte, personasArea, mounted])
+    if (mounted && currentSemanaId) {
+      localStorage.setItem('horarios_pro_current_semana_id', currentSemanaId)
+    }
+  }, [reporte, personasArea, currentSemanaId, mounted])
 
   const updateEmpleado = (diaIndex: number, empId: string, updates: Partial<TurnoEmpleado>) => {
     const newReporte = [...reporte]
@@ -89,6 +108,24 @@ export default function ApoyoModule() {
     if (emp) {
       Object.assign(emp, updates)
       setReporte(newReporte)
+    }
+  }
+
+  const loadSemana = async (id: string) => {
+    if (!id) return
+    setCurrentSemanaId(id)
+    setCargandoSemana(true)
+    try {
+      const { data, error } = await supabase.from('semanas_planificadas').select('data_reporte, data_personas').eq('id', id).single()
+      if (error) throw error
+      if (data) {
+        if (data.data_reporte) setReporte(data.data_reporte)
+        if (data.data_personas) setPersonasArea(data.data_personas)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setCargandoSemana(false)
     }
   }
 
@@ -158,12 +195,29 @@ export default function ApoyoModule() {
 
   const AREAS_VALIDAS = ['PGC', 'NON FOOD', 'NO PROC', 'ASISTENTE']
   const totalPersonas = AREAS_VALIDAS.reduce((a, b) => a + (Number(personasArea[b]) || 0), 0)
+  const currentSemanaName = semanas.find(s => s.id === currentSemanaId)?.nombre_semana || ''
 
   return (
     <div className="pb-12 space-y-6 animate-in fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Distribución de Horas</h1>
-        <p className="text-sm text-slate-500">Los bloques de soporte automático se sincronizan desde Malla Pro.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Distribución de Horas {currentSemanaName ? `- ${currentSemanaName}` : ''}
+          </h1>
+          <p className="text-sm text-slate-500">Los bloques de soporte automático se sincronizan desde Malla Pro.</p>
+        </div>
+        
+        <select 
+          className="border border-slate-300 rounded-md px-3 py-2 text-sm bg-white shadow-sm outline-none cursor-pointer text-slate-700 min-w-[200px]"
+          value={currentSemanaId}
+          onChange={(e) => loadSemana(e.target.value)}
+          disabled={cargandoSemana}
+        >
+          <option value="" disabled>Consultar semana anterior...</option>
+          {semanas.map(s => (
+            <option key={s.id} value={s.id}>{s.nombre_semana}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6 items-start">
