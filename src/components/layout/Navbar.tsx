@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 export function Navbar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
     const checkAdmin = async () => {
