@@ -251,7 +251,7 @@ export default function ApoyoModule() {
                               onChange={e => updateEmpleado(diaIndex, b.id, { area: e.target.value })}
                               className="text-[8px] font-semibold bg-white/30 border border-black/10 p-0 outline-none w-full mt-1 appearance-none rounded-none text-black cursor-pointer"
                             >
-                              <option value="" disabled hidden></option>
+                              <option value="">- Vacío -</option>
                               <option value="PGC">PGC</option>
                               <option value="NON FOOD">NON FOOD</option>
                               <option value="NO PROC">NO PROC</option>
