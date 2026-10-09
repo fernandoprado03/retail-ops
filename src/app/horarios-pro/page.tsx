@@ -907,9 +907,24 @@ export default function HorariosPro() {
   return (
     <div className="pb-12 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro (15 Min)</h1>
-          <p className="text-sm text-slate-500">Diseño ajustado a bloques de 15 minutos exactos según el archivo original.</p>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro</h1>
+            {reporte.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setReporte([])} className="h-8 shadow-sm">
+                Volver a subir archivos
+              </Button>
+            )}
+          </div>
+          {currentSemanaId ? (
+            <p className="text-sm font-medium text-green-700 bg-green-50/80 border border-green-200 inline-flex items-center px-2.5 py-1 rounded-md w-fit shadow-sm">
+              Semana Activa: {semanasGuardadas.find(s => s.id === currentSemanaId)?.nombre_semana || 'Desconocida'}
+            </p>
+          ) : (
+            <p className="text-sm text-slate-500">
+              {reporte.length > 0 ? "Semana sin guardar (Borrador temporal)" : "Sube tus archivos excel para comenzar"}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <select 
@@ -954,7 +969,6 @@ export default function HorariosPro() {
         </div>
       ) : (
         <div className="space-y-12 animate-in fade-in duration-500">
-          <Button variant="outline" onClick={() => setReporte([])}>Volver a subir archivos</Button>
           
           {reporte.map((dia, idx) => {
             const progPorCuarto = calculateProgramado(dia.empleados)
