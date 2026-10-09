@@ -276,7 +276,7 @@ export default function ApoyoModule() {
         </div>
 
         {/* RESUMEN DE HORAS */}
-        <Card className="w-full xl:w-[350px] shrink-0 border-black/20 shadow-sm rounded-none">
+        <Card className="w-full xl:w-[220px] shrink-0 border-black/20 shadow-sm rounded-none">
           <div className="bg-[#ffff00] px-2 py-1 border-b border-black/20">
             <h3 className="text-[12px] font-bold text-black tracking-wide">DISTRIBUCION DE HORAS</h3>
           </div>
