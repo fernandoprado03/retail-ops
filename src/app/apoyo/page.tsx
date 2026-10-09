@@ -252,7 +252,7 @@ export default function ApoyoModule() {
                       if (dur < 0) dur += 24
                       const durStr = isNaN(dur) ? '00:00' : formatHours(dur)
 
-                      const areaColor = b.area && AREAS_COLORS[b.area] ? AREAS_COLORS[b.area] : AREAS_COLORS['ASISTENTE']
+                      const areaColor = b.area && AREAS_COLORS[b.area] ? AREAS_COLORS[b.area] : 'bg-white border-slate-300 text-slate-800'
 
                       return (
                         <div key={b.id} className="flex border border-black/20">
