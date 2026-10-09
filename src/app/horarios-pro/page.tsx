@@ -577,7 +577,7 @@ export default function HorariosPro() {
             if (prog[fin] < req_fin) {
               fin += 0.25
             } else {
-              if (fin - inicio < 0.5) {
+              if (fin - inicio < 1.5) {
                 fin += 0.25
               } else {
                 break
@@ -585,13 +585,13 @@ export default function HorariosPro() {
             }
           }
           
-          if (fin - inicio < 0.5) {
-            fin = inicio + 0.5
+          if (fin - inicio < 1.5) {
+            fin = inicio + 1.5
           }
 
           if (fin > 22.5) {
             fin = 22.5
-            inicio = Math.max(8, 22.5 - 0.5)
+            inicio = Math.max(8, 22.5 - 1.5)
           }
 
           newReporte[diaIndex].empleados.push({
@@ -608,7 +608,29 @@ export default function HorariosPro() {
       }
     }
     
-    // NOTA: Se eliminó la antigua FASE 3 (que fusionaba bloques) porque causaba sobrecobertura (ej. generaba bloques de 4.5 horas para cubrir dos brechas pequeñas de 30 mins, afectando métricas y presupuesto).
+    // FASE 3: Fusionar bloques automáticos cercanos (<= 0.5 horas de diferencia)
+    const autoEmpleados = newReporte[diaIndex].empleados.filter(e => e.id.startsWith('auto-'))
+    const manualEmpleados = newReporte[diaIndex].empleados.filter(e => !e.id.startsWith('auto-'))
+    
+    autoEmpleados.sort((a, b) => a.inicio - b.inicio)
+    const mergedAuto: TurnoEmpleado[] = []
+    
+    for (const emp of autoEmpleados) {
+      let merged = false
+      // Intentamos fusionar con algún bloque automático anterior
+      for (const last of mergedAuto) {
+        if (emp.inicio >= last.fin && (emp.inicio - last.fin) <= 0.5 && (emp.fin - last.inicio) <= 4.5) {
+          last.fin = emp.fin
+          merged = true
+          break
+        }
+      }
+      if (!merged) {
+        mergedAuto.push(emp)
+      }
+    }
+    
+    newReporte[diaIndex].empleados = [...manualEmpleados, ...mergedAuto]
     
     if (faltantes || breaksMovidos || scoReasignados) {
       newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
