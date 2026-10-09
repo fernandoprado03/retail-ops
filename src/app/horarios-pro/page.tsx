@@ -307,6 +307,37 @@ export default function HorariosPro() {
     setReporte(newReporte)
   }
 
+  const reasignarCajas = (diaIdx: number) => {
+    const newReporte = [...reporte]
+    const dia = newReporte[diaIdx]
+    const validEmps = dia.empleados.filter(emp => !emp.isSCO && !emp.isMultifuncional && emp.rol !== 'Soporte Automático')
+    
+    // ValidEmps no tiene mutaciones reales, solo actualizamos su caja, pero Javascript mantiene la referencia.
+    // Ordenamos por inicio
+    validEmps.sort((a, b) => a.inicio - b.inicio)
+
+    const poolCajas = ['13', '12', '11', '9', '7', '5', '3', '1', '10', '8', '6', '2']
+    const cajasStatus = poolCajas.map(caja => ({ caja, libreDesde: 0 }))
+    
+    for (const emp of validEmps) {
+      let assigned = false
+      for (const status of cajasStatus) {
+        if (status.libreDesde <= emp.inicio) {
+          emp.caja = status.caja
+          status.libreDesde = emp.fin
+          assigned = true
+          break
+        }
+      }
+      if (!assigned) {
+        emp.caja = ''
+      }
+    }
+    
+    setReporte(newReporte)
+    toast.success('Cajas reasignadas correctamente sin cruces')
+  }
+
   const addMultifuncional = (diaIndex: number) => {
     const newReporte = [...reporte]
     newReporte[diaIndex].empleados.push({
@@ -1012,6 +1043,9 @@ export default function HorariosPro() {
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => autoFillGaps(idx)} className="h-8 text-xs bg-slate-700 hover:bg-slate-600 text-white border-none">
                       Cubrir Brechas (v3)
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => reasignarCajas(idx)} className="h-8 text-xs bg-blue-600 hover:bg-blue-500 text-white border-none" title="Reasignar cajas sin cruces (ideal si cargaste datos antiguos)">
+                      Corregir Cajas
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => addMultifuncional(idx)} className="h-8 text-xs bg-green-600 hover:bg-green-500 text-white border-none">
                       <Plus className="w-4 h-4 mr-1" /> Añadir Multifuncional
