@@ -517,6 +517,40 @@ export default function HorariosPro() {
       }
       if (!movedInPass) break
     }
+    
+    // FASE 1.5: Reasignar exceso de SCO a CAJA para cubrir brechas
+    let scoReasignados = false
+    for (const h of HORAS_ENTERAS) {
+      for (const q of CUARTOS_DE_HORA) {
+        const t = h + q
+        if (t >= 22.5) continue
+        
+        let req = dia.requeridoPorHora[h] || 0
+        prog = calculateProgramado(newReporte[diaIndex].empleados)
+        
+        if (prog[t] < req) {
+          const scosDisponibles = newReporte[diaIndex].empleados.filter(e => 
+            e.isSCO && 
+            t >= e.inicio && t < e.fin &&
+            !(e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin) &&
+            (!e.customRoles || e.customRoles[t] !== 'CAJA')
+          )
+          
+          if (scosDisponibles.length > 1) {
+            let extras = scosDisponibles.length - 1
+            for (const emp of scosDisponibles) {
+              if (extras > 0 && prog[t] < req) {
+                if (!emp.customRoles) emp.customRoles = {}
+                emp.customRoles[t] = 'CAJA'
+                prog = calculateProgramado(newReporte[diaIndex].empleados)
+                extras--
+                scoReasignados = true
+              }
+            }
+          }
+        }
+      }
+    }
 
     // FASE 2: Rellenar Brechas Restantes (Crear multifuncionales)
     for (const h of HORAS_ENTERAS) {
@@ -595,13 +629,15 @@ export default function HorariosPro() {
     
     newReporte[diaIndex].empleados = [...manualEmpleados, ...mergedAuto]
     
-    if (faltantes || breaksMovidos) {
+    if (faltantes || breaksMovidos || scoReasignados) {
       newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
       setReporte(newReporte)
-      if (breaksMovidos && !faltantes) {
+      if (scoReasignados && !faltantes && !breaksMovidos) {
+         toast.success('Se reasignaron SCOs excedentes a Caja para cubrir la demanda')
+      } else if (breaksMovidos && !faltantes) {
          toast.success('Se optimizaron los breaks para cubrir todo sin apoyo extra')
       } else {
-         toast.success('Breaks optimizados y apoyos generados (min 1.5h, máx 4.5h)')
+         toast.success('Brechas cubiertas exitosamente')
       }
     } else {
       toast.info('No hay brechas que cubrir')
