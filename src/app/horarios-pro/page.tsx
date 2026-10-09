@@ -560,6 +560,30 @@ export default function HorariosPro() {
       }
     }
     
+    // FASE 3: Fusionar bloques automáticos cercanos (<= 0.5 horas de diferencia)
+    const autoEmpleados = newReporte[diaIndex].empleados.filter(e => e.id.startsWith('auto-'))
+    const manualEmpleados = newReporte[diaIndex].empleados.filter(e => !e.id.startsWith('auto-'))
+    
+    autoEmpleados.sort((a, b) => a.inicio - b.inicio)
+    const mergedAuto: TurnoEmpleado[] = []
+    
+    for (const emp of autoEmpleados) {
+      let merged = false
+      // Intentamos fusionar con algún bloque automático anterior
+      for (const last of mergedAuto) {
+        if (emp.inicio >= last.fin && (emp.inicio - last.fin) <= 0.5 && (emp.fin - last.inicio) <= 4.5) {
+          last.fin = emp.fin
+          merged = true
+          break
+        }
+      }
+      if (!merged) {
+        mergedAuto.push(emp)
+      }
+    }
+    
+    newReporte[diaIndex].empleados = [...manualEmpleados, ...mergedAuto]
+    
     if (faltantes || breaksMovidos) {
       newReporte[diaIndex].empleados.sort((a, b) => a.inicio - b.inicio)
       setReporte(newReporte)
