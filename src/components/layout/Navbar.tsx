@@ -45,7 +45,7 @@ export function Navbar() {
         </div>
 
         <ul className="flex justify-between items-center h-16 md:flex-col md:items-start md:justify-start md:h-auto md:space-y-2 md:px-3 md:flex-1">
-          <li className="md:w-full">
+          {/* <li className="md:w-full">
             <Link href="/" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
               <ClipboardList className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
               <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Pendientes</span>
@@ -60,7 +60,7 @@ export function Navbar() {
               </div>
               <span className="text-[10px] font-medium text-slate-700 mt-1 md:hidden">Nueva</span>
             </Link>
-          </li>
+          </li> */}
           
           <li className="md:w-full">
             <Link href="/kpis" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/kpis' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
