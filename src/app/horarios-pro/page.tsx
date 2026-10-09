@@ -59,6 +59,7 @@ export default function HorariosPro() {
   const [mallaFile, setMallaFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [reporte, setReporte] = useState<ReporteDia[]>([])
+  const [activeTabIndex, setActiveTabIndex] = useState<number>(0)
   const [mounted, setMounted] = useState(false)
   
   const [semanasGuardadas, setSemanasGuardadas] = useState<{id: string, nombre_semana: string}[]>([])
@@ -243,6 +244,7 @@ export default function HorariosPro() {
       console.error(e)
       toast.error('Error procesando archivos')
     } finally {
+      setActiveTabIndex(0)
       setIsProcessing(false)
     }
   }
@@ -891,6 +893,7 @@ export default function HorariosPro() {
       if (error) throw error
       if (data) {
         setReporte(data.data_reporte)
+        setActiveTabIndex(0)
         setCurrentSemanaId(data.id)
         if (data.data_personas) {
           localStorage.setItem('apoyo_personas_area', JSON.stringify(data.data_personas))
@@ -968,9 +971,31 @@ export default function HorariosPro() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-12 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500">
           
-          {reporte.map((dia, idx) => {
+          {/* TABS */}
+          <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-thin scrollbar-thumb-slate-300">
+            {reporte.map((dia, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveTabIndex(idx)}
+                className={`px-4 py-2 rounded-t-lg font-medium text-sm whitespace-nowrap transition-colors ${
+                  activeTabIndex === idx 
+                    ? 'bg-slate-900 text-white shadow-sm' 
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-b-0 border-slate-200'
+                }`}
+              >
+                {dia.fecha}
+              </button>
+            ))}
+          </div>
+
+          {/* CONTENIDO ACTIVO */}
+          {(() => {
+            const dia = reporte[activeTabIndex];
+            if (!dia) return null;
+            
+            const idx = activeTabIndex;
             const progPorCuarto = calculateProgramado(dia.empleados)
             
             return (
@@ -1149,7 +1174,7 @@ export default function HorariosPro() {
                 </div>
               </Card>
             )
-          })}
+          })()}
         </div>
       )}
     </div>
