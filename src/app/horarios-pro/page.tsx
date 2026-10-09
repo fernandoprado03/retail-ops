@@ -982,7 +982,7 @@ export default function HorariosPro() {
                 onClick={() => setActiveTabIndex(idx)}
                 className={`px-4 py-2 font-medium text-sm whitespace-nowrap transition-colors rounded-t-md border -mb-[1px] ${
                   activeTabIndex === idx 
-                    ? 'bg-slate-900 text-white border-slate-900 border-b-slate-900' 
+                    ? 'bg-slate-900 text-white border-slate-200 border-b-slate-900' 
                     : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200 border-b-transparent'
                 }`}
               >
@@ -1000,7 +1000,7 @@ export default function HorariosPro() {
             const progPorCuarto = calculateProgramado(dia.empleados)
             
             return (
-              <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-sm border-slate-200 rounded-tl-none rounded-tr-md">
+              <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-none ring-0 border border-slate-200 rounded-tl-none rounded-tr-md !p-0 !gap-0">
                 <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                   <h3 className="font-bold">{dia.fecha}</h3>
                   <div className="flex gap-2" data-html2canvas-ignore="true">
