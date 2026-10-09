@@ -1019,58 +1019,61 @@ export default function HorariosPro() {
                   </div>
                 </div>
                 
-                <div className="p-0 overflow-x-auto">
+                <div className="p-0 overflow-auto max-h-[calc(100vh-220px)] border-b border-slate-200">
                   <div className="min-w-[1200px]">
-                    {/* HEADER DE HORAS */}
-                    <div className="flex bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
-                      <div className="w-[360px] shrink-0 p-3 border-r border-slate-200">Personal / Horas</div>
-                      {HORAS_ENTERAS.map(h => (
-                        <div key={h} className="flex-1 text-center py-2 border-r border-slate-200 last:border-0 border-l-2 border-l-slate-300">
-                          {h}:00
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* MATRIZ DE REQUERIMIENTOS Y BRECHA (Por cuarto de hora) */}
-                    <div className="flex border-b-2 border-slate-300 bg-slate-100">
-                      <div className="w-[360px] shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center">
-                        <span className="text-xs font-bold text-slate-700">Demanda (Cajas Lineal)</span>
-                        <span className="text-[10px] font-medium text-slate-500">Proyección vs Real</span>
-                      </div>
-                      
-                      {HORAS_ENTERAS.map(h => {
-                        return (
-                          <div key={h} className="flex-1 flex border-r border-slate-200 border-l-2 border-l-slate-300">
-                            {CUARTOS_DE_HORA.map(q => {
-                              const t = h + q
-                              const req = t >= 22.5 ? 0 : (dia.requeridoPorHora[h] || 0)
-                              const actual = progPorCuarto[t] || 0
-                              const falta = req - actual
-                              
-                              return (
-                                <div key={q} className="flex-1 border-r border-slate-200/50 flex flex-col items-center justify-start py-1 bg-white/50 last:border-r-0">
-                                  <div className={`text-[11px] font-bold ${t >= 22.5 ? 'text-slate-400' : 'text-slate-800'}`}>{req}</div>
-                                  {falta > 0 && (
-                                    <div className="mt-1 w-full bg-red-100 text-red-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Faltan ${falta}`}>
-                                      -{falta}
-                                    </div>
-                                  )}
-                                  {falta < 0 && (
-                                    <div className="mt-1 w-full bg-blue-100 text-blue-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Sobran ${Math.abs(falta)}`}>
-                                      +{Math.abs(falta)}
-                                    </div>
-                                  )}
-                                  {falta === 0 && req > 0 && (
-                                    <div className="mt-1 w-full bg-green-100 text-green-700 text-[9px] font-bold py-0.5 text-center shadow-sm">
-                                      OK
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
+                    
+                    <div className="sticky top-0 z-30 shadow-sm flex flex-col">
+                      {/* HEADER DE HORAS */}
+                      <div className="flex bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
+                        <div className="w-[360px] shrink-0 p-3 border-r border-slate-200 bg-slate-50">Personal / Horas</div>
+                        {HORAS_ENTERAS.map(h => (
+                          <div key={h} className="flex-1 text-center py-2 border-r border-slate-200 last:border-0 border-l-2 border-l-slate-300 bg-slate-50">
+                            {h}:00
                           </div>
-                        )
-                      })}
+                        ))}
+                      </div>
+
+                      {/* MATRIZ DE REQUERIMIENTOS Y BRECHA (Por cuarto de hora) */}
+                      <div className="flex border-b-2 border-slate-300 bg-slate-100">
+                        <div className="w-[360px] shrink-0 p-3 border-r border-slate-200 flex flex-col justify-center bg-slate-100">
+                          <span className="text-xs font-bold text-slate-700">Demanda (Cajas Lineal)</span>
+                          <span className="text-[10px] font-medium text-slate-500">Proyección vs Real</span>
+                        </div>
+                        
+                        {HORAS_ENTERAS.map(h => {
+                          return (
+                            <div key={h} className="flex-1 flex border-r border-slate-200 border-l-2 border-l-slate-300 bg-slate-100">
+                              {CUARTOS_DE_HORA.map(q => {
+                                const t = h + q
+                                const req = t >= 22.5 ? 0 : (dia.requeridoPorHora[h] || 0)
+                                const actual = progPorCuarto[t] || 0
+                                const falta = req - actual
+                                
+                                return (
+                                  <div key={q} className="flex-1 border-r border-slate-200/50 flex flex-col items-center justify-start py-1 bg-white/50 last:border-r-0">
+                                    <div className={`text-[11px] font-bold ${t >= 22.5 ? 'text-slate-400' : 'text-slate-800'}`}>{req}</div>
+                                    {falta > 0 && (
+                                      <div className="mt-1 w-full bg-red-100 text-red-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Faltan ${falta}`}>
+                                        -{falta}
+                                      </div>
+                                    )}
+                                    {falta < 0 && (
+                                      <div className="mt-1 w-full bg-blue-100 text-blue-700 text-[9px] font-bold py-0.5 text-center shadow-sm" title={`Sobran ${Math.abs(falta)}`}>
+                                        +{Math.abs(falta)}
+                                      </div>
+                                    )}
+                                    {falta === 0 && req > 0 && (
+                                      <div className="mt-1 w-full bg-green-100 text-green-700 text-[9px] font-bold py-0.5 text-center shadow-sm">
+                                        OK
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
 
                     {/* EMPLEADOS PROGRAMADOS */}
