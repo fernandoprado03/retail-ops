@@ -211,32 +211,32 @@ export default function ApoyoModule() {
                             <div className="flex items-center text-[9px] mb-0.5 font-mono">
                               <input 
                                 type="text" 
-                                value={formatHours(b.inicio).replace(':','')} 
+                                value={formatHours(b.inicio)} 
                                 onChange={e => {
                                   const val = e.target.value; 
-                                  if (val.length <= 4) {
+                                  if (val.length <= 5) {
                                     const frac = timeToFraction(val)
-                                    if (frac > 0 || val === '0000') updateEmpleado(diaIndex, b.id, { inicio: frac })
+                                    if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { inicio: frac })
                                   }
                                 }} 
-                                className="w-8 bg-transparent border-none p-0 outline-none placeholder:text-black/50" 
-                                placeholder="0900" 
-                                maxLength={4}
+                                className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50" 
+                                placeholder="09:00" 
+                                maxLength={5}
                               />
                               <span className="mx-0.5">A</span>
                               <input 
                                 type="text" 
-                                value={formatHours(b.fin).replace(':','')} 
+                                value={formatHours(b.fin)} 
                                 onChange={e => {
                                   const val = e.target.value; 
-                                  if (val.length <= 4) {
+                                  if (val.length <= 5) {
                                     const frac = timeToFraction(val)
-                                    if (frac > 0 || val === '0000') updateEmpleado(diaIndex, b.id, { fin: frac })
+                                    if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { fin: frac })
                                   }
                                 }} 
-                                className="w-8 bg-transparent border-none p-0 outline-none placeholder:text-black/50" 
-                                placeholder="1330" 
-                                maxLength={4}
+                                className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50" 
+                                placeholder="13:30" 
+                                maxLength={5}
                               />
                             </div>
                             <input 
