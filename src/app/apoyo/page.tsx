@@ -282,7 +282,7 @@ export default function ApoyoModule() {
           </div>
           <div className="flex h-6 bg-[#ffff00] border-b border-black/20">
             <div className="w-[35px] border-r border-black/20 flex items-center justify-center text-[7px] font-bold text-black leading-tight text-center">
-              DOTACIÓN
+              Dot.
             </div>
             <div className="w-[80px] border-r border-black/20 flex items-center justify-center text-[8px] font-bold text-black">
               ÁREA
