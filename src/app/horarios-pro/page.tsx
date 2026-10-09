@@ -356,77 +356,88 @@ export default function HorariosPro() {
     const newReporte = [...reporte]
     let faltantes = false
 
-    // FASE 0: Asegurar Cobertura Continua de Cajas Preferenciales (13 y 12)
+    // FASE 0: Asegurar Cobertura Continua de Cajas Críticas (Pref y SCO)
     let prog = calculateProgramado(newReporte[diaIndex].empleados)
     
-    for (let pass = 0; pass < 2; pass++) {
-      for (const h of HORAS_ENTERAS) {
-        for (const q of CUARTOS_DE_HORA) {
-          const t = h + q
-          if (t >= 22.5) continue
-          
-          const isPrefGap = !newReporte[diaIndex].empleados.some(e => 
-            (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
-            t >= e.inicio && t < e.fin &&
-            !(e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin)
-          )
+    const criticalGroups = [
+      (e: TurnoEmpleado) => e.caja?.trim() === '13' || e.caja?.trim() === '12',
+      (e: TurnoEmpleado) => !!e.isSCO
+    ]
 
-          if (isPrefGap) {
-            const prefOnBreak = newReporte[diaIndex].empleados.find(e => 
-              (e.caja?.trim() === '13' || e.caja?.trim() === '12') &&
-              e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin
+    for (const isCritical of criticalGroups) {
+      for (let pass = 0; pass < 2; pass++) {
+        for (const h of HORAS_ENTERAS) {
+          for (const q of CUARTOS_DE_HORA) {
+            const t = h + q
+            if (t >= 22.5) continue
+            
+            const isGap = !newReporte[diaIndex].empleados.some(e => 
+              isCritical(e) &&
+              t >= e.inicio && t < e.fin &&
+              !(e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin)
             )
 
-            if (prefOnBreak) {
-              let bestNewBreak = -1
-              let minDamage = 999
-              const breakLength = prefOnBreak.breakFin! - prefOnBreak.breakInicio!
-              
-              const minBuffer = 1; // 1 hour minimum before and after break
-              const maxStart = prefOnBreak.fin - breakLength - minBuffer;
-              const minStart = prefOnBreak.inicio + minBuffer;
-              
-              for (let start = minStart; start <= maxStart; start += 0.25) {
-                let canMove = true
-                let shortageCaused = 0
+            if (isGap) {
+              const onBreak = newReporte[diaIndex].empleados.find(e => 
+                isCritical(e) &&
+                e.breakInicio !== undefined && e.breakFin !== undefined && t >= e.breakInicio && t < e.breakFin
+              )
+
+              if (onBreak) {
+                let bestNewBreak = -1
+                let minDamage = 999
+                const breakLength = onBreak.breakFin! - onBreak.breakInicio!
                 
-                for (let bt = start; bt < start + breakLength; bt += 0.25) {
-                  const otherPrefIsOpen = newReporte[diaIndex].empleados.some(other => 
-                    other.id !== prefOnBreak.id && 
-                    (other.caja?.trim() === '13' || other.caja?.trim() === '12') &&
-                    bt >= other.inicio && bt < other.fin &&
-                    !(other.breakInicio !== undefined && other.breakFin !== undefined && bt >= other.breakInicio && bt < other.breakFin)
-                  )
-                  if (!otherPrefIsOpen) {
-                    canMove = false
-                    break
+                const minBuffer = 1; // 1 hour minimum before and after break
+                const maxStart = onBreak.fin - breakLength - minBuffer;
+                const minStart = onBreak.inicio + minBuffer;
+                
+                for (let start = minStart; start <= maxStart; start += 0.25) {
+                  let canMove = true
+                  let shortageCaused = 0
+                  
+                  for (let bt = start; bt < start + breakLength; bt += 0.25) {
+                    const otherIsOpen = newReporte[diaIndex].empleados.some(other => 
+                      other.id !== onBreak.id && 
+                      isCritical(other) &&
+                      bt >= other.inicio && bt < other.fin &&
+                      !(other.breakInicio !== undefined && other.breakFin !== undefined && bt >= other.breakInicio && bt < other.breakFin)
+                    )
+                    
+                    // Si al mover el break aquí causamos un gap en esta área crítica, no podemos moverlo aquí
+                    const anyoneScheduled = newReporte[diaIndex].empleados.some(other => isCritical(other) && bt >= other.inicio && bt < other.fin)
+                    if (anyoneScheduled && !otherIsOpen) {
+                      canMove = false
+                      break
+                    }
+                    
+                    const h_bt = Math.floor(bt)
+                    const req_bt = dia.requeridoPorHora[h_bt] || 0
+                    const isOldBreak = bt >= onBreak.breakInicio! && bt < onBreak.breakFin!
+                    const newProg = prog[bt] - (isOldBreak ? 0 : 1)
+                    if (!onBreak.isSCO && newProg < req_bt) {
+                      shortageCaused += (req_bt - newProg)
+                    }
                   }
                   
-                  const h_bt = Math.floor(bt)
-                  const req_bt = dia.requeridoPorHora[h_bt] || 0
-                  const isOldBreak = bt >= prefOnBreak.breakInicio! && bt < prefOnBreak.breakFin!
-                  const newProg = prog[bt] - (isOldBreak ? 0 : 1)
-                  if (newProg < req_bt) {
-                    shortageCaused += (req_bt - newProg)
+                  if (canMove && shortageCaused < minDamage) {
+                    minDamage = shortageCaused
+                    bestNewBreak = start
                   }
                 }
                 
-                if (canMove && shortageCaused < minDamage) {
-                  minDamage = shortageCaused
-                  bestNewBreak = start
+                if (bestNewBreak !== -1 && bestNewBreak !== onBreak.breakInicio) {
+                  onBreak.breakInicio = bestNewBreak
+                  onBreak.breakFin = bestNewBreak + breakLength
+                  prog = calculateProgramado(newReporte[diaIndex].empleados)
                 }
-              }
-              
-              if (bestNewBreak !== -1 && bestNewBreak !== prefOnBreak.breakInicio) {
-                prefOnBreak.breakInicio = bestNewBreak
-                prefOnBreak.breakFin = bestNewBreak + breakLength
-                prog = calculateProgramado(newReporte[diaIndex].empleados)
               }
             }
           }
         }
       }
     }
+
 
     // FASE 1: Optimización Inteligente de Breaks (General)
     let breaksMovidos = false
