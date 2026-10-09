@@ -972,18 +972,18 @@ export default function HorariosPro() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="animate-in fade-in duration-500">
           
           {/* TABS */}
-          <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-thin scrollbar-thumb-slate-300">
+          <div className="flex overflow-x-auto pt-2 pl-2 pr-2">
             {reporte.map((dia, idx) => (
               <button
                 key={idx}
                 onClick={() => setActiveTabIndex(idx)}
-                className={`px-4 py-2 rounded-t-lg font-medium text-sm whitespace-nowrap transition-colors ${
+                className={`px-4 py-2 font-medium text-sm whitespace-nowrap transition-colors rounded-t-md border -mb-[1px] relative z-10 ${
                   activeTabIndex === idx 
-                    ? 'bg-slate-900 text-white shadow-sm' 
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-b-0 border-slate-200'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-none' 
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200 border-b-transparent'
                 }`}
               >
                 {dia.fecha}
@@ -1000,7 +1000,7 @@ export default function HorariosPro() {
             const progPorCuarto = calculateProgramado(dia.empleados)
             
             return (
-              <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-sm border-slate-200">
+              <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-sm border-slate-200 rounded-tl-none rounded-tr-md">
                 <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
                   <h3 className="font-bold">{dia.fecha}</h3>
                   <div className="flex gap-2" data-html2canvas-ignore="true">
@@ -1022,7 +1022,7 @@ export default function HorariosPro() {
                 <div className="p-0 overflow-auto max-h-[calc(100vh-220px)] border-b border-slate-200">
                   <div className="min-w-[1200px]">
                     
-                    <div className="sticky top-0 z-30 shadow-sm flex flex-col">
+                    <div className="sticky top-0 z-30 flex flex-col bg-slate-50">
                       {/* HEADER DE HORAS */}
                       <div className="flex bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500">
                         <div className="w-[360px] shrink-0 p-3 border-r border-slate-200 bg-slate-50">Personal / Horas</div>
