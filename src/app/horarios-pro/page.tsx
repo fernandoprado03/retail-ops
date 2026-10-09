@@ -1001,8 +1001,7 @@ export default function HorariosPro() {
             
             return (
               <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-none ring-0 border border-slate-200 rounded-tl-none rounded-tr-md !p-0 !gap-0">
-                <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
-                  <h3 className="font-bold">{dia.fecha}</h3>
+                <div className="bg-slate-900 text-white px-4 py-3 flex justify-end items-center">
                   <div className="flex gap-2" data-html2canvas-ignore="true">
                     <Button variant="outline" size="sm" onClick={() => exportToPDF(idx, dia.fecha)} disabled={isExporting === idx} className="h-8 text-xs bg-white text-slate-900 border-none hover:bg-slate-200">
                       <Download className="w-4 h-4 mr-1" /> {isExporting === idx ? "Exportando..." : "Exportar PDF"}
