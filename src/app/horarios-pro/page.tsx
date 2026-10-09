@@ -211,23 +211,24 @@ export default function HorariosPro() {
         const poolCajas = ['13', '12', '11', '9', '7', '5', '3', '1', '10', '8', '6', '2']
         const validEmps = empleados.filter(emp => !emp.isSCO && !emp.isMultifuncional && emp.rol !== 'Soporte Automático')
         
-        let left = 0
-        let right = validEmps.length - 1
-        let cajaIndex = 0
+        // Estado de disponibilidad de cada caja (priorizado por orden en poolCajas)
+        const cajasStatus = poolCajas.map(caja => ({ caja, libreDesde: 0 }))
         
-        while (left <= right) {
-          if (left === right) {
-            validEmps[left].caja = poolCajas[cajaIndex % poolCajas.length]
-            break
+        for (const emp of validEmps) {
+          let assigned = false
+          // Buscamos la primera caja de mayor prioridad (menor índice) que esté libre al inicio del turno
+          for (const status of cajasStatus) {
+            // Permitimos usar la caja si se liberó a la misma hora exacta (ej. 17:00 a 17:00)
+            if (status.libreDesde <= emp.inicio) {
+              emp.caja = status.caja
+              status.libreDesde = emp.fin
+              assigned = true
+              break
+            }
           }
-          validEmps[left].caja = poolCajas[cajaIndex % poolCajas.length]
-          cajaIndex++
-          
-          validEmps[right].caja = poolCajas[cajaIndex % poolCajas.length]
-          cajaIndex++
-          
-          left++
-          right--
+          if (!assigned) {
+            emp.caja = '' // Si las 12 cajas están ocupadas simultáneamente, dejar en blanco
+          }
         }
 
         reportes.push({
