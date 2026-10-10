@@ -263,7 +263,7 @@ export default function ApoyoModule() {
                                 <Trash2 className="w-3 h-3" />
                               </button>
                             )}
-                            <div className="flex items-center text-[9px] mb-0.5 font-mono">
+                            <div className="flex items-center text-[9px] mb-0.5 font-mono font-bold">
                               <input 
                                 type="text" 
                                 value={formatHours(b.inicio)} 
@@ -274,7 +274,7 @@ export default function ApoyoModule() {
                                     if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { inicio: frac })
                                   }
                                 }} 
-                                className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50" 
+                                className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50 font-bold" 
                                 placeholder="09:00" 
                                 maxLength={5}
                               />
@@ -289,7 +289,7 @@ export default function ApoyoModule() {
                                     if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { fin: frac })
                                   }
                                 }} 
-                                className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50" 
+                                className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50 font-bold" 
                                 placeholder="13:30" 
                                 maxLength={5}
                               />
@@ -312,8 +312,7 @@ export default function ApoyoModule() {
                               <option value="ASISTENTE">ASISTENTE</option>
                             </select>
                           </div>
-                          {/* Columna Horas totales */}
-                          <div className="w-[38px] shrink-0 bg-white flex items-center justify-center p-1 text-[9px] font-mono text-slate-700 font-medium">
+                          <div className="w-[38px] shrink-0 bg-white flex items-center justify-center p-1 text-[9px] font-mono text-slate-900 font-bold">
                             {durStr}
                           </div>
                         </div>
