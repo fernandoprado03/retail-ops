@@ -1281,16 +1281,33 @@ export default function BoletinJ06Page() {
               </div>
             </div>
 
+            {/* Banner Informativo de Inventario */}
+            <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0"></span>
+                <span className="text-xs text-emerald-950 font-semibold">
+                  Inventario: Nota calculada como promedio de Ajustes y Negativos. Pistoleo Pan fijado en 100% por default (columna ERI eliminada).
+                </span>
+              </div>
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md shrink-0">
+                Promedio Inventario Zona B: {(TIENDAS_ZONA_B.reduce((acc, t) => {
+                  const a = datosAjustes.find(x => x.codigo === t.codigo)?.cumplimientoPorcentaje || 0
+                  const n = datosNegativos.find(x => x.codigo === t.codigo)?.cumplimientoPorcentaje || 0
+                  return acc + (a + n) / 2
+                }, 0) / TIENDAS_ZONA_B.length).toFixed(2)}%
+              </span>
+            </div>
+
             <div className="overflow-x-auto border border-slate-300 rounded-xl">
               <table className="w-full text-xs border-collapse text-center">
                 <thead>
                   {/* Fila Criterio Principal */}
                   <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-300">
-                    <th colSpan={3} className="py-2 border-r border-slate-300">
+                    <th colSpan={2} className="py-2 border-r border-slate-300">
                       KPI&apos;S
                     </th>
-                    <th colSpan={3} className="py-2 border-r border-slate-300 bg-slate-200">
-                      Inventario
+                    <th colSpan={4} className="py-2 border-r border-slate-300 bg-slate-200">
+                      Inventario ⭐ (Promedio Ajustes + Negativos)
                     </th>
                     <th colSpan={2} className="py-2 border-r border-slate-300">
                       Implementación
@@ -1307,16 +1324,17 @@ export default function BoletinJ06Page() {
                   <tr className="bg-slate-50 text-slate-600 text-[11px] border-b border-slate-300">
                     <th className="py-1 px-3 text-left border-r border-slate-300">Tienda</th>
                     <th className="py-1 px-3 text-left border-r border-slate-300">Líder J06</th>
-                    <th className="py-1 px-2 border-r border-slate-300 font-semibold text-slate-700">
-                      Objetivo &gt;98% (ERI)
-                    </th>
 
-                    <th className="py-1 px-2 border-r border-slate-300 bg-slate-100">100%</th>
+                    {/* Inventario Objetivos */}
+                    <th className="py-1 px-2 border-r border-slate-300 bg-slate-100">100% (Fijo)</th>
                     <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
                       Diario (Ajustes)
                     </th>
                     <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
                       Obj. Por tienda (Negativos)
+                    </th>
+                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-black">
+                      Promedio
                     </th>
 
                     <th className="py-1 px-2 border-r border-slate-300">100%</th>
@@ -1341,14 +1359,16 @@ export default function BoletinJ06Page() {
                   <tr className="bg-slate-200/80 font-bold text-slate-800 border-b border-slate-300">
                     <th className="py-2 px-3 text-left border-r border-slate-300">Tienda</th>
                     <th className="py-2 px-3 text-left border-r border-slate-300">Líder J06</th>
-                    <th className="py-2 px-2 border-r border-slate-300">ERI</th>
 
-                    <th className="py-2 px-2 border-r border-slate-300">Pistoleo Pan</th>
+                    <th className="py-2 px-2 border-r border-slate-300 text-slate-500">Pistoleo Pan</th>
                     <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
                       Ajustes ⭐
                     </th>
                     <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
                       Negativos ⭐
+                    </th>
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-300 text-emerald-950 font-black">
+                      Nota Inventario ⭐
                     </th>
 
                     <th className="py-2 px-2 border-r border-slate-300">Registro A-C</th>
@@ -1377,6 +1397,9 @@ export default function BoletinJ06Page() {
                     const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
                     const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
 
+                    // Nota de inventario: promedio de Ajustes y Negativos
+                    const notaInventario = parseFloat(((pctAjuste + pctNegativo) / 2).toFixed(2))
+
                     const nsgVal = rowDisp ? rowDisp.nsg : 0
                     const bodegaVal = rowDisp ? rowDisp.bodega : 0
                     const quiebreVal = rowDisp ? rowDisp.quiebre : 0
@@ -1389,8 +1412,11 @@ export default function BoletinJ06Page() {
                         <td className="py-2 px-3 text-left text-slate-600 border-r border-slate-200 whitespace-nowrap">
                           {tienda.lider}
                         </td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-500">0.00%</td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-emerald-700 bg-emerald-50/40">100.00%</td>
+
+                        {/* PISTOLEO PAN (100% FIJO POR DEFAULT) */}
+                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600 bg-slate-50">
+                          100.00%
+                        </td>
 
                         {/* COLUMNA AJUSTES (LOOKER AUTOMATIZADO) */}
                         <td className="py-2 px-2 border-r border-slate-200 font-bold bg-emerald-50 text-emerald-900">
@@ -1408,6 +1434,19 @@ export default function BoletinJ06Page() {
                           }`}
                         >
                           {pctNegativo.toFixed(2)}%
+                        </td>
+
+                        {/* NOTA INVENTARIO = PROMEDIO (AJUSTES + NEGATIVOS) / 2 */}
+                        <td
+                          className={`py-2 px-2 border-r border-slate-200 font-black ${
+                            notaInventario >= 90
+                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                              : notaInventario >= 70
+                              ? 'bg-[#ffe0b2] text-[#e65100]'
+                              : 'bg-[#ffcdd2] text-[#b71c1c]'
+                          }`}
+                        >
+                          {notaInventario.toFixed(2)}%
                         </td>
 
                         <td className="py-2 px-2 border-r border-slate-200 text-slate-600">100.00%</td>
