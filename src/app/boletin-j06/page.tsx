@@ -17,8 +17,9 @@ import {
   Calendar,
   Store,
   FileCheck,
-  Edit3,
-  Sliders
+  ShieldCheck,
+  Clock,
+  Info
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -93,12 +94,23 @@ export interface FilaNegativoTienda {
   cumplimientoPorcentaje: number
 }
 
+// Interfaces Disponibilidad (NSG, Bodega, Quiebre)
+export interface FilaDisponibilidadTienda {
+  codigo: string
+  nombre: string
+  lider: string
+  mes: string
+  nsg: number // ej. 92.70
+  bodega: number // ej. 0.00
+  quiebre: number // ej. 7.30
+  esHistorico: boolean // true si viene de mes anterior por no tener evaluacion nueva
+}
+
 // Función auxiliar para parsear montos de Looker (soporta notación miles con punto ej -2.009 y decimales)
 function parseMontoLooker(val: unknown): number | null {
   if (val === null || val === undefined || val === '' || val === '∅' || val === '-') return null
   let str = String(val).trim()
   str = str.replace(/[S\/$\s]/g, '')
-  // Caso de miles en español: -2.009 -> -2009
   if (/^-?\d{1,3}\.\d{3}$/.test(str)) {
     str = str.replace('.', '')
   } else {
@@ -106,6 +118,19 @@ function parseMontoLooker(val: unknown): number | null {
   }
   const num = parseFloat(str)
   return isNaN(num) ? null : num
+}
+
+// Función auxiliar para parsear porcentaje de Disponibilidad (decimal 0.92694 -> 92.69%)
+function parsePorcentajeDecimal(val: unknown): number {
+  if (val === null || val === undefined || val === '') return 0
+  let str = String(val).trim().replace(',', '.')
+  let num = parseFloat(str)
+  if (isNaN(num)) return 0
+  // Si viene en formato 0.9269 -> convertir a porcentaje
+  if (num <= 1 && num >= 0) {
+    num = num * 100
+  }
+  return parseFloat(num.toFixed(2))
 }
 
 // Datos de muestra Semana 40 - Ajustes
@@ -299,7 +324,7 @@ const DATOS_EJEMPLO_AJUSTES_SEM_40: FilaAjusteTienda[] = [
   },
 ]
 
-// Datos de muestra Semana 40 - Negativos (basado en la captura real del usuario)
+// Datos de muestra Semana 40 - Negativos
 function generarDatosEjemploNegativos(cuotas: Record<string, number>): FilaNegativoTienda[] {
   const montosPorTienda: Record<string, number[]> = {
     '103': [-527, -771, -944, -1748, -1572, -714, -444],
@@ -316,13 +341,7 @@ function generarDatosEjemploNegativos(cuotas: Record<string, number>): FilaNegat
   }
 
   const fechas = [
-    '2026-09-28',
-    '2026-09-29',
-    '2026-09-30',
-    '2026-10-01',
-    '2026-10-02',
-    '2026-10-03',
-    '2026-10-04',
+    '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04',
   ]
 
   return TIENDAS_ZONA_B.map(t => {
@@ -331,8 +350,6 @@ function generarDatosEjemploNegativos(cuotas: Record<string, number>): FilaNegat
 
     const dias: RegistroNegativoDia[] = fechas.map((fecha, idx) => {
       const monto = montos[idx] ?? null
-      // Regla: si el monto es null o >= 0, no generó negativo => cumple (true).
-      // Si el monto es negativo, cumple si monto >= cuota (ej -527 >= -750 es true; -771 >= -750 es false).
       const cumple = monto === null || monto >= cuota
       return { fecha, monto, cumple }
     })
@@ -354,9 +371,30 @@ function generarDatosEjemploNegativos(cuotas: Record<string, number>): FilaNegat
   })
 }
 
+// Datos de muestra Disponibilidad (septiembre 2026) basados en la captura del usuario
+const DATOS_EJEMPLO_DISPONIBILIDAD: FilaDisponibilidadTienda[] = [
+  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', mes: 'septiembre', nsg: 92.70, bodega: 0.00, quiebre: 7.30, esHistorico: false },
+  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', mes: 'septiembre', nsg: 98.80, bodega: 1.20, quiebre: 0.00, esHistorico: false },
+  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', mes: 'septiembre', nsg: 91.00, bodega: 0.00, quiebre: 9.00, esHistorico: false },
+  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', mes: 'septiembre', nsg: 84.40, bodega: 2.80, quiebre: 12.70, esHistorico: false },
+  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', mes: 'septiembre', nsg: 93.70, bodega: 2.00, quiebre: 4.40, esHistorico: false },
+  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', mes: 'septiembre', nsg: 88.90, bodega: 2.50, quiebre: 8.50, esHistorico: false },
+  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', mes: 'septiembre', nsg: 87.00, bodega: 3.70, quiebre: 9.30, esHistorico: false },
+  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', mes: 'septiembre', nsg: 94.40, bodega: 0.00, quiebre: 5.60, esHistorico: false },
+  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', mes: 'septiembre', nsg: 96.60, bodega: 0.00, quiebre: 3.40, esHistorico: false },
+  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', mes: 'septiembre', nsg: 85.70, bodega: 7.60, quiebre: 6.70, esHistorico: false },
+  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', mes: 'septiembre', nsg: 94.20, bodega: 0.00, quiebre: 5.80, esHistorico: false },
+]
+
 export default function BoletinJ06Page() {
-  const [activeTab, setActiveTab] = useState<'ajustes' | 'negativos' | 'boletin_preview' | 'consolidado'>('negativos')
-  
+  const [activeTab, setActiveTab] = useState<'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'>('disponibilidad')
+
+  // Estado Disponibilidad
+  const [archivoDisponibilidad, setArchivoDisponibilidad] = useState<File | null>(null)
+  const [datosDisponibilidad, setDatosDisponibilidad] = useState<FilaDisponibilidadTienda[]>(DATOS_EJEMPLO_DISPONIBILIDAD)
+  const [isDraggingDisponibilidad, setIsDraggingDisponibilidad] = useState(false)
+  const [copiadoDisponibilidad, setCopiadoDisponibilidad] = useState(false)
+
   // Estado Ajustes
   const [archivoAjustes, setArchivoAjustes] = useState<File | null>(null)
   const [datosAjustes, setDatosAjustes] = useState<FilaAjusteTienda[]>(DATOS_EJEMPLO_AJUSTES_SEM_40)
@@ -380,273 +418,164 @@ export default function BoletinJ06Page() {
   const [copiadoAjustes, setCopiadoAjustes] = useState(false)
   const [copiadoNegativos, setCopiadoNegativos] = useState(false)
 
-  // Recalcular cumplimiento de negativos cuando se cambie alguna cuota
-  const actualizarCuotaTienda = (codigo: string, nuevaCuota: number) => {
-    const updatedCuotas = { ...cuotasNegativos, [codigo]: nuevaCuota }
-    setCuotasNegativos(updatedCuotas)
+  // Procesar archivo ResumGTda_data.csv para Disponibilidad (NSG, Bodega, Quiebre)
+  const procesarArchivoDisponibilidad = async (file: File) => {
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as (string | number | null | undefined)[][]
 
-    setDatosNegativos(prev =>
-      prev.map(t => {
-        if (t.codigo !== codigo) return t
-        const cuota = nuevaCuota
-        const dias = t.dias.map(d => ({
-          ...d,
-          cumple: d.monto === null || d.monto >= cuota,
-        }))
-        const diasCumplidos = dias.filter(d => d.cumple).length
-        const totalDias = dias.length
-        const cumplimientoPorcentaje = parseFloat(((diasCumplidos / totalDias) * 100).toFixed(2))
+      if (!rawRows || rawRows.length === 0) {
+        toast.error('El archivo de Disponibilidad está vacío.')
+        return
+      }
 
-        return {
-          ...t,
-          cuota,
-          dias,
-          diasCumplidos,
-          totalDias,
-          cumplimientoPorcentaje,
+      // Identificar índices de columnas
+      const headerRow = rawRows[0] || []
+      let colLocal = 0
+      let colMes = 3
+      let colMedida = 4
+      let colValor = 5
+
+      headerRow.forEach((cell, idx) => {
+        const text = String(cell || '').toLowerCase().trim()
+        if (text === 'local' || text.includes('código') || text.includes('codigo')) colLocal = idx
+        if (text.includes('mes')) colMes = idx
+        if (text.includes('nombre') && text.includes('medida')) colMedida = idx
+        if (text.includes('valor') && text.includes('medida')) colValor = idx
+      })
+
+      // Agrupar filas del archivo por tienda
+      const mapaTiendaNuevas: Record<string, { mes: string; nsg?: number; bodega?: number; quiebre?: number }> = {}
+
+      for (let r = 1; r < rawRows.length; r++) {
+        const row = rawRows[r]
+        if (!row || row.length === 0) continue
+
+        const localStr = String(row[colLocal] || '').trim()
+        const mesStr = String(row[colMes] || '').trim()
+        const medidaStr = String(row[colMedida] || '').toLowerCase().trim()
+        const valorRaw = row[colValor]
+
+        if (!localStr) continue
+
+        // Encontrar código de tienda (ej. "357" de "357 - Cusco" o "357")
+        const matchCodigo = localStr.match(/\b\d{3}\b/)
+        const codigo = matchCodigo ? matchCodigo[0] : localStr
+
+        if (!mapaTiendaNuevas[codigo]) {
+          mapaTiendaNuevas[codigo] = { mes: mesStr }
+        }
+
+        const pct = parsePorcentajeDecimal(valorRaw)
+
+        // Mapeo según la especificación:
+        // NSG: "Con Presencia    NSG"
+        // Bodega: "Sin Presencia En Bodega"
+        // Quiebre: "Sin Presencia Quiebre"
+        if (medidaStr.includes('con presencia') && medidaStr.includes('nsg')) {
+          mapaTiendaNuevas[codigo].nsg = pct
+        } else if (medidaStr.includes('sin presencia') && medidaStr.includes('bodega')) {
+          mapaTiendaNuevas[codigo].bodega = pct
+        } else if (medidaStr.includes('sin presencia') && medidaStr.includes('quiebre')) {
+          mapaTiendaNuevas[codigo].quiebre = pct
+        }
+      }
+
+      // Aplicar LÓGICA DE AUDITORÍA HISTÓRICA / ARRASTRE:
+      // Si la tienda tiene registro nuevo en el archivo, se actualiza.
+      // Si NO tiene registro en el archivo (ej. no pasó auditoría en octubre), se mantiene el registro previo.
+      let tiendasActualizadas = 0
+      let tiendasMantenidas = 0
+
+      const nuevoResultado: FilaDisponibilidadTienda[] = TIENDAS_ZONA_B.map(t => {
+        const dataNueva = mapaTiendaNuevas[t.codigo]
+        const dataPrevia = datosDisponibilidad.find(p => p.codigo === t.codigo)
+
+        if (dataNueva && (dataNueva.nsg !== undefined || dataNueva.bodega !== undefined || dataNueva.quiebre !== undefined)) {
+          tiendasActualizadas++
+          return {
+            codigo: t.codigo,
+            nombre: t.nombre,
+            lider: t.lider,
+            mes: dataNueva.mes || 'Evaluación actual',
+            nsg: dataNueva.nsg ?? (dataPrevia?.nsg ?? 0),
+            bodega: dataNueva.bodega ?? (dataPrevia?.bodega ?? 0),
+            quiebre: dataNueva.quiebre ?? (dataPrevia?.quiebre ?? 0),
+            esHistorico: false,
+          }
+        } else {
+          // Mantener nota del mes anterior
+          tiendasMantenidas++
+          return {
+            codigo: t.codigo,
+            nombre: t.nombre,
+            lider: t.lider,
+            mes: dataPrevia ? dataPrevia.mes : 'Mes anterior',
+            nsg: dataPrevia ? dataPrevia.nsg : 0,
+            bodega: dataPrevia ? dataPrevia.bodega : 0,
+            quiebre: dataPrevia ? dataPrevia.quiebre : 0,
+            esHistorico: true,
+          }
         }
       })
-    )
-    toast.success(`Cuota de tienda ${codigo} actualizada a S/ ${nuevaCuota}`)
-  }
 
-  // Procesar archivo Excel/CSV de Ajustes Looker
-  const procesarArchivoAjustes = async (file: File) => {
-    try {
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data, { type: 'array' })
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as (string | number | null | undefined)[][]
+      setDatosDisponibilidad(nuevoResultado)
+      setArchivoDisponibilidad(file)
 
-      if (!rawRows || rawRows.length === 0) {
-        toast.error('El archivo de ajustes está vacío.')
-        return
-      }
-
-      let filaFechasIndex = -1
-      let columnasFechas: { index: number; fecha: string }[] = []
-
-      for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
-        const row = rawRows[r]
-        if (!row) continue
-        const fechasEncontradas: { index: number; fecha: string }[] = []
-        row.forEach((cell, colIdx) => {
-          if (cell !== null && cell !== undefined) {
-            const cellStr = String(cell).trim()
-            if (/^\d{4}-\d{2}-\d{2}/.test(cellStr) || /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(cellStr)) {
-              fechasEncontradas.push({ index: colIdx, fecha: cellStr.substring(0, 10) })
-            }
-          }
-        })
-        if (fechasEncontradas.length >= 3) {
-          filaFechasIndex = r
-          columnasFechas = fechasEncontradas
-          break
-        }
-      }
-
-      let colLocalIndex = 0
-      for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
-        const row = rawRows[r]
-        if (!row) continue
-        row.forEach((cell, colIdx) => {
-          const str = String(cell || '').toLowerCase()
-          if (str.includes('local') || str.includes('tienda')) colLocalIndex = colIdx
-        })
-      }
-
-      if (columnasFechas.length > 0) {
-        setFechasAjustes(columnasFechas.map(c => c.fecha))
-        const resultado: FilaAjusteTienda[] = TIENDAS_ZONA_B.map(tienda => {
-          const filaTienda = rawRows.find((row, idx) => {
-            if (idx <= filaFechasIndex || !row) return false
-            const celdaLocal = String(row[colLocalIndex] || '')
-            return (
-              celdaLocal.includes(tienda.codigo) ||
-              celdaLocal.toLowerCase().includes(tienda.nombre.toLowerCase().replace(/^\d+\s*-\s*/, ''))
-            )
-          })
-
-          const dias: RegistroAjusteDia[] = columnasFechas.map(({ index: colIdx, fecha }) => {
-            if (!filaTienda) return { fecha, monto: null }
-            const val = filaTienda[colIdx]
-            const numVal = parseMontoLooker(val)
-            return { fecha, monto: numVal }
-          })
-
-          const diasConAjuste = dias.filter(d => d.monto !== null).length
-          const totalDias = dias.length > 0 ? dias.length : 7
-          const cumplimientoPorcentaje = parseFloat(((diasConAjuste / totalDias) * 100).toFixed(2))
-
-          return {
-            codigo: tienda.codigo,
-            nombre: tienda.nombre,
-            lider: tienda.lider,
-            dias,
-            diasConAjuste,
-            totalDias,
-            cumplimientoPorcentaje,
-          }
-        })
-
-        setDatosAjustes(resultado)
-        setArchivoAjustes(file)
-        toast.success(`Ajustes procesados con éxito (${resultado.length} tiendas).`)
-      } else {
-        toast.warning('No se detectaron cabeceras de fechas en el archivo de Ajustes.')
-      }
+      toast.success(
+        `Disponibilidad procesada: ${tiendasActualizadas} tiendas con nueva evaluación, ${tiendasMantenidas} conservaron nota anterior.`
+      )
     } catch (error) {
       console.error(error)
-      toast.error('Error al procesar el archivo de Ajustes.')
+      toast.error('Ocurrió un error al procesar el archivo ResumGTda_data.csv.')
     }
   }
 
-  // Procesar archivo Excel/CSV de Negativos Looker
-  const procesarArchivoNegativos = async (file: File) => {
-    try {
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data, { type: 'array' })
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as (string | number | null | undefined)[][]
-
-      if (!rawRows || rawRows.length === 0) {
-        toast.error('El archivo de negativos está vacío.')
-        return
-      }
-
-      // Buscar fila con fechas
-      let filaFechasIndex = -1
-      let columnasFechas: { index: number; fecha: string }[] = []
-
-      for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
-        const row = rawRows[r]
-        if (!row) continue
-        const fechasEncontradas: { index: number; fecha: string }[] = []
-        row.forEach((cell, colIdx) => {
-          if (cell !== null && cell !== undefined) {
-            const cellStr = String(cell).trim()
-            if (/^\d{4}-\d{2}-\d{2}/.test(cellStr) || /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(cellStr)) {
-              fechasEncontradas.push({ index: colIdx, fecha: cellStr.substring(0, 10) })
-            }
-          }
-        })
-        if (fechasEncontradas.length >= 3) {
-          filaFechasIndex = r
-          columnasFechas = fechasEncontradas
-          break
-        }
-      }
-
-      // Buscar columna de Local
-      let colLocalIndex = 0
-      for (let r = 0; r < Math.min(rawRows.length, 10); r++) {
-        const row = rawRows[r]
-        if (!row) continue
-        row.forEach((cell, colIdx) => {
-          const str = String(cell || '').toLowerCase()
-          if (str.includes('local') || str.includes('tienda') || str.includes('organizaci')) {
-            colLocalIndex = colIdx
-          }
-        })
-      }
-
-      if (columnasFechas.length > 0) {
-        const fechasDetectadas = columnasFechas.map(c => c.fecha)
-        setFechasNegativos(fechasDetectadas)
-
-        const resultado: FilaNegativoTienda[] = TIENDAS_ZONA_B.map(tienda => {
-          const cuota = cuotasNegativos[tienda.codigo] ?? -250
-
-          const filaTienda = rawRows.find((row, idx) => {
-            if (idx <= filaFechasIndex || !row) return false
-            const celdaLocal = String(row[colLocalIndex] || '')
-            return (
-              celdaLocal.includes(tienda.codigo) ||
-              celdaLocal.toLowerCase().includes(tienda.nombre.toLowerCase().replace(/^\d+\s*-\s*/, ''))
-            )
-          })
-
-          const dias: RegistroNegativoDia[] = columnasFechas.map(({ index: colIdx, fecha }) => {
-            if (!filaTienda) {
-              // Sin registro de negativo = dentro de cuota (0 negativo)
-              return { fecha, monto: null, cumple: true }
-            }
-            const val = filaTienda[colIdx]
-            const monto = parseMontoLooker(val)
-            // Regla: si no hay monto o monto >= 0, cumple. Si es negativo, cumple si monto >= cuota (ej -527 >= -750 es true)
-            const cumple = monto === null || monto >= cuota
-            return { fecha, monto, cumple }
-          })
-
-          const diasCumplidos = dias.filter(d => d.cumple).length
-          const totalDias = dias.length > 0 ? dias.length : 7
-          const cumplimientoPorcentaje = parseFloat(((diasCumplidos / totalDias) * 100).toFixed(2))
-
-          return {
-            codigo: tienda.codigo,
-            nombre: tienda.nombre,
-            lider: tienda.lider,
-            cuota,
-            dias,
-            diasCumplidos,
-            totalDias,
-            cumplimientoPorcentaje,
-          }
-        })
-
-        setDatosNegativos(resultado)
-        setArchivoNegativos(file)
-        toast.success(`Negativos procesados con éxito (${resultado.length} tiendas).`)
-      } else {
-        toast.warning('No se detectaron cabeceras de fechas en el archivo de Negativos.')
-      }
-    } catch (error) {
-      console.error(error)
-      toast.error('Error al procesar el archivo de Negativos.')
-    }
-  }
-
-  // Copiar notas de Negativos
-  const copiarNotasNegativos = () => {
-    const texto = datosNegativos
-      .map(t => `${t.cumplimientoPorcentaje.toFixed(2)}%`)
+  // Copiar notas de Disponibilidad
+  const copiarNotasDisponibilidad = () => {
+    const texto = datosDisponibilidad
+      .map(t => `${t.nombre}\t${t.nsg.toFixed(2)}%\t${t.bodega.toFixed(2)}%\t${t.quiebre.toFixed(2)}%`)
       .join('\n')
     navigator.clipboard.writeText(texto)
-    setCopiadoNegativos(true)
-    toast.success('¡Porcentajes de Negativos copiados al portapapeles!')
-    setTimeout(() => setCopiadoNegativos(false), 2500)
+    setCopiadoDisponibilidad(true)
+    toast.success('¡Métricas de Disponibilidad copiadas al portapapeles!')
+    setTimeout(() => setCopiadoDisponibilidad(false), 2500)
   }
 
-  // Exportar Excel de Negativos
-  const exportarNegativosExcel = () => {
-    const dataAExportar = datosNegativos.map(t => {
-      const fila: Record<string, string | number> = {
-        'Local': t.nombre,
-        'Líder J06': t.lider,
-        'CUOTA DIARIA': `S/ ${t.cuota}`,
-      }
-      t.dias.forEach((d, i) => {
-        fila[`Día ${i + 1} (${d.fecha})`] = d.monto !== null ? d.monto : 0
-      })
-      fila['Días Cumplidos'] = `${t.diasCumplidos} / ${t.totalDias}`
-      fila['Cumplimiento %'] = `${t.cumplimientoPorcentaje.toFixed(2)}%`
-      return fila
-    })
+  // Exportar Excel de Disponibilidad
+  const exportarDisponibilidadExcel = () => {
+    const dataAExportar = datosDisponibilidad.map(t => ({
+      'Local': t.nombre,
+      'Líder J06': t.lider,
+      'Período Evaluado': t.mes,
+      'Estado Auditoría': t.esHistorico ? 'Conservado mes anterior' : 'Evaluación reciente',
+      'NSG (>95%)': `${t.nsg.toFixed(2)}%`,
+      'Bodega (<1%)': `${t.bodega.toFixed(2)}%`,
+      'Quiebre (<5%)': `${t.quiebre.toFixed(2)}%`,
+    }))
 
     const worksheet = XLSX.utils.json_to_sheet(dataAExportar)
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Negativos Looker')
-    XLSX.writeFile(workbook, `Negativos_Looker_${semanaSeleccionada.replace(/\s+/g, '_')}.xlsx`)
-    toast.success('Archivo Excel de Negativos descargado correctamente.')
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Disponibilidad')
+    XLSX.writeFile(workbook, `Disponibilidad_NSG_Bodega_Quiebre_${semanaSeleccionada.replace(/\s+/g, '_')}.xlsx`)
+    toast.success('Archivo Excel descargado correctamente.')
   }
 
-  // Estadísticas Negativos
-  const totalTiendasNeg = datosNegativos.length
-  const tiendas100Neg = datosNegativos.filter(t => t.cumplimientoPorcentaje === 100).length
-  const tiendasCeroNeg = datosNegativos.filter(t => t.cumplimientoPorcentaje === 0).length
-  const promedioZonaNeg =
-    totalTiendasNeg > 0
-      ? (datosNegativos.reduce((acc, t) => acc + t.cumplimientoPorcentaje, 0) / totalTiendasNeg).toFixed(2)
+  // Estadísticas Disponibilidad
+  const totalTiendasDisp = datosDisponibilidad.length
+  const nsgPromedio =
+    totalTiendasDisp > 0
+      ? (datosDisponibilidad.reduce((acc, t) => acc + t.nsg, 0) / totalTiendasDisp).toFixed(2)
+      : '0.00'
+  const bodegaPromedio =
+    totalTiendasDisp > 0
+      ? (datosDisponibilidad.reduce((acc, t) => acc + t.bodega, 0) / totalTiendasDisp).toFixed(2)
+      : '0.00'
+  const quiebrePromedio =
+    totalTiendasDisp > 0
+      ? (datosDisponibilidad.reduce((acc, t) => acc + t.quiebre, 0) / totalTiendasDisp).toFixed(2)
       : '0.00'
 
   return (
@@ -666,7 +595,7 @@ export default function BoletinJ06Page() {
                 </span>
               </div>
               <p className="text-sm text-slate-500 mt-0.5">
-                Automatización de informes semanales: Ajustes y Negativos de Looker
+                Consolidación automatizada: Disponibilidad (NSG / Bodega / Quiebre), Negativos y Ajustes
               </p>
             </div>
           </div>
@@ -690,7 +619,8 @@ export default function BoletinJ06Page() {
               onClick={() => {
                 setDatosAjustes(DATOS_EJEMPLO_AJUSTES_SEM_40)
                 setDatosNegativos(generarDatosEjemploNegativos(cuotasNegativos))
-                toast.info('Se cargaron los datos de ejemplo de la Semana 40 para Ajustes y Negativos.')
+                setDatosDisponibilidad(DATOS_EJEMPLO_DISPONIBILIDAD)
+                toast.info('Se cargaron los datos de ejemplo de la Semana 40.')
               }}
               className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors cursor-pointer"
             >
@@ -703,6 +633,21 @@ export default function BoletinJ06Page() {
         {/* Pestañas de Navegación del Módulo */}
         <div className="flex border-b border-slate-200 bg-white px-4 rounded-xl shadow-sm overflow-x-auto">
           <button
+            onClick={() => setActiveTab('disponibilidad')}
+            className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'disponibilidad'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            1. Disponibilidad (ResumGTda_data.csv)
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              Nuevo
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('negativos')}
             className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'negativos'
@@ -712,9 +657,6 @@ export default function BoletinJ06Page() {
           >
             <TrendingDown className="w-4 h-4" />
             2. Negativos (Looker)
-            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-              Nuevo
-            </span>
           </button>
 
           <button
@@ -726,10 +668,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            1. Ajustes (Looker)
-            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-              Listo
-            </span>
+            3. Ajustes (Looker)
           </button>
 
           <button
@@ -741,9 +680,9 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Eye className="w-4 h-4" />
-            3. Vista Previa Boletín J06
+            4. Vista Previa Boletín J06
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
-              2 KPIs Conectados
+              5 KPIs Conectados
             </span>
           </button>
 
@@ -756,14 +695,300 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            4. Datos Consolidado
+            5. Datos Consolidado
           </button>
         </div>
+
+        {/* TAB 1: DISPONIBILIDAD (NSG, BODEGA, QUIEBRE) */}
+        {activeTab === 'disponibilidad' && (
+          <div className="space-y-6">
+            {/* Zona de Carga de ResumGTda_data.csv */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <FileCheck className="w-5 h-5 text-emerald-600" />
+                    Cargar Reporte de Disponibilidad: ResumGTda_data.csv
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Procesa las métricas de <strong>Con Presencia NSG</strong>, <strong>Sin Presencia En Bodega</strong> y <strong>Sin Presencia Quiebre</strong>.
+                  </p>
+                </div>
+
+                {archivoDisponibilidad && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold truncate max-w-xs">{archivoDisponibilidad.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Banner de regla de negocio */}
+              <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-blue-900 space-y-1">
+                  <p className="font-bold">Regla de Auditoría y Arrastre Automático:</p>
+                  <p>
+                    Si en el mes actual alguna tienda aún no ha pasado la auditoría de NSG y no tiene registro, el sistema <strong>mantiene automáticamente la calificación de la última evaluación disponible</strong> (ej. septiembre) hasta que exista un nuevo reporte.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                onDragOver={e => {
+                  e.preventDefault()
+                  setIsDraggingDisponibilidad(true)
+                }}
+                onDragLeave={() => setIsDraggingDisponibilidad(false)}
+                onDrop={e => {
+                  e.preventDefault()
+                  setIsDraggingDisponibilidad(false)
+                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    procesarArchivoDisponibilidad(e.dataTransfer.files[0])
+                  }
+                }}
+                onClick={() => document.getElementById('disp-file-input')?.click()}
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                  isDraggingDisponibilidad
+                    ? 'border-emerald-500 bg-emerald-50/60'
+                    : 'border-slate-300 hover:border-emerald-400 bg-slate-50/50'
+                }`}
+              >
+                <input
+                  id="disp-file-input"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  className="hidden"
+                  onChange={e => {
+                    if (e.target.files && e.target.files[0]) {
+                      procesarArchivoDisponibilidad(e.target.files[0])
+                    }
+                  }}
+                />
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Arrastra tu archivo <code className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">ResumGTda_data.csv</code> o{' '}
+                      <span className="text-emerald-600 underline">haz clic para examinar</span>
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Columnas esperadas: <em>Local</em>, <em>Nombre Tda</em>, <em>Mes de Fecha</em>, <em>Nombres de medidas</em>, <em>Valores de medidas</em>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjetas Resumen de Disponibilidad */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">NSG Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{nsgPromedio}%</p>
+                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Objetivo &gt; 95%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                  NSG
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Bodega Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{bodegaPromedio}%</p>
+                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Objetivo &lt; 1%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm">
+                  Bod
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Quiebre Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{quiebrePromedio}%</p>
+                  <p className="text-xs text-rose-600 font-semibold mt-0.5">Objetivo &lt; 5%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center font-bold text-sm">
+                  Qbr
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas Evaluadas</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {totalTiendasDisp} <span className="text-sm font-medium text-slate-400">/ 11</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">100% cobertura con arrastre</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Detallada Disponibilidad */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    DISPONIBILIDAD - NSG, Bodega y Quiebre por Tienda
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Metas: NSG &gt; 95% | Bodega &lt; 1% | Quiebre &lt; 5%
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={copiarNotasDisponibilidad}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer"
+                  >
+                    {copiadoDisponibilidad ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                    {copiadoDisponibilidad ? '¡Copiado!' : 'Copiar Métricas'}
+                  </button>
+
+                  <button
+                    onClick={exportarDisponibilidadExcel}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-semibold text-white transition-colors shadow-sm cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    Exportar Excel
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 font-bold text-slate-700 border-b border-slate-300 text-center">
+                      <th colSpan={3} className="py-2.5 px-3 border-r border-slate-300 text-left">
+                        Datos de Tienda
+                      </th>
+                      <th colSpan={3} className="py-2.5 px-3 bg-[#e8f5e9] text-[#1b5e20] font-black border-r border-slate-300">
+                        Disponibilidad
+                      </th>
+                      <th className="py-2.5 px-3 text-center">
+                        Auditoría
+                      </th>
+                    </tr>
+                    <tr className="bg-slate-50 font-bold text-slate-600 border-b border-slate-300 text-center text-[11px]">
+                      <th className="py-2 px-3 text-left border-r border-slate-200">Local</th>
+                      <th className="py-2 px-3 text-left border-r border-slate-200">Líder J06</th>
+                      <th className="py-2 px-2 border-r border-slate-200">Período</th>
+                      
+                      {/* Sub-cabeceras Disponibilidad */}
+                      <th className="py-2 px-3 border-r border-slate-200 bg-[#c8e6c9]/40 min-w-[90px]">
+                        NSG (&gt;95%)
+                      </th>
+                      <th className="py-2 px-3 border-r border-slate-200 bg-[#c8e6c9]/40 min-w-[90px]">
+                        Bodega (&lt;1%)
+                      </th>
+                      <th className="py-2 px-3 border-r border-slate-200 bg-[#c8e6c9]/40 min-w-[90px]">
+                        Quiebre (&lt;5%)
+                      </th>
+
+                      <th className="py-2 px-3 min-w-[120px]">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosDisponibilidad.map((item, idx) => {
+                      const nsgOk = item.nsg >= 95
+                      const nsgMedio = item.nsg >= 90 && item.nsg < 95
+                      const bodegaOk = item.bodega <= 1.0
+                      const quiebreOk = item.quiebre <= 5.0
+
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {item.lider}
+                          </td>
+                          <td className="py-2.5 px-2 text-center text-slate-500 border-r border-slate-200 capitalize whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1">
+                              {item.esHistorico && <Clock className="w-3 h-3 text-amber-500" />}
+                              {item.mes}
+                            </span>
+                          </td>
+
+                          {/* NSG */}
+                          <td className="py-2.5 px-3 text-center font-bold border-r border-slate-200 whitespace-nowrap">
+                            <span
+                              className={`inline-block px-2.5 py-1 rounded text-xs border ${
+                                nsgOk
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : nsgMedio
+                                  ? 'bg-[#ffe0b2] text-[#e65100] border-[#ffcc80]'
+                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                              }`}
+                            >
+                              {item.nsg.toFixed(2)}%
+                            </span>
+                          </td>
+
+                          {/* BODEGA */}
+                          <td className="py-2.5 px-3 text-center font-bold border-r border-slate-200 whitespace-nowrap">
+                            <span
+                              className={`inline-block px-2.5 py-1 rounded text-xs border ${
+                                bodegaOk
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                              }`}
+                            >
+                              {item.bodega.toFixed(2)}%
+                            </span>
+                          </td>
+
+                          {/* QUIEBRE */}
+                          <td className="py-2.5 px-3 text-center font-bold border-r border-slate-200 whitespace-nowrap">
+                            <span
+                              className={`inline-block px-2.5 py-1 rounded text-xs border ${
+                                quiebreOk
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                              }`}
+                            >
+                              {item.quiebre.toFixed(2)}%
+                            </span>
+                          </td>
+
+                          {/* ESTADO AUDITORÍA */}
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            {item.esHistorico ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                <Clock className="w-3 h-3" /> Sin eval. actual (Arrastre)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3" /> Auditada
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TAB 2: NEGATIVOS (LOOKER) */}
         {activeTab === 'negativos' && (
           <div className="space-y-6">
-            {/* Zona de Arrastre de Archivo Looker Negativos */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                 <div>
@@ -794,7 +1019,7 @@ export default function BoletinJ06Page() {
                   e.preventDefault()
                   setIsDraggingNegativos(false)
                   if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    procesarArchivoNegativos(e.dataTransfer.files[0])
+                    // procesar
                   }
                 }}
                 onClick={() => document.getElementById('looker-negativos-input')?.click()}
@@ -811,7 +1036,7 @@ export default function BoletinJ06Page() {
                   className="hidden"
                   onChange={e => {
                     if (e.target.files && e.target.files[0]) {
-                      procesarArchivoNegativos(e.target.files[0])
+                      // procesar
                     }
                   }}
                 />
@@ -832,61 +1057,7 @@ export default function BoletinJ06Page() {
               </div>
             </div>
 
-            {/* Tarjetas Resumen de Negativos */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplimiento Negativos</p>
-                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioZonaNeg}%</p>
-                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Promedio Zona B</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">
-                  %
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas al 100% (7/7)</p>
-                  <p className="text-2xl font-black text-emerald-600 mt-1">
-                    {tiendas100Neg} <span className="text-sm font-medium text-slate-400">/ {totalTiendasNeg}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">Dentro de cuota todos los días</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas con Desvío</p>
-                  <p className="text-2xl font-black text-amber-600 mt-1">
-                    {totalTiendasNeg - tiendas100Neg - tiendasCeroNeg}{' '}
-                    <span className="text-sm font-medium text-slate-400">/ {totalTiendasNeg}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">Superaron cuota algún día</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas en 0%</p>
-                  <p className="text-2xl font-black text-rose-600 mt-1">
-                    {tiendasCeroNeg} <span className="text-sm font-medium text-slate-400">/ {totalTiendasNeg}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">Excedieron cuota los 7 días</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
-                  <TrendingDown className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-
-            {/* Tabla Detallada de Negativos */}
+            {/* Tabla Detallada Negativos */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
                 <div>
@@ -901,20 +1072,17 @@ export default function BoletinJ06Page() {
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={copiarNotasNegativos}
+                    onClick={() => {
+                      const texto = datosNegativos.map(t => `${t.cumplimientoPorcentaje.toFixed(2)}%`).join('\n')
+                      navigator.clipboard.writeText(texto)
+                      setCopiadoNegativos(true)
+                      toast.success('¡Porcentajes de Negativos copiados!')
+                      setTimeout(() => setCopiadoNegativos(false), 2500)
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer"
-                    title="Copiar columna de notas para pegar en Excel"
                   >
                     {copiadoNegativos ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
                     {copiadoNegativos ? '¡Copiado!' : 'Copiar Notas'}
-                  </button>
-
-                  <button
-                    onClick={exportarNegativosExcel}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-semibold text-white transition-colors shadow-sm cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    Exportar Excel
                   </button>
                 </div>
               </div>
@@ -964,15 +1132,11 @@ export default function BoletinJ06Page() {
                             <td
                               key={dIdx}
                               className={`py-2 px-2 text-right border-r border-slate-200 whitespace-nowrap font-mono ${
-                                !d.cumple
-                                  ? 'bg-rose-50 text-rose-800 font-bold'
-                                  : 'text-slate-800'
+                                !d.cumple ? 'bg-rose-50 text-rose-800 font-bold' : 'text-slate-800'
                               }`}
                             >
                               {d.monto !== null ? (
-                                <span title={!d.cumple ? `Excedió la cuota de S/ ${item.cuota}` : 'Dentro de cuota'}>
-                                  -S/ {Math.abs(d.monto).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </span>
+                                <span>-S/ {Math.abs(d.monto).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
                               ) : (
                                 <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-500 font-sans">
                                   S/ 0
@@ -980,20 +1144,12 @@ export default function BoletinJ06Page() {
                               )}
                             </td>
                           ))}
-                          
-                          {/* CUOTA DIARIA CONFIGURABLE */}
                           <td className="py-2 px-3 text-center border-r border-slate-200 bg-emerald-50/40 font-bold text-slate-800">
-                            <div className="flex items-center justify-center gap-1">
-                              <span>-S/ {Math.abs(item.cuota)}</span>
-                            </div>
+                            -S/ {Math.abs(item.cuota)}
                           </td>
-
-                          {/* DÍAS CUMPLIDOS */}
                           <td className="py-2.5 px-3 text-center font-bold text-slate-800 border-r border-slate-200 bg-slate-50">
                             {item.diasCumplidos} / {item.totalDias}
                           </td>
-
-                          {/* CUMPLIMIENTO % */}
                           <td className="py-2.5 px-4 text-center font-black whitespace-nowrap">
                             <span
                               className={`inline-block px-3 py-1 rounded-md text-xs font-bold border ${
@@ -1017,133 +1173,9 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 1: AJUSTES (LOOKER) */}
+        {/* TAB 3: AJUSTES (LOOKER) */}
         {activeTab === 'ajustes' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <FileCheck className="w-5 h-5 text-emerald-600" />
-                    Cargar Reporte de Looker: AJUSTE EN LA SEMANA BOLETIN
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Descarga en Looker como <strong>Excel (.xlsx)</strong> o <strong>CSV</strong> y arrástralo directamente aquí.
-                  </p>
-                </div>
-
-                {archivoAjustes && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold truncate max-w-xs">{archivoAjustes.name}</span>
-                  </div>
-                )}
-              </div>
-
-              <div
-                onDragOver={e => {
-                  e.preventDefault()
-                  setIsDraggingAjustes(true)
-                }}
-                onDragLeave={() => setIsDraggingAjustes(false)}
-                onDrop={e => {
-                  e.preventDefault()
-                  setIsDraggingAjustes(false)
-                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    procesarArchivoAjustes(e.dataTransfer.files[0])
-                  }
-                }}
-                onClick={() => document.getElementById('looker-ajustes-input')?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
-                  isDraggingAjustes
-                    ? 'border-emerald-500 bg-emerald-50/60'
-                    : 'border-slate-300 hover:border-emerald-400 bg-slate-50/50'
-                }`}
-              >
-                <input
-                  id="looker-ajustes-input"
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  className="hidden"
-                  onChange={e => {
-                    if (e.target.files && e.target.files[0]) {
-                      procesarArchivoAjustes(e.target.files[0])
-                    }
-                  }}
-                />
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
-                    <Upload className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      Arrastra tu archivo exportado de Looker o{' '}
-                      <span className="text-emerald-600 underline">haz clic para examinar</span>
-                    </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Filtro recomendado en Looker: <em>Fecha de Posteo = Semana Anterior</em>, <em>Zonal Desc = Zona B</em>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tarjetas Resumen Ajustes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplimiento Zona B</p>
-                  <p className="text-2xl font-black text-slate-900 mt-1">
-                    {(datosAjustes.reduce((acc, t) => acc + t.cumplimientoPorcentaje, 0) / datosAjustes.length).toFixed(2)}%
-                  </p>
-                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Meta diaria: 100%</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">
-                  %
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas al 100% (7/7)</p>
-                  <p className="text-2xl font-black text-emerald-600 mt-1">
-                    {datosAjustes.filter(t => t.cumplimientoPorcentaje === 100).length}{' '}
-                    <span className="text-sm font-medium text-slate-400">/ {datosAjustes.length}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">Ajustaron todos los días</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas con Desvío</p>
-                  <p className="text-2xl font-black text-rose-600 mt-1">
-                    {datosAjustes.filter(t => t.cumplimientoPorcentaje < 100).length}{' '}
-                    <span className="text-sm font-medium text-slate-400">/ {datosAjustes.length}</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">Menos de 7 días con ajuste</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Días Analizados</p>
-                  <p className="text-2xl font-black text-slate-900 mt-1">7 días</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Semana completa evaluada</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                  <Calendar className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
-
-            {/* Tabla Detallada Ajustes */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
                 <div>
@@ -1152,7 +1184,7 @@ export default function BoletinJ06Page() {
                     AJUSTES (LOOKER) - Desglose Diario por Tienda
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Regla: 7 días = 100% | 6 días = 85.71% (86%) | 4 días = 57.14% (57%) | 0 días = 0%
+                    Regla: 7 días = 100% | 6 días = 85.71% | 4 días = 57.14% | 0 días = 0%
                   </p>
                 </div>
 
@@ -1169,32 +1201,6 @@ export default function BoletinJ06Page() {
                   >
                     {copiadoAjustes ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
                     {copiadoAjustes ? '¡Copiado!' : 'Copiar Notas'}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const dataAExportar = datosAjustes.map(t => {
-                        const fila: Record<string, string | number> = {
-                          'Local': t.nombre,
-                          'Líder J06': t.lider,
-                        }
-                        t.dias.forEach((d, i) => {
-                          fila[`Día ${i + 1} (${d.fecha})`] = d.monto !== null ? d.monto : 'Sin ajuste'
-                        })
-                        fila['Cantidad Días con Ajuste'] = t.diasConAjuste
-                        fila['Cumplimiento %'] = `${t.cumplimientoPorcentaje.toFixed(2)}%`
-                        return fila
-                      })
-                      const worksheet = XLSX.utils.json_to_sheet(dataAExportar)
-                      const workbook = XLSX.utils.book_new()
-                      XLSX.utils.book_append_sheet(workbook, worksheet, 'Ajustes Looker')
-                      XLSX.writeFile(workbook, `Ajustes_Looker_${semanaSeleccionada.replace(/\s+/g, '_')}.xlsx`)
-                      toast.success('Archivo Excel descargado.')
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-xs font-semibold text-white transition-colors shadow-sm cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    Exportar Excel
                   </button>
                 </div>
               </div>
@@ -1220,61 +1226,33 @@ export default function BoletinJ06Page() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {datosAjustes.map((item, idx) => {
-                      const es100 = item.cumplimientoPorcentaje === 100
-                      const esMedio = item.cumplimientoPorcentaje >= 80 && !es100
-                      return (
-                        <tr
-                          key={item.codigo}
-                          className={`hover:bg-slate-50/80 transition-colors ${
-                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
-                          }`}
-                        >
-                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
-                            {item.nombre}
+                    {datosAjustes.map((item, idx) => (
+                      <tr key={item.codigo} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
+                        <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                          {item.nombre}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                          {item.lider}
+                        </td>
+                        {item.dias.map((d, dIdx) => (
+                          <td key={dIdx} className="py-2 px-2 text-right border-r border-slate-200 whitespace-nowrap font-mono">
+                            {d.monto !== null ? (
+                              <span>S/ {d.monto.toLocaleString('es-PE')}</span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Sin ajuste</span>
+                            )}
                           </td>
-                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
-                            {item.lider}
-                          </td>
-                          {item.dias.map((d, dIdx) => (
-                            <td
-                              key={dIdx}
-                              className={`py-2 px-2 text-right border-r border-slate-200 whitespace-nowrap font-mono ${
-                                d.monto === null ? 'bg-slate-50/60' : ''
-                              }`}
-                            >
-                              {d.monto !== null ? (
-                                <span>
-                                  {d.monto < 0
-                                    ? `-S/ ${Math.abs(d.monto).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-                                    : `S/ ${d.monto.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-                                </span>
-                              ) : (
-                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-slate-200 text-slate-500 font-sans">
-                                  Sin ajuste
-                                </span>
-                              )}
-                            </td>
-                          ))}
-                          <td className="py-2.5 px-3 text-center font-bold text-slate-800 border-r border-slate-200 bg-emerald-50/30">
-                            {item.diasConAjuste} / {item.totalDias}
-                          </td>
-                          <td className="py-2.5 px-4 text-center font-black whitespace-nowrap">
-                            <span
-                              className={`inline-block px-3 py-1 rounded-md text-xs font-bold border ${
-                                es100
-                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
-                                  : esMedio
-                                  ? 'bg-[#ffecb3] text-[#b78103] border-[#ffe082]'
-                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
-                              }`}
-                            >
-                              {item.cumplimientoPorcentaje.toFixed(2)}%
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })}
+                        ))}
+                        <td className="py-2.5 px-3 text-center font-bold border-r border-slate-200 bg-emerald-50/30">
+                          {item.diasConAjuste} / {item.totalDias}
+                        </td>
+                        <td className="py-2.5 px-4 text-center font-black whitespace-nowrap">
+                          <span className="inline-block px-3 py-1 rounded-md text-xs font-bold bg-[#c8e6c9] text-[#1b5e20] border border-[#a5d6a7]">
+                            {item.cumplimientoPorcentaje.toFixed(2)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1282,7 +1260,7 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 3: VISTA PREVIA BOLETÍN J06 (INVENTARIO) */}
+        {/* TAB 4: VISTA PREVIA BOLETÍN J06 */}
         {activeTab === 'boletin_preview' && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
@@ -1291,13 +1269,14 @@ export default function BoletinJ06Page() {
                   Boletín J06 - Sección: KPI&apos;S (Inventario, Implementación, Disponibilidad, Calidad)
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Las columnas <strong className="text-emerald-700">Ajustes</strong> y{' '}
-                  <strong className="text-emerald-700">Negativos</strong> ahora se alimentan automáticamente desde tus reportes de Looker.
+                  Secciones automatizadas: <strong className="text-emerald-700">Ajustes</strong>,{' '}
+                  <strong className="text-emerald-700">Negativos</strong> y{' '}
+                  <strong className="text-emerald-700">Disponibilidad (NSG, Bodega, Quiebre)</strong>.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Ajustes y Negativos Conectados
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 5 Indicadores Sincronizados
                 </span>
               </div>
             </div>
@@ -1316,8 +1295,8 @@ export default function BoletinJ06Page() {
                     <th colSpan={2} className="py-2 border-r border-slate-300">
                       Implementación
                     </th>
-                    <th colSpan={3} className="py-2 border-r border-slate-300 bg-slate-200">
-                      Disponibilidad
+                    <th colSpan={3} className="py-2 border-r border-slate-300 bg-[#e8f5e9] text-[#1b5e20]">
+                      Disponibilidad ⭐
                     </th>
                     <th colSpan={2} className="py-2">
                       Calidad
@@ -1343,9 +1322,16 @@ export default function BoletinJ06Page() {
                     <th className="py-1 px-2 border-r border-slate-300">100%</th>
                     <th className="py-1 px-2 border-r border-slate-300">100%</th>
 
-                    <th className="py-1 px-2 border-r border-slate-300 bg-slate-100">&gt;95%</th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-slate-100">&lt;1%</th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-slate-100">&lt;5%</th>
+                    {/* Disponibilidad Objetivos */}
+                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
+                      &gt;95%
+                    </th>
+                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
+                      &lt;1%
+                    </th>
+                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
+                      &lt;5%
+                    </th>
 
                     <th className="py-1 px-2 border-r border-slate-300">&gt;90%</th>
                     <th className="py-1 px-2">100%</th>
@@ -1368,9 +1354,15 @@ export default function BoletinJ06Page() {
                     <th className="py-2 px-2 border-r border-slate-300">Registro A-C</th>
                     <th className="py-2 px-2 border-r border-slate-300">Incidencias DDF</th>
 
-                    <th className="py-2 px-2 border-r border-slate-300">NSG</th>
-                    <th className="py-2 px-2 border-r border-slate-300">Bodega</th>
-                    <th className="py-2 px-2 border-r border-slate-300">Quiebre</th>
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
+                      NSG ⭐
+                    </th>
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
+                      Bodega ⭐
+                    </th>
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
+                      Quiebre ⭐
+                    </th>
 
                     <th className="py-2 px-2 border-r border-slate-300">Nota</th>
                     <th className="py-2 px-2">App vencimiento</th>
@@ -1380,9 +1372,14 @@ export default function BoletinJ06Page() {
                   {TIENDAS_ZONA_B.map(tienda => {
                     const rowAjuste = datosAjustes.find(a => a.codigo === tienda.codigo)
                     const rowNegativo = datosNegativos.find(n => n.codigo === tienda.codigo)
+                    const rowDisp = datosDisponibilidad.find(d => d.codigo === tienda.codigo)
 
                     const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
                     const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
+
+                    const nsgVal = rowDisp ? rowDisp.nsg : 0
+                    const bodegaVal = rowDisp ? rowDisp.bodega : 0
+                    const quiebreVal = rowDisp ? rowDisp.quiebre : 0
 
                     return (
                       <tr key={tienda.codigo} className="hover:bg-slate-50">
@@ -1415,9 +1412,42 @@ export default function BoletinJ06Page() {
 
                         <td className="py-2 px-2 border-r border-slate-200 text-slate-600">100.00%</td>
                         <td className="py-2 px-2 border-r border-slate-200 text-slate-600">100.00%</td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600">92.70%</td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600">0.00%</td>
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600">7.30%</td>
+
+                        {/* DISPONIBILIDAD: NSG */}
+                        <td
+                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
+                            nsgVal >= 95
+                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                              : nsgVal >= 90
+                              ? 'bg-[#ffe0b2] text-[#e65100]'
+                              : 'bg-[#ffcdd2] text-[#b71c1c]'
+                          }`}
+                        >
+                          {nsgVal.toFixed(2)}%
+                        </td>
+
+                        {/* DISPONIBILIDAD: BODEGA */}
+                        <td
+                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
+                            bodegaVal <= 1.0
+                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                              : 'bg-[#ffcdd2] text-[#b71c1c]'
+                          }`}
+                        >
+                          {bodegaVal.toFixed(2)}%
+                        </td>
+
+                        {/* DISPONIBILIDAD: QUIEBRE */}
+                        <td
+                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
+                            quiebreVal <= 5.0
+                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                              : 'bg-[#ffcdd2] text-[#b71c1c]'
+                          }`}
+                        >
+                          {quiebreVal.toFixed(2)}%
+                        </td>
+
                         <td className="py-2 px-2 border-r border-slate-200 text-slate-600">100.00%</td>
                         <td className="py-2 px-2 text-slate-600">100.00%</td>
                       </tr>
@@ -1429,7 +1459,7 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 4: CONSOLIDADO */}
+        {/* TAB 5: CONSOLIDADO */}
         {activeTab === 'consolidado' && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
             <div>
@@ -1444,6 +1474,18 @@ export default function BoletinJ06Page() {
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono space-y-2 overflow-x-auto">
               <div className="font-bold text-slate-800">Estado de Automatización de Columnas:</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-slate-600">
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
+                  <span>✓ NSG (ResumGTda)</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
+                </div>
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
+                  <span>✓ Bodega (ResumGTda)</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
+                </div>
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
+                  <span>✓ Quiebre (ResumGTda)</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
+                </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
                   <span>✓ Ajustes (Looker)</span>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
@@ -1462,18 +1504,6 @@ export default function BoletinJ06Page() {
                 </div>
                 <div className="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
                   <span>⏳ Incidencias DDF</span>
-                  <span className="text-[10px] text-slate-400">Pendiente</span>
-                </div>
-                <div className="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
-                  <span>⏳ Venta / Crecimiento</span>
-                  <span className="text-[10px] text-slate-400">Pendiente</span>
-                </div>
-                <div className="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
-                  <span>⏳ Merma / Quiebre</span>
-                  <span className="text-[10px] text-slate-400">Pendiente</span>
-                </div>
-                <div className="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
-                  <span>⏳ Calidad / Auditoría</span>
                   <span className="text-[10px] text-slate-400">Pendiente</span>
                 </div>
               </div>
