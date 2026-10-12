@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu } from 'lucide-react'
+import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
@@ -80,6 +80,13 @@ export function Navbar() {
             <Link href="/apoyo" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
               <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/apoyo' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
               <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Apoyo</span>
+            </Link>
+          </li>
+
+          <li className="md:w-full hidden md:block">
+            <Link href="/boletin-j06" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/boletin-j06' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+              <FileSpreadsheet className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/boletin-j06' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Boletín J06</span>
             </Link>
           </li>
 
