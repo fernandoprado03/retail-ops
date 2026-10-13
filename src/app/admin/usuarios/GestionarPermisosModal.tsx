@@ -16,7 +16,8 @@ import {
   BarChart3,
   ClipboardList,
   Sparkles,
-  Lock
+  Lock,
+  CalendarDays
 } from 'lucide-react'
 import { PermisosUsuario, normalizarPermisos } from '@/types/permisos'
 import { actualizarPermisosUsuario } from '@/actions/usuarios'
@@ -60,6 +61,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         boletin_j06: { ver: true, editar: true },
         horarios_pro: { ver: true, editar: true },
         malla_multifuncional: { ver: true, editar: true },
+        horario_comercial: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: true, editar: false },
         incidencias: { ver: true, editar: true }
@@ -69,6 +71,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         boletin_j06: { ver: true, editar: false },
         horarios_pro: { ver: true, editar: false },
         malla_multifuncional: { ver: true, editar: false },
+        horario_comercial: { ver: true, editar: false },
         apoyo: { ver: true, editar: false },
         kpis: { ver: true, editar: false },
         incidencias: { ver: true, editar: false }
@@ -78,6 +81,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         boletin_j06: { ver: true, editar: true },
         horarios_pro: { ver: false, editar: false },
         malla_multifuncional: { ver: false, editar: false },
+        horario_comercial: { ver: false, editar: false },
         apoyo: { ver: false, editar: false },
         kpis: { ver: false, editar: false },
         incidencias: { ver: false, editar: false }
@@ -87,6 +91,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         boletin_j06: { ver: false, editar: false },
         horarios_pro: { ver: true, editar: true },
         malla_multifuncional: { ver: true, editar: true },
+        horario_comercial: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: false, editar: false },
         incidencias: { ver: false, editar: false }
@@ -426,7 +431,82 @@ export default function GestionarPermisosModal({ usuario }: Props) {
                   </div>
                 </div>
 
-                {/* 4. KPIS */}
+                {/* 4. HORARIO COMERCIAL */}
+                <div
+                  className={`border rounded-xl p-3.5 transition-all ${
+                    (permisos.horario_comercial?.ver ?? true)
+                      ? 'border-teal-200 bg-teal-50/20'
+                      : 'border-slate-200 bg-slate-50/50 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+                        <CalendarDays className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-slate-900 text-sm">
+                            Horario Comercial
+                          </h4>
+                          <span className="text-[10px] text-slate-400 font-mono">/horario-comercial</span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Matriz interactiva tipo Excel para editar turnos por colaborador y pasillo
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700 select-none">
+                        <input
+                          type="checkbox"
+                          checked={permisos.horario_comercial?.ver ?? true}
+                          onChange={(e) => {
+                            const val = e.target.checked
+                            setPermisos((prev) => ({
+                              ...prev,
+                              horario_comercial: {
+                                ver: val,
+                                editar: val ? (prev.horario_comercial?.editar ?? true) : false
+                              }
+                            }))
+                          }}
+                          className="w-4 h-4 rounded text-green-600 focus:ring-green-500 border-slate-300"
+                        />
+                        <span>Ver</span>
+                      </label>
+
+                      <label
+                        className={`flex items-center gap-1.5 text-xs font-medium select-none ${
+                          (permisos.horario_comercial?.ver ?? true)
+                            ? 'cursor-pointer text-slate-700'
+                            : 'cursor-not-allowed text-slate-400'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={!(permisos.horario_comercial?.ver ?? true)}
+                          checked={permisos.horario_comercial?.editar ?? true}
+                          onChange={(e) => {
+                            const val = e.target.checked
+                            setPermisos((prev) => ({
+                              ...prev,
+                              horario_comercial: {
+                                ...(prev.horario_comercial || { ver: true }),
+                                editar: val
+                              }
+                            }))
+                          }}
+                          className="w-4 h-4 rounded text-green-600 focus:ring-green-500 border-slate-300 disabled:opacity-50"
+                        />
+                        <span>Editar</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. KPIS */}
                 <div
                   className={`border rounded-xl p-3.5 transition-all ${
                     permisos.kpis.ver

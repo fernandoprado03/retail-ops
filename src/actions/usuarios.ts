@@ -71,6 +71,7 @@ export async function actualizarPermisosUsuario(id: string, permisos: PermisosUs
   revalidatePath('/boletin-j06')
   revalidatePath('/horarios-pro')
   revalidatePath('/malla-multifuncional')
+  revalidatePath('/horario-comercial')
   revalidatePath('/apoyo')
   revalidatePath('/kpis')
   return { success: true }

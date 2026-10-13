@@ -105,6 +105,11 @@ export default async function AdminUsuarios() {
                                 👥 Malla Multifuncional {(perms.malla_multifuncional?.editar ?? perms.apoyo?.editar) ? '(Ver+Editar)' : '(Lectura)'}
                               </span>
                             )}
+                            {perms.horario_comercial?.ver && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
+                                🗓️ Horario Comercial {perms.horario_comercial?.editar ? '(Ver+Editar)' : '(Lectura)'}
+                              </span>
+                            )}
                             {perms.kpis.ver && (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
                                 📈 KPIs

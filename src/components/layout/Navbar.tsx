@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet } from 'lucide-react'
+import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet, CalendarDays } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
@@ -36,6 +36,7 @@ export function Navbar() {
   const canSeeKpis = isAdmin || (permisos ? permisos.kpis.ver : true)
   const canSeeHorarios = isAdmin || (permisos ? permisos.horarios_pro.ver : true)
   const canSeeMultifuncional = isAdmin || (permisos ? (permisos.malla_multifuncional?.ver ?? permisos.apoyo?.ver ?? true) : true)
+  const canSeeComercial = isAdmin || (permisos ? (permisos.horario_comercial?.ver ?? true) : true)
   const canSeeBoletin = isAdmin || (permisos ? permisos.boletin_j06.ver : true)
 
   return (
@@ -81,6 +82,15 @@ export function Navbar() {
               <Link href="/malla-multifuncional" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
                 <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
                 <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Multifuncional</span>
+              </Link>
+            </li>
+          )}
+
+          {canSeeComercial && (
+            <li className="md:w-full hidden md:block">
+              <Link href="/horario-comercial" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horario-comercial' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <CalendarDays className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/horario-comercial' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Horario Comercial</span>
               </Link>
             </li>
           )}
