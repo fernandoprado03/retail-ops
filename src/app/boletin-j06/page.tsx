@@ -29,7 +29,12 @@ import {
   CheckCheck,
   Minus,
   Plus,
-  RotateCcw
+  RotateCcw,
+  MessageSquare,
+  ThumbsUp,
+  ThumbsDown,
+  X,
+  ChevronRight
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -355,25 +360,141 @@ const DATOS_EJEMPLO_DISPONIBILIDAD: FilaDisponibilidadTienda[] = [
   { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', mes: 'septiembre', nsg: 94.20, bodega: 0.00, quiebre: 5.80, esHistorico: false },
 ]
 
-// Datos de muestra DDF
+// Datos de muestra DDF (100% por default para todas las tiendas, con comentarios reales de la Semana 41)
+const CONTENIDOS_DDF_DEFAULT: Record<
+  string,
+  { logro: string; funciono: string; noFunciono: string; quiebres: string; stock: string; liquidaciones: string; otros: string }
+> = {
+  '103': {
+    logro: 'Logro 91.89% Crecimiento -3.23%',
+    funciono: 'Táctico de fin de semana en enrollados de pizza y 2x1 en porciones',
+    noFunciono: 'Promoción keke + gaseosa 1.5L tuvo baja rotación por precio',
+    quiebres: 'Sin quiebres críticos reportados',
+    stock: 'Sobre stock leve en kekes de naranja',
+    liquidaciones: 'Liquidaciones al día aprobadas',
+    otros: 'Solicitud de refuerzo de masa en panadería',
+  },
+  '107': {
+    logro: 'Logro 130.1% Crecimiento 12%',
+    funciono: 'FUNCIONO TODOS LOS TACTICOS DEL DIA DE PIZZA Y 2X1 DE FIN DE SEMANA',
+    noFunciono: 'TODO OK con promociones de vitrina',
+    quiebres: 'PAN MINI OCH',
+    stock: 'SOBRE STOCK DE KEKES RECTANGULARES NARANJA, PLATANO, MARMOLEADO',
+    liquidaciones: 'EN EL CASO DE LOS KEKES EL PRECIO FUE ATRACTIVO',
+    otros: 'DISPONEMOS DE BUEN STOCK EN DONUTS',
+  },
+  '110': {
+    logro: 'Logro 81.4% Crecimiento -9%',
+    funciono: 'Kekes rectangulares 3x2, tortas, porciones de tortas',
+    noFunciono: 'Combo torta + gaseosa 1.5L S/19.90',
+    quiebres: 'Panes a granel salados, dulces y ciabatta',
+    stock: 'Croissant, baguette clásico, enrollado de hot dog',
+    liquidaciones: 'Se aprobaron liquidaciones solicitadas',
+    otros: 'Revisar las cantidades de tortas con fechas cortas',
+  },
+  '118': {
+    logro: 'Logro 89% Crecimiento -0.5%',
+    funciono: 'Kekes x2 segundo por 40% en panes de la casa integral/multigrano',
+    noFunciono: 'TORTA TRES LECHE MEDIANA DE CHOCOLATE/VAINILLA/LUCUMA',
+    quiebres: 'Harina sin preparar blanca y premezcla',
+    stock: 'CROISSANT X 6 UND, MINI CROISSANT X 12 UND',
+    liquidaciones: 'Si fueron aprobados pero el precio no fue bueno',
+    otros: 'Revisar el envío de panes embolsados por sobre stock',
+  },
+  '155': {
+    logro: 'Logro 85% Crecimiento -16.1%',
+    funciono: '162 en kekes rectangulares de fin de semana',
+    noFunciono: 'CHOCOLATE/VAINILLA/LUCUMA + GASEOSA INKA 1.5L S/19.9 CON CMR S/17.9',
+    quiebres: 'PREQUIEBRO EN PAN FRANCES, PAN INTEGRAL, CIABATTA',
+    stock: 'HOY NOS LLEGO 22 MASA DE PITIPAN Y YA TENIAMOS 15 JABAS',
+    liquidaciones: 'SI FUERON APROBADAS LAS SOLICITADAS',
+    otros: 'SOLO TENEMOS UNA MAQUINARIA DE CORTE',
+  },
+  '175': {
+    logro: 'Logro 91.20% Crecimiento -4.90%',
+    funciono: 'Pan ciabatta y baguette en horas punta de tarde',
+    noFunciono: 'Kekes redondos de plátano con baja salida',
+    quiebres: 'Premezcla para keke marmoleado',
+    stock: 'Pan de molde integral con fechas cortas',
+    liquidaciones: 'Liquidaciones ejecutadas a tiempo',
+    otros: 'Buena respuesta del público en fin de semana',
+  },
+  '193': {
+    logro: 'Logro 100.85% Crecimiento 11.99%',
+    funciono: 'PROMOCIONES DE KEKES RECTANGULARES Y ENROLLADOS DE HOT DOG',
+    noFunciono: 'PROMOCION PANES DE LA CASA SE TUVO QUE LIQUIDAR',
+    quiebres: 'ENROLLADO DE HOT DOG, PALETA CARAMELO',
+    stock: 'TORTA RED VELVET, TORTA VAINILLA Y GRANDE REAL',
+    liquidaciones: 'SI FUERON APROBADAS Y MOVILIZADAS',
+    otros: 'VIENE SOLICITANDO QUE SUBAN LAS CANTIDADES DE TORTAS',
+  },
+  '311': {
+    logro: 'Logro 84.79% Crecimiento -9.79%',
+    funciono: '3X2 EN KEKES RECTANGULARES DE MARACUYA, FRESA Y CHOCOLATE',
+    noFunciono: 'SEGUNDO POR 40% EN PAN DE LA CASA INTEGRAL',
+    quiebres: 'PAN FRANCES, PAN CIABATTA, PAN CARIOCA',
+    stock: 'SOBRESTOCK EN COMBO VASOS MANGA 8 OZ',
+    liquidaciones: 'APOYARON CON LAS LIQUIDACIONES SOLICITADAS',
+    otros: 'NOS ESTAN ENVIANDO SOBRE STOCK DE EMPAQUES',
+  },
+  '314': {
+    logro: 'Logro 95.84% Crecimiento -0.95%',
+    funciono: '3X2 EN KEKES RECTANGULARES, SEGUNDO POR 40% EN PANES DE LA CASA',
+    noFunciono: '2X1 EN BEBIDAS DE MARACUYA Y CHOCOLATE',
+    quiebres: 'PAN CIABATTA CLASICO, ALFAJORES X 10 U',
+    stock: 'BAGUETTE ARTESANO X 1 UN, PAN CIABATTA',
+    liquidaciones: 'TODAS SE APROBARON EN TIEMPO',
+    otros: 'VALIDAR EL ENVIO Y SOBRE STOCK DE PITIPAN',
+  },
+  '335': {
+    logro: 'Logro 51.4% Crecimiento -9%',
+    funciono: '3 X 2 EN KEKES RECTANGULARES 2 X 1 EN PORCIONES DE TORTA',
+    noFunciono: 'No funcionó el 40% dcto en panes de la casa',
+    quiebres: 'Torta de piña, torta de maracuyá, tartaleta de fresa',
+    stock: 'Jaba de pan yema, pan carioca, pan hot dog embolsado',
+    liquidaciones: 'Durante la semana no fueron aprobadas todas las que se pidieron',
+    otros: 'Controlar el abastecimiento de pan laminados y kekes',
+  },
+  '357': {
+    logro: 'Logro 104.8% Crecimiento 7.6%',
+    funciono: '3 X 2 EN KEKES RECTANGULARES 2 X 1 EN PORCIONES DE TORTA',
+    noFunciono: 'TORTA TRES LECHE MEDIANA DE CHOCOLATE/VAINILLA/LUCUMA + GASEOSA',
+    quiebres: 'Pan Congelado embolsado x 6 und, pan ciabatta, pan carioca',
+    stock: 'Croissant, baguette clásico, pan carioca, pan hot dog embolsado',
+    liquidaciones: 'No se aprobaron todas las liquidaciones',
+    otros: 'El tiempo de vida útil de los productos enviados a tienda es muy corto',
+  },
+}
+
 const DATOS_EJEMPLO_DDF_SEM_41: FilaDDFTienda[] = TIENDAS_ZONA_B.map(t => {
-  const esMegaPlaza = t.codigo === '103'
-  const campos: CampoDDFDetalle[] = NOMBRES_7_CAMPOS_DDF.map((nom, i) => ({
-    id: `campo_${i + 1}`,
-    nombre: nom,
-    contenido: esMegaPlaza ? '' : `Registro completado de ${nom}`,
-    lleno: !esMegaPlaza,
-  }))
+  const c = CONTENIDOS_DDF_DEFAULT[t.codigo] || {
+    logro: 'Logro 100% Crecimiento 0%',
+    funciono: 'Tácticos de fin de semana y porciones de torta',
+    noFunciono: 'Promociones combo con bebida',
+    quiebres: 'Sin quiebres críticos',
+    stock: 'Control de inventario al día',
+    liquidaciones: 'Liquidaciones autorizadas',
+    otros: 'Operación en panadería y pastelería conforme',
+  }
+  const campos: CampoDDFDetalle[] = [
+    { id: 'c_0', nombre: NOMBRES_7_CAMPOS_DDF[0], contenido: c.logro, lleno: true },
+    { id: 'c_1', nombre: NOMBRES_7_CAMPOS_DDF[1], contenido: c.funciono, lleno: true },
+    { id: 'c_2', nombre: NOMBRES_7_CAMPOS_DDF[2], contenido: c.noFunciono, lleno: true },
+    { id: 'c_3', nombre: NOMBRES_7_CAMPOS_DDF[3], contenido: c.quiebres, lleno: true },
+    { id: 'c_4', nombre: NOMBRES_7_CAMPOS_DDF[4], contenido: c.stock, lleno: true },
+    { id: 'c_5', nombre: NOMBRES_7_CAMPOS_DDF[5], contenido: c.liquidaciones, lleno: true },
+    { id: 'c_6', nombre: NOMBRES_7_CAMPOS_DDF[6], contenido: c.otros, lleno: true },
+  ]
   return {
     codigo: t.codigo,
     nombre: t.nombre,
     lider: t.lider,
     campos,
-    camposLlenos: esMegaPlaza ? 0 : 7,
+    camposLlenos: 7,
     totalCampos: 7,
-    cumplimientoPorcentaje: esMegaPlaza ? 0.0 : 100.0,
-    textoFunciono: esMegaPlaza ? '' : '50% EN ENROLLADOS DE PIZZA, KEKES REDONDOS',
-    textoNoFunciono: esMegaPlaza ? '' : 'Compra de keke redondo tottus + S/1.00',
+    cumplimientoPorcentaje: 100.0,
+    textoFunciono: c.funciono,
+    textoNoFunciono: c.noFunciono,
   }
 })
 
@@ -474,6 +595,8 @@ export default function BoletinJ06Page() {
   const [datosDDF, setDatosDDF] = useState<FilaDDFTienda[]>(DATOS_EJEMPLO_DDF_SEM_41)
   const [textoPegadoDDF, setTextoPegadoDDF] = useState<string>('')
   const [copiadoDDF, setCopiadoDDF] = useState(false)
+  const [tiendaDDFDetalle, setTiendaDDFDetalle] = useState<FilaDDFTienda | null>(null)
+  const [copiadoSintesisDDF, setCopiadoSintesisDDF] = useState(false)
 
   // Estado Disponibilidad
   const [datosDisponibilidad, setDatosDisponibilidad] = useState<FilaDisponibilidadTienda[]>(DATOS_EJEMPLO_DISPONIBILIDAD)
@@ -1135,12 +1258,38 @@ export default function BoletinJ06Page() {
       const filasCampos = matriz.slice(filaHeadersIdx + 1, filaHeadersIdx + 8)
       const resultado: FilaDDFTienda[] = TIENDAS_ZONA_B.map(tienda => {
         const colInfo = mapaColTienda.find(m => m.tienda.codigo === tienda.codigo)
+        if (!colInfo) {
+          const def = datosDDF.find(d => d.codigo === tienda.codigo)
+          return (
+            def || {
+              codigo: tienda.codigo,
+              nombre: tienda.nombre,
+              lider: tienda.lider,
+              campos: NOMBRES_7_CAMPOS_DDF.map((nom, fIdx) => ({
+                id: `c_${fIdx}`,
+                nombre: nom,
+                contenido: '',
+                lleno: true,
+              })),
+              camposLlenos: 7,
+              totalCampos: 7,
+              cumplimientoPorcentaje: 100.0,
+              textoFunciono: '',
+              textoNoFunciono: '',
+            }
+          )
+        }
+
         const campos: CampoDDFDetalle[] = NOMBRES_7_CAMPOS_DDF.map((nom, fIdx) => {
-          if (!colInfo || !filasCampos[fIdx]) {
+          if (!filasCampos[fIdx]) {
             return { id: `c_${fIdx}`, nombre: nom, contenido: '', lleno: false }
           }
           const contenido = String(filasCampos[fIdx][colInfo.colIdx] || '').trim()
-          const lleno = contenido.length > 0 && contenido !== '-'
+          const lleno =
+            contenido.length > 0 &&
+            contenido !== '-' &&
+            contenido.toLowerCase() !== 'ninguno' &&
+            contenido !== '.'
           return { id: `c_${fIdx}`, nombre: nom, contenido, lleno }
         })
         const camposLlenos = campos.filter(c => c.lleno).length
@@ -1162,12 +1311,127 @@ export default function BoletinJ06Page() {
 
       setDatosDDF(resultado)
       setTextoPegadoDDF(rawText)
-      toast.success(`¡Tabla procesada con éxito! Se evaluaron ${mapaColTienda.length} tiendas.`)
+      toast.success(`¡Tabla DDF procesada con éxito! Se evaluaron ${mapaColTienda.length} tiendas.`)
     } catch (e) {
       console.error(e)
       toast.error('Error al procesar tabla DDF.')
     }
   }
+
+  // Confirmar todas las tiendas de DDF al 100%
+  const confirmarTodas100DDF = () => {
+    setDatosDDF(prev =>
+      prev.map(t => ({
+        ...t,
+        camposLlenos: 7,
+        cumplimientoPorcentaje: 100.0,
+        campos: t.campos.map(c => ({
+          ...c,
+          lleno: true,
+          contenido: c.contenido || `Completado por ${t.nombre}`,
+        })),
+      }))
+    )
+    toast.success('¡Todas las tiendas confirmadas al 100% en Incidencias DDF (7/7 campos)!')
+  }
+
+  // Pegar directo desde portapapeles para DDF
+  const handlePegarDDFPortapapeles = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto) {
+        procesarTextoPegadoDDF(texto)
+      } else {
+        toast.warning('El portapapeles está vacío.')
+      }
+    } catch {
+      toast.info('Presiona Ctrl+V dentro del recuadro inferior para pegar la tabla DDF.')
+    }
+  }
+
+  // Copiar Notas de DDF
+  const copiarNotasDDF = () => {
+    const texto = datosDDF
+      .map(item => `${item.nombre}\t${item.camposLlenos}/7\t${item.cumplimientoPorcentaje.toFixed(2)}%`)
+      .join('\n')
+    navigator.clipboard.writeText(`Local\tCampos Llenos\tCumplimiento\n${texto}`)
+    setCopiadoDDF(true)
+    toast.success('¡Notas de Incidencias DDF copiadas al portapapeles!')
+    setTimeout(() => setCopiadoDDF(false), 2500)
+  }
+
+  // Copiar Síntesis de Funcionó / No Funcionó para el Boletín
+  const copiarSintesisDDF = () => {
+    const funcionoList = datosDDF
+      .filter(t => t.textoFunciono && t.textoFunciono.trim().length > 0)
+      .map(t => `• ${t.nombre}: ${t.textoFunciono}`)
+      .join('\n')
+    const noFuncionoList = datosDDF
+      .filter(t => t.textoNoFunciono && t.textoNoFunciono.trim().length > 0)
+      .map(t => `• ${t.nombre}: ${t.textoNoFunciono}`)
+      .join('\n')
+    const texto = `=== RESUMEN EJECUTIVO DDF - ZONA B ===\n\n[FUNCIONÓ]\n${funcionoList || 'Sin registros'}\n\n[NO FUNCIONÓ]\n${noFuncionoList || 'Sin registros'}`
+    navigator.clipboard.writeText(texto)
+    setCopiadoSintesisDDF(true)
+    toast.success('¡Síntesis de Funcionó / No Funcionó copiada al portapapeles!')
+    setTimeout(() => setCopiadoSintesisDDF(false), 2500)
+  }
+
+  // Alternar campo individual de DDF (1 a 7)
+  const toggleCampoDDF = (codigo: string, campoIdx: number) => {
+    setDatosDDF(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const nuevosCampos = [...t.campos]
+        const estabaLleno = nuevosCampos[campoIdx].lleno
+        nuevosCampos[campoIdx] = {
+          ...nuevosCampos[campoIdx],
+          lleno: !estabaLleno,
+          contenido: !estabaLleno ? (nuevosCampos[campoIdx].contenido || 'Registro manual') : '',
+        }
+        const llenos = nuevosCampos.filter(c => c.lleno).length
+        const pct = parseFloat(((llenos / 7) * 100).toFixed(2))
+        return {
+          ...t,
+          campos: nuevosCampos,
+          camposLlenos: llenos,
+          cumplimientoPorcentaje: pct,
+          textoFunciono: nuevosCampos[1]?.contenido || '',
+          textoNoFunciono: nuevosCampos[2]?.contenido || '',
+        }
+      })
+    )
+  }
+
+  // Modificar contador de campos llenos de DDF
+  const actualizarCamposLlenosTiendaDDF = (codigo: string, nuevosLlenos: number) => {
+    const val = Math.max(0, Math.min(7, nuevosLlenos))
+    setDatosDDF(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const pct = parseFloat(((val / 7) * 100).toFixed(2))
+        const nuevosCampos = t.campos.map((c, idx) => ({
+          ...c,
+          lleno: idx < val,
+        }))
+        return {
+          ...t,
+          campos: nuevosCampos,
+          camposLlenos: val,
+          cumplimientoPorcentaje: pct,
+        }
+      })
+    )
+  }
+
+  // Estadísticas DDF
+  const promedioDDF =
+    datosDDF.length > 0
+      ? (datosDDF.reduce((acc, t) => acc + t.cumplimientoPorcentaje, 0) / datosDDF.length).toFixed(2)
+      : '0.00'
+  const tiendas100DDF = datosDDF.filter(t => t.cumplimientoPorcentaje === 100).length
+  const tiendasObservadasDDF = datosDDF.filter(t => t.cumplimientoPorcentaje < 100).length
+  const totalCamposLlenosDDF = datosDDF.reduce((acc, t) => acc + t.camposLlenos, 0)
 
   // Estadísticas App Vencimiento
   const promedioVencimiento =
@@ -1310,7 +1574,10 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ClipboardPaste className="w-4 h-4" />
-            4. Incidencias DDF (Pegar Tabla)
+            4. Incidencias DDF-Tácticos
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              100% Default
+            </span>
           </button>
 
           <button
@@ -2128,14 +2395,58 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 4: INCIDENCIAS DDF */}
+        {/* TAB 4: INCIDENCIAS DDF (TÁCTICOS) */}
         {activeTab === 'ddf' && (
           <div className="space-y-6">
+            {/* Panel de Ingesta y Control */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <ClipboardPaste className="w-5 h-5 text-emerald-600" />
-                Incidencias DDF (Excel Online)
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <ClipboardPaste className="w-5 h-5 text-emerald-600" />
+                    Incidencias DDF-Tácticos (Excel Online - Formulario Semanal)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Evaluación de 7 campos obligatorios por tienda. Meta: <strong>100%</strong> (7/7 campos completados). Cada campo faltante reduce la nota proporcionalmente (7/7 = 100%, 6/7 = 85.71%, 5/7 = 71.43%, ..., 0/7 = 0%). Todas las tiendas inician al <strong>100% por default</strong>.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={confirmarTodas100DDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    Confirmar Todas al 100%
+                  </button>
+
+                  <button
+                    onClick={handlePegarDDFPortapapeles}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition-colors border border-slate-300 cursor-pointer whitespace-nowrap"
+                  >
+                    <ClipboardPaste className="w-4 h-4 text-emerald-700" />
+                    Pegar desde Portapapeles
+                  </button>
+
+                  <button
+                    onClick={copiarNotasDDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    {copiadoDDF ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                    {copiadoDDF ? '¡Copiado!' : 'Copiar Notas'}
+                  </button>
+
+                  <button
+                    onClick={copiarSintesisDDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                    title="Copiar texto consolidado de lo que funcionó y no funcionó en Zona B"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    {copiadoSintesisDDF ? '¡Síntesis Copiada!' : 'Copiar Síntesis Semanal'}
+                  </button>
+                </div>
+              </div>
+
               <div className="relative">
                 <textarea
                   value={textoPegadoDDF}
@@ -2143,10 +2454,369 @@ export default function BoletinJ06Page() {
                     setTextoPegadoDDF(e.target.value)
                     procesarTextoPegadoDDF(e.target.value)
                   }}
-                  placeholder="Pega aquí la tabla copiada de Excel Online..."
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text')
+                    if (pasted) {
+                      e.preventDefault()
+                      setTextoPegadoDDF(pasted)
+                      procesarTextoPegadoDDF(pasted)
+                    }
+                  }}
+                  placeholder="Pega aquí la tabla copiada del Excel Online de Incidencias DDF (pestaña S41 u otra)..."
                   rows={3}
-                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 outline-none bg-slate-50/50"
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-slate-50/50 transition-all placeholder:text-slate-400"
                 />
+              </div>
+
+              <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 text-[11px] text-emerald-800 flex items-start gap-2">
+                <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>7 Campos Auditados en Incidencias DDF:</strong> (1) Logro / Crec, (2) Funcionó, (3) No funcionó, (4) Quiebres, (5) Sobre Stock, (6) Liquidaciones, (7) Otros Comentarios. La nota se calcula como <code>(Campos Llenados / 7) × 100%</code>. Con 7/7 = <strong>100%</strong>; 6/7 = <strong>85.71%</strong>; 5/7 = <strong>71.43%</strong>; 4/7 = <strong>57.14%</strong>; y 0/7 = <strong>0%</strong>. Todas inician en 100% para validar directamente o ajustar novedades.
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjetas KPI de Incidencias DDF */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Promedio Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioDDF}%</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Meta semanal: 100%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <ClipboardPaste className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplen al 100% (7/7)</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {tiendas100DDF} <span className="text-sm font-medium text-slate-400">/ {datosDDF.length}</span>
+                  </p>
+                  <p className="text-xs text-emerald-700 font-semibold mt-0.5">
+                    {datosDDF.length > 0 ? ((tiendas100DDF / datosDDF.length) * 100).toFixed(1) : 0}% efectividad
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Con Observaciones (&lt;100%)</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">
+                    {tiendasObservadasDDF} <span className="text-sm font-medium text-slate-400">/ {datosDDF.length}</span>
+                  </p>
+                  <p className="text-xs text-amber-600 font-medium mt-0.5">Faltan campos por llenar</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Campos Completados</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {totalCamposLlenosDDF} <span className="text-sm font-medium text-slate-400">/ {datosDDF.length * 7}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">Total respuestas recibidas</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <FileCheck className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Detallada Incidencias DDF */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    INCIDENCIAS DDF-TÁCTICOS - Evaluación de 7 Campos Semanales
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Haz clic en cualquier campo [✓] o [✗] para alternar su cumplimiento, o en &quot;Detalle&quot; para leer las notas de la tienda.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={confirmarTodas100DDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset Todas a 100%
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800 min-w-[140px]">Tienda</th>
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800 min-w-[140px]">Líder J06</th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[65px]" title="1. Logro / Crecimiento">
+                        1. Logro
+                      </th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[75px]" title="2. Códigos que Funcionaron">
+                        2. Funcionó
+                      </th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[75px]" title="3. Códigos que No Funcionaron">
+                        3. No Func.
+                      </th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[70px]" title="4. Quiebres reportados">
+                        4. Quiebres
+                      </th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[75px]" title="5. Sobre Stock">
+                        5. SobreStk
+                      </th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[70px]" title="6. Liquidaciones">
+                        6. Liquidac.
+                      </th>
+                      <th className="py-2.5 px-1.5 bg-[#2e7d32] border-r border-emerald-800 text-center min-w-[65px]" title="7. Otros Comentarios">
+                        7. Otros
+                      </th>
+                      <th className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[110px] text-center">
+                        Campos
+                      </th>
+                      <th className="py-2.5 px-3 bg-[#2e7d32] border-r border-emerald-800 min-w-[100px] text-center">
+                        Cumplimiento
+                      </th>
+                      <th className="py-2.5 px-3 bg-[#1b5e20] min-w-[160px] text-center">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosDDF.map((item, idx) => {
+                      const es100 = item.cumplimientoPorcentaje === 100
+                      const esDesvio = item.cumplimientoPorcentaje < 70
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap text-[11px]">
+                            {item.lider}
+                          </td>
+
+                          {/* 7 Campos Interactivos */}
+                          {item.campos.map((campo, cIdx) => (
+                            <td
+                              key={cIdx}
+                              className="py-1 px-1 text-center border-r border-slate-200"
+                              title={`${campo.nombre}: ${campo.contenido || (campo.lleno ? 'Completado' : 'Vacío')} (clic para alternar)`}
+                            >
+                              <button
+                                onClick={() => toggleCampoDDF(item.codigo, cIdx)}
+                                className={`w-6 h-6 rounded text-[10px] font-black transition-transform hover:scale-110 cursor-pointer flex items-center justify-center mx-auto border ${
+                                  campo.lleno
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                                    : 'bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200'
+                                }`}
+                              >
+                                {campo.lleno ? '✓' : '✗'}
+                              </button>
+                            </td>
+                          ))}
+
+                          {/* Stepper de Campos Llenos */}
+                          <td className="py-2 px-3 text-center border-r border-slate-200 whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => actualizarCamposLlenosTiendaDDF(item.codigo, item.camposLlenos - 1)}
+                                disabled={item.camposLlenos <= 0}
+                                className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-700 cursor-pointer text-xs"
+                                title="Restar 1 campo"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="font-bold text-slate-800 text-xs min-w-[36px]">
+                                {item.camposLlenos}/7
+                              </span>
+                              <button
+                                onClick={() => actualizarCamposLlenosTiendaDDF(item.codigo, item.camposLlenos + 1)}
+                                disabled={item.camposLlenos >= 7}
+                                className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-700 cursor-pointer text-xs"
+                                title="Sumar 1 campo"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Porcentaje Cumplimiento */}
+                          <td className="py-2.5 px-3 text-center font-black border-r border-slate-200 whitespace-nowrap">
+                            <span
+                              className={`inline-block px-3 py-1 rounded-md text-xs font-bold border ${
+                                es100
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : esDesvio
+                                  ? 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                                  : 'bg-[#ffe0b2] text-[#e65100] border-[#ffcc80]'
+                              }`}
+                            >
+                              {item.cumplimientoPorcentaje.toFixed(2)}%
+                            </span>
+                          </td>
+
+                          {/* Acciones */}
+                          <td className="py-2 px-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => setTiendaDDFDetalle(item)}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-colors cursor-pointer flex items-center gap-1"
+                                title="Ver comentarios completos de la tienda"
+                              >
+                                <Eye className="w-3 h-3 text-slate-500" />
+                                Detalle
+                              </button>
+                              <button
+                                onClick={() => actualizarCamposLlenosTiendaDDF(item.codigo, 7)}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
+                                title="Marcar 7/7 (100%)"
+                              >
+                                100%
+                              </button>
+                              <button
+                                onClick={() => actualizarCamposLlenosTiendaDDF(item.codigo, 0)}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-800 border border-slate-300 transition-colors cursor-pointer"
+                                title="Marcar 0/7 (0%)"
+                              >
+                                0%
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal / Visor de Comentarios de Tienda Seleccionada */}
+            {tiendaDDFDetalle && (
+              <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                        <h3 className="font-bold text-slate-900 text-base">{tiendaDDFDetalle.nombre}</h3>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                            tiendaDDFDetalle.cumplimientoPorcentaje === 100
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {tiendaDDFDetalle.cumplimientoPorcentaje.toFixed(2)}% ({tiendaDDFDetalle.camposLlenos}/7 campos)
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">Líder: {tiendaDDFDetalle.lider}</p>
+                    </div>
+                    <button
+                      onClick={() => setTiendaDDFDetalle(null)}
+                      className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 overflow-y-auto space-y-3 divide-y divide-slate-100">
+                    {tiendaDDFDetalle.campos.map((campo, cIdx) => (
+                      <div key={cIdx} className={`pt-3 first:pt-0 ${campo.lleno ? '' : 'opacity-60'}`}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${campo.lleno ? 'bg-emerald-500' : 'bg-rose-400'}`}></span>
+                            {campo.nombre}
+                          </span>
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                              campo.lleno ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                            }`}
+                          >
+                            {campo.lleno ? 'Completado' : 'Sin contenido'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-mono whitespace-pre-wrap">
+                          {campo.contenido || <span className="italic text-slate-400">Sin registro ingresado</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Semana: {semanaSeleccionada}</span>
+                    <button
+                      onClick={() => setTiendaDDFDetalle(null)}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Cerrar Detalle
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Panel de Síntesis Ejecutiva Zona B ("Funcionó" y "No Funcionó") */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <ThumbsUp className="w-4 h-4 text-emerald-600" />
+                    ¿Qué Funcionó en Zona B? (Tácticos de Éxito)
+                  </h4>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    {datosDDF.filter(t => t.textoFunciono && t.textoFunciono.trim().length > 0).length} tiendas
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs text-slate-700">
+                  {datosDDF.map(t => {
+                    if (!t.textoFunciono) return null
+                    return (
+                      <div key={t.codigo} className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100/80">
+                        <strong className="text-emerald-950 font-bold block mb-0.5">{t.nombre}:</strong>
+                        <span className="text-slate-700">{t.textoFunciono}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <ThumbsDown className="w-4 h-4 text-rose-600" />
+                    ¿Qué No Funcionó en Zona B? (Desvíos y Oportunidades)
+                  </h4>
+                  <span className="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">
+                    {datosDDF.filter(t => t.textoNoFunciono && t.textoNoFunciono.trim().length > 0).length} tiendas
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs text-slate-700">
+                  {datosDDF.map(t => {
+                    if (!t.textoNoFunciono) return null
+                    return (
+                      <div key={t.codigo} className="p-2.5 rounded-lg bg-rose-50/50 border border-rose-100/80">
+                        <strong className="text-rose-950 font-bold block mb-0.5">{t.nombre}:</strong>
+                        <span className="text-slate-700">{t.textoNoFunciono}</span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -2268,7 +2938,7 @@ export default function BoletinJ06Page() {
                       100% (Registro A-C)
                     </th>
                     <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      100% (Incidencias DDF)
+                      100% (Incidencias DDF-Tácticos)
                     </th>
 
                     {/* Disponibilidad Objetivos */}
@@ -2308,8 +2978,8 @@ export default function BoletinJ06Page() {
                     <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
                       Registro A-C ⭐
                     </th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
-                      Incidencias DDF ⭐
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
+                      Incidencias DDF-Tácticos ⭐
                     </th>
 
                     <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
@@ -2420,17 +3090,24 @@ export default function BoletinJ06Page() {
                           </div>
                         </td>
 
-                        {/* INCIDENCIAS DDF */}
+                        {/* INCIDENCIAS DDF-TÁCTICOS */}
                         <td
                           className={`py-2 px-2 border-r border-slate-200 font-bold ${
                             pctDDF === 100
                               ? 'bg-emerald-50 text-emerald-900'
-                              : pctDDF > 0
+                              : pctDDF >= 70
                               ? 'bg-amber-50 text-amber-900'
                               : 'bg-rose-50 text-rose-900'
                           }`}
                         >
-                          {pctDDF.toFixed(2)}%
+                          <div className="flex flex-col items-center">
+                            <span>{pctDDF.toFixed(2)}%</span>
+                            {rowDDF && rowDDF.camposLlenos < 7 && (
+                              <span className="text-[9px] font-semibold text-amber-800 bg-amber-100 px-1 rounded leading-tight mt-0.5">
+                                {rowDDF.camposLlenos}/7
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* DISPONIBILIDAD: NSG */}
@@ -2532,7 +3209,7 @@ export default function BoletinJ06Page() {
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
                 </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
-                  <span>✓ Incidencias DDF (Pegado)</span>
+                  <span>✓ Incidencias DDF-Tácticos (Excel)</span>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
                 </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
