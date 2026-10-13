@@ -34,7 +34,8 @@ import {
   ThumbsUp,
   ThumbsDown,
   X,
-  ChevronRight
+  ChevronRight,
+  DollarSign
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -127,6 +128,24 @@ export const CUOTAS_NEGATIVOS_DEFAULT: Record<string, number> = {
   '314': -250,
   '335': -100,
   '357': -250,
+}
+
+// Métricas base de scorecard de líderes Zona B
+export const METRICAS_LIDERES_BASE: Record<
+  string,
+  { dotacion: number; produccion: number; merma: number; reporte: number; equipo: number; amabilidad: number }
+> = {
+  '103': { dotacion: 7.0, produccion: 99.00, merma: 99.84, reporte: 100.0, equipo: 100.0, amabilidad: 100.0 },
+  '107': { dotacion: 3.0, produccion: 85.00, merma: 98.37, reporte: 100.0, equipo: 100.0, amabilidad: 101.0 },
+  '110': { dotacion: 3.0, produccion: 90.00, merma: 92.48, reporte: 50.0,  equipo: 100.0, amabilidad: 106.0 },
+  '118': { dotacion: 3.0, produccion: 92.00, merma: 98.09, reporte: 100.0, equipo: 100.0, amabilidad: 104.0 },
+  '155': { dotacion: 3.0, produccion: 92.00, merma: 96.73, reporte: 100.0, equipo: 100.0, amabilidad: 103.0 },
+  '175': { dotacion: 4.0, produccion: 92.00, merma: 98.49, reporte: 100.0, equipo: 100.0, amabilidad: 98.0 },
+  '193': { dotacion: 4.0, produccion: 95.00, merma: 101.12, reporte: 100.0, equipo: 100.0, amabilidad: 102.0 },
+  '311': { dotacion: 4.0, produccion: 92.00, merma: 95.34, reporte: 100.0, equipo: 100.0, amabilidad: 102.0 },
+  '314': { dotacion: 2.0, produccion: 92.00, merma: 97.68, reporte: 100.0, equipo: 100.0, amabilidad: 105.0 },
+  '335': { dotacion: 2.5, produccion: 66.00, merma: 92.29, reporte: 100.0, equipo: 100.0, amabilidad: 93.0 },
+  '357': { dotacion: 3.0, produccion: 96.00, merma: 92.22, reporte: 100.0, equipo: 100.0, amabilidad: 108.0 },
 }
 
 // Interfaces Ajustes
@@ -230,6 +249,18 @@ export interface FilaRegistroACTienda {
   registrosCumplidos: number
   totalRegistros: number
   cumplimientoPorcentaje: number
+}
+
+// Interfaces Ventas Semanales (% Logro y % Crecimiento)
+export interface FilaVentaTienda {
+  codigo: string
+  nombre: string
+  lider: string
+  ventaSoles: number
+  metaSoles?: number
+  logroPorcentaje: number
+  crecimientoPorcentaje: number
+  observaciones?: string
 }
 
 const NOMBRES_7_CAMPOS_DDF = [
@@ -569,10 +600,34 @@ const DATOS_EJEMPLO_REGISTRO_AC: FilaRegistroACTienda[] = TIENDAS_ZONA_B.map(t =
   }
 })
 
+// Datos de muestra Ventas Semanales (Semana 40 de referencia oficial)
+export const DATOS_EJEMPLO_VENTA: FilaVentaTienda[] = [
+  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', ventaSoles: 88692, metaSoles: 96520, logroPorcentaje: 91.89, crecimientoPorcentaje: -3.23 },
+  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', ventaSoles: 38643, metaSoles: 39448, logroPorcentaje: 97.96, crecimientoPorcentaje: -0.13 },
+  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', ventaSoles: 37596, metaSoles: 37476, logroPorcentaje: 100.32, crecimientoPorcentaje: 5.09 },
+  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', ventaSoles: 48885, metaSoles: 52655, logroPorcentaje: 92.84, crecimientoPorcentaje: -2.97 },
+  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', ventaSoles: 58551, metaSoles: 68361, logroPorcentaje: 85.65, crecimientoPorcentaje: -16.11 },
+  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', ventaSoles: 70620, metaSoles: 77434, logroPorcentaje: 91.20, crecimientoPorcentaje: -4.90 },
+  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', ventaSoles: 59562, metaSoles: 59060, logroPorcentaje: 100.85, crecimientoPorcentaje: 11.99 },
+  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', ventaSoles: 50323, metaSoles: 59350, logroPorcentaje: 84.79, crecimientoPorcentaje: -9.79 },
+  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', ventaSoles: 32569, metaSoles: 33983, logroPorcentaje: 95.84, crecimientoPorcentaje: -0.95 },
+  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', ventaSoles: 24637, metaSoles: 29994, logroPorcentaje: 82.14, crecimientoPorcentaje: -8.84 },
+  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', ventaSoles: 26755, metaSoles: 27614, logroPorcentaje: 96.89, crecimientoPorcentaje: -2.39 },
+]
+
 export default function BoletinJ06Page() {
   const [activeTab, setActiveTab] = useState<
-    'vencimiento' | 'calidad_auditoria' | 'registro_ac' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'
-  >('registro_ac')
+    'ventas' | 'vencimiento' | 'calidad_auditoria' | 'registro_ac' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'
+  >('ventas')
+
+  // Estado Ventas (% Logro y % Crecimiento)
+  const [datosVenta, setDatosVenta] = useState<FilaVentaTienda[]>(DATOS_EJEMPLO_VENTA)
+  const [textoPegadoVenta, setTextoPegadoVenta] = useState<string>('')
+  const [copiadoVenta, setCopiadoVenta] = useState(false)
+  const [ventaTotalBannerManual, setVentaTotalBannerManual] = useState<number>(2294972)
+  const [usarTotalBannerManual, setUsarTotalBannerManual] = useState<boolean>(true)
+  const [cumplimientoBannerManual, setCumplimientoBannerManual] = useState<number>(94.0)
+  const [crecimientoBannerManual, setCrecimientoBannerManual] = useState<number>(-0.4)
 
   // Estado App Vencimiento
   const [datosVencimiento, setDatosVencimiento] = useState<FilaAppVencimientoTienda[]>(DATOS_EJEMPLO_VENCIMIENTO)
@@ -1459,6 +1514,181 @@ export default function BoletinJ06Page() {
   const tiendasObservadasAC = datosRegistroAC.filter(t => t.cumplimientoPorcentaje < 100).length
   const totalRegistrosCompletados = datosRegistroAC.reduce((acc, t) => acc + t.registrosCumplidos, 0)
 
+  // Ingesta y Procesamiento de Ventas (% Logro y % Crecimiento)
+  const procesarTextoPegadoVentas = (rawText: string) => {
+    if (!rawText || rawText.trim().length === 0) {
+      toast.error('El texto pegado está vacío.')
+      return
+    }
+
+    try {
+      const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+      let actualizados = 0
+      const nuevosDatos = [...datosVenta]
+
+      for (const linea of lineas) {
+        // Ignorar encabezados comunes
+        if (
+          /^(tienda|local|codigo|código|venta|logro|crecimiento|semana)/i.test(linea) &&
+          !identificarTienda(linea)
+        ) {
+          continue
+        }
+
+        const partes = linea.includes('\t')
+          ? linea.split('\t').map(p => p.trim())
+          : linea.includes(';')
+          ? linea.split(';').map(p => p.trim())
+          : linea.split(/\s{2,}/).map(p => p.trim())
+
+        let tiendaMatch: TiendaZonaB | undefined = undefined
+        for (let i = 0; i < partes.length; i++) {
+          const match = identificarTienda(partes[i])
+          if (match) {
+            tiendaMatch = match
+            break
+          }
+        }
+        if (!tiendaMatch) {
+          tiendaMatch = identificarTienda(linea)
+        }
+
+        if (tiendaMatch) {
+          const limpiarNumero = (valStr: string): number | null => {
+            const limpio = valStr
+              .replace(/S\/\.?/gi, '')
+              .replace(/\$/g, '')
+              .replace(/%/g, '')
+              .replace(/,/g, '')
+              .trim()
+            const num = parseFloat(limpio)
+            return isNaN(num) ? null : num
+          }
+
+          let ventaVal: number | null = null
+          let logroVal: number | null = null
+          let crecVal: number | null = null
+
+          if (partes.length >= 3) {
+            const colsNumericas = partes
+              .map(limpiarNumero)
+              .filter((v): v is number => v !== null)
+
+            if (colsNumericas.length >= 3) {
+              ventaVal = colsNumericas[0]
+              logroVal = colsNumericas[1]
+              crecVal = colsNumericas[2]
+            } else if (colsNumericas.length === 2) {
+              if (colsNumericas[0] > 1000) {
+                ventaVal = colsNumericas[0]
+                logroVal = colsNumericas[1]
+              } else {
+                logroVal = colsNumericas[0]
+                crecVal = colsNumericas[1]
+              }
+            }
+          }
+
+          if (ventaVal === null || logroVal === null || crecVal === null) {
+            const matchVenta = linea.match(/(?:S\/\s*)?([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{4,7}(?:\.[0-9]+)?)/)
+            if (matchVenta && ventaVal === null) {
+              ventaVal = parseFloat(matchVenta[1].replace(/,/g, ''))
+            }
+
+            const matchesPct = Array.from(linea.matchAll(/([+\-]?\d+(?:\.\d+)?)\s*%/g))
+            if (matchesPct.length >= 2) {
+              if (logroVal === null) logroVal = parseFloat(matchesPct[0][1])
+              if (crecVal === null) crecVal = parseFloat(matchesPct[1][1])
+            } else if (matchesPct.length === 1) {
+              const val = parseFloat(matchesPct[0][1])
+              if (val < 0) {
+                if (crecVal === null) crecVal = val
+              } else {
+                if (logroVal === null) logroVal = val
+              }
+            }
+          }
+
+          const idx = nuevosDatos.findIndex(t => t.codigo === tiendaMatch!.codigo)
+          if (idx !== -1) {
+            nuevosDatos[idx] = {
+              ...nuevosDatos[idx],
+              ventaSoles: ventaVal !== null ? Math.round(ventaVal) : nuevosDatos[idx].ventaSoles,
+              logroPorcentaje: logroVal !== null ? parseFloat(logroVal.toFixed(2)) : nuevosDatos[idx].logroPorcentaje,
+              crecimientoPorcentaje: crecVal !== null ? parseFloat(crecVal.toFixed(2)) : nuevosDatos[idx].crecimientoPorcentaje,
+            }
+            actualizados++
+          }
+        }
+      }
+
+      if (actualizados > 0) {
+        setDatosVenta(nuevosDatos)
+        toast.success(`¡Se actualizaron con éxito las ventas de ${actualizados} tiendas!`)
+      } else {
+        toast.error('No se pudo identificar tiendas o números en el texto pegado.')
+      }
+    } catch {
+      toast.error('Error al procesar el texto pegado de ventas.')
+    }
+  }
+
+  const pegarDesdePortapapelesVentas = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto && texto.trim().length > 0) {
+        setTextoPegadoVenta(texto)
+        procesarTextoPegadoVentas(texto)
+      } else {
+        toast.warning('El portapapeles está vacío.')
+      }
+    } catch {
+      toast.info('Pega el texto directamente en el recuadro inferior con Ctrl+V.')
+    }
+  }
+
+  const copiarTablaVentas = () => {
+    const encabezado = 'Tienda\tLíder\tVenta (S/)\t% Logro\t% Crecimiento'
+    const filas = datosVenta
+      .map(
+        t =>
+          `${t.nombre}\t${t.lider}\t${t.ventaSoles}\t${t.logroPorcentaje.toFixed(2)}%\t${t.crecimientoPorcentaje >= 0 ? '+' : ''}${t.crecimientoPorcentaje.toFixed(2)}%`
+      )
+      .join('\n')
+    navigator.clipboard.writeText(`${encabezado}\n${filas}`)
+    setCopiadoVenta(true)
+    toast.success('¡Tabla de Ventas copiada en formato TSV/Excel!')
+    setTimeout(() => setCopiadoVenta(false), 2500)
+  }
+
+  const restablecerVentasDefault = () => {
+    setDatosVenta(DATOS_EJEMPLO_VENTA)
+    toast.info('Valores de venta restablecidos a los de referencia (S40).')
+  }
+
+  const actualizarCampoVenta = (
+    codigo: string,
+    campo: 'ventaSoles' | 'logroPorcentaje' | 'crecimientoPorcentaje',
+    valor: number
+  ) => {
+    setDatosVenta(prev =>
+      prev.map(t => (t.codigo === codigo ? { ...t, [campo]: valor } : t))
+    )
+  }
+
+  // Estadísticas de Ventas
+  const totalVentaCalculada = datosVenta.reduce((acc, t) => acc + t.ventaSoles, 0)
+  const promedioLogroVenta =
+    datosVenta.length > 0
+      ? (datosVenta.reduce((acc, t) => acc + t.logroPorcentaje, 0) / datosVenta.length).toFixed(2)
+      : '0.00'
+  const promedioCrecimientoVenta =
+    datosVenta.length > 0
+      ? (datosVenta.reduce((acc, t) => acc + t.crecimientoPorcentaje, 0) / datosVenta.length).toFixed(2)
+      : '0.00'
+  const tiendasCumplenMetaVenta = datosVenta.filter(t => t.logroPorcentaje >= 100).length
+  const tiendasFocoVenta = datosVenta.filter(t => t.crecimientoPorcentaje < 0 || t.logroPorcentaje < 90)
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 md:p-8 space-y-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -1511,6 +1741,7 @@ export default function BoletinJ06Page() {
                 setDatosVencimiento(DATOS_EJEMPLO_VENCIMIENTO)
                 setDatosCalidadAuditoria(DATOS_EJEMPLO_CALIDAD_AUDITORIA)
                 setDatosRegistroAC(DATOS_EJEMPLO_REGISTRO_AC)
+                setDatosVenta(DATOS_EJEMPLO_VENTA)
                 toast.info('Se cargaron los datos de ejemplo.')
               }}
               className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors cursor-pointer"
@@ -1524,6 +1755,21 @@ export default function BoletinJ06Page() {
         {/* Pestañas de Navegación del Módulo */}
         <div className="flex border-b border-slate-200 bg-white px-4 rounded-xl shadow-sm overflow-x-auto">
           <button
+            onClick={() => setActiveTab('ventas')}
+            className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'ventas'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            1. Ventas (% Logro / Crec.)
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              Nuevo
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('vencimiento')}
             className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'vencimiento'
@@ -1532,7 +1778,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Smartphone className="w-4 h-4" />
-            1. App Vencimiento (Pegar Web)
+            2. App Vencimiento (Pegar Web)
           </button>
 
           <button
@@ -1544,10 +1790,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Award className="w-4 h-4" />
-            2. Calidad Auditoría (Pegar Excel)
-            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-              Nuevo
-            </span>
+            3. Calidad Auditoría (Pegar Excel)
           </button>
 
           <button
@@ -1559,7 +1802,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Camera className="w-4 h-4" />
-            3. Registro A-C (Apertura/Cierre)
+            4. Registro A-C (Apertura/Cierre)
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
               100% Default
             </span>
@@ -1574,7 +1817,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ClipboardPaste className="w-4 h-4" />
-            4. Incidencias DDF-Tácticos
+            5. Incidencias DDF-Tácticos
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
               100% Default
             </span>
@@ -1589,7 +1832,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            5. Disponibilidad (ResumGTda)
+            6. Disponibilidad (ResumGTda)
           </button>
 
           <button
@@ -1601,7 +1844,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <TrendingDown className="w-4 h-4" />
-            5. Negativos (Looker)
+            7. Negativos (Looker)
           </button>
 
           <button
@@ -1613,7 +1856,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            6. Ajustes (Looker)
+            8. Ajustes (Looker)
           </button>
 
           <button
@@ -1625,9 +1868,9 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Eye className="w-4 h-4" />
-            7. Vista Previa Boletín J06
+            9. Vista Previa Boletín J06
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
-              8 KPIs Conectados
+              Completo
             </span>
           </button>
 
@@ -1640,11 +1883,454 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            8. Datos Consolidado
+            10. Datos Consolidado
           </button>
         </div>
 
-        {/* TAB 1: APP VENCIMIENTO (PEGAR WEB) */}
+        {/* TAB 1: VENTAS (% LOGRO Y % CRECIMIENTO) */}
+        {activeTab === 'ventas' && (
+          <div className="space-y-6">
+            {/* Panel de Ingesta y Copiado */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-600" />
+                    Ventas Semanales: Venta (S/), % Logro y % Crecimiento
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Copia y pega la tabla de ventas directamente desde Excel, Google Sheets o Looker. El sistema reconoce automáticamente tiendas (incluyendo códigos y nombres como Cusco 357, Trujillo 1 y 2), montos en Soles y porcentajes de logro y crecimiento.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={pegarDesdePortapapelesVentas}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  >
+                    <ClipboardPaste className="w-4 h-4" />
+                    Pegar Portapapeles
+                  </button>
+                  <button
+                    onClick={copiarTablaVentas}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
+                  >
+                    {copiadoVenta ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    {copiadoVenta ? '¡Copiado!' : 'Copiar Tabla TSV'}
+                  </button>
+                  <button
+                    onClick={restablecerVentasDefault}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
+                    title="Restablecer valores oficiales de referencia"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Valores S40 Ref.
+                  </button>
+                </div>
+              </div>
+
+              {/* Métricas Resumen Zona B */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span>Venta Suma Tiendas</span>
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="text-lg font-bold text-slate-900">
+                    S/ {totalVentaCalculada.toLocaleString('es-PE')}
+                  </div>
+                  <div className="text-[10px] text-slate-500">11 tiendas Zona B</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-emerald-800 font-medium">
+                    <span>% Logro Zona B</span>
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="text-lg font-bold text-emerald-950">
+                    {promedioLogroVenta}%
+                  </div>
+                  <div className="text-[10px] text-emerald-700">Meta: ≥ 100.0%</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-amber-800 font-medium">
+                    <span>% Crecimiento Prom.</span>
+                    <TrendingDown className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div
+                    className={`text-lg font-bold ${
+                      parseFloat(promedioCrecimientoVenta) >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                    }`}
+                  >
+                    {parseFloat(promedioCrecimientoVenta) >= 0 ? '+' : ''}
+                    {promedioCrecimientoVenta}%
+                  </div>
+                  <div className="text-[10px] text-slate-500">vs semana/año anterior</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span>Tiendas en Meta</span>
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="text-lg font-bold text-slate-900">
+                    {tiendasCumplenMetaVenta} <span className="text-xs text-slate-400 font-normal">/ 11</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {((tiendasCumplenMetaVenta / 11) * 100).toFixed(1)}% de cumplimiento
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-rose-800 font-medium">
+                    <span>Tiendas Foco Semana</span>
+                    <AlertCircle className="w-4 h-4 text-rose-600" />
+                  </div>
+                  <div className="text-lg font-bold text-rose-900">
+                    {tiendasFocoVenta.length} <span className="text-xs text-rose-400 font-normal">/ 11</span>
+                  </div>
+                  <div className="text-[10px] text-rose-700">Crec. negativo o logro &lt;90%</div>
+                </div>
+              </div>
+
+              {/* Ajuste de Banner Institucional Zona B */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-700">Banner General Zona B:</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={usarTotalBannerManual}
+                      onChange={e => setUsarTotalBannerManual(e.target.checked)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>Usar monto institucional en encabezado (S/ {ventaTotalBannerManual.toLocaleString('es-PE')})</span>
+                  </label>
+                </div>
+                {usarTotalBannerManual && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Monto Banner S/:</span>
+                    <input
+                      type="number"
+                      value={ventaTotalBannerManual}
+                      onChange={e => setVentaTotalBannerManual(parseFloat(e.target.value) || 0)}
+                      className="w-28 px-2 py-1 bg-white border border-slate-300 rounded text-slate-900 font-mono font-bold text-right"
+                    />
+                    <span className="text-slate-500 ml-1">Cumpl%:</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={cumplimientoBannerManual}
+                      onChange={e => setCumplimientoBannerManual(parseFloat(e.target.value) || 0)}
+                      className="w-16 px-1.5 py-1 bg-white border border-slate-300 rounded text-slate-900 font-mono font-bold text-right"
+                    />
+                    <span className="text-slate-500 ml-1">Crec%:</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={crecimientoBannerManual}
+                      onChange={e => setCrecimientoBannerManual(parseFloat(e.target.value) || 0)}
+                      className="w-16 px-1.5 py-1 bg-white border border-slate-300 rounded text-slate-900 font-mono font-bold text-right"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Área de Texto para Pegar */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Pegar tabla o reporte de ventas (Excel / Looker / TSV):
+                </label>
+                <div className="relative">
+                  <textarea
+                    rows={3}
+                    placeholder={`Ejemplo de formato soportado:\n103 - Mega Plaza\tS/ 88,692\t91.89%\t-3.23%\n107 - Atocongo\tS/ 38,643\t97.96%\t-0.13%\n110 - Huaylas\tS/ 37,596\t100.32%\t+5.09%`}
+                    value={textoPegadoVenta}
+                    onChange={e => setTextoPegadoVenta(e.target.value)}
+                    className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  />
+                  {textoPegadoVenta && (
+                    <button
+                      onClick={() => setTextoPegadoVenta('')}
+                      className="absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-600 bg-white rounded-md shadow-sm border border-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">
+                    💡 Formatos: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700">Tienda [tab] Venta [tab] % Logro [tab] % Crec</code>
+                  </span>
+                  <button
+                    onClick={() => procesarTextoPegadoVentas(textoPegadoVenta)}
+                    disabled={!textoPegadoVenta.trim()}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Procesar Texto Pegado
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Interactiva de Ventas */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Tabla de Ventas Semanal por Tienda ({semanaSeleccionada})
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Edita directamente cualquier valor en la tabla si necesitas ajustar cifras manuales.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
+                  11 Tiendas Zona B
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-semibold">
+                      <th className="py-2.5 px-3 border-r border-slate-200">Tienda</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200">Líder J06</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-right">Venta (S/)</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-right">Meta Estimada</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-center">
+                        % Logro (Meta &gt;100%)
+                      </th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-center">
+                        % Crecimiento
+                      </th>
+                      <th className="py-2.5 px-3 text-center">Diagnóstico / Foco</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosVenta.map(tienda => {
+                      const metaCalc = Math.round((tienda.ventaSoles / (tienda.logroPorcentaje / 100)) || 0)
+                      const cumpleMeta = tienda.logroPorcentaje >= 100
+                      const esCercaMeta = tienda.logroPorcentaje >= 90 && tienda.logroPorcentaje < 100
+                      const esCritico = tienda.logroPorcentaje < 90 || tienda.crecimientoPorcentaje < -5
+
+                      return (
+                        <tr key={tienda.codigo} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            <span className="font-mono text-slate-500 mr-1.5">{tienda.codigo}</span>
+                            {tienda.nombre.replace(/^\d+\s*-\s*/, '')}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {tienda.lider}
+                          </td>
+
+                          {/* Venta Soles */}
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-slate-400 text-[11px]">S/</span>
+                              <input
+                                type="number"
+                                value={tienda.ventaSoles}
+                                onChange={e =>
+                                  actualizarCampoVenta(
+                                    tienda.codigo,
+                                    'ventaSoles',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="w-24 px-1.5 py-0.5 text-right font-mono font-semibold text-slate-900 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded focus:border-emerald-500 focus:outline-none"
+                              />
+                            </div>
+                          </td>
+
+                          {/* Meta Estimada */}
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono text-slate-500">
+                            S/ {metaCalc.toLocaleString('es-PE')}
+                          </td>
+
+                          {/* % Logro */}
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={tienda.logroPorcentaje}
+                                onChange={e =>
+                                  actualizarCampoVenta(
+                                    tienda.codigo,
+                                    'logroPorcentaje',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className={`w-20 px-1.5 py-0.5 text-center font-mono font-bold rounded border focus:outline-none ${
+                                  cumpleMeta
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : esCercaMeta
+                                    ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                    : 'bg-rose-50 text-rose-900 border-rose-300'
+                                }`}
+                              />
+                              <span className="text-[11px] font-semibold text-slate-500">%</span>
+                            </div>
+                          </td>
+
+                          {/* % Crecimiento */}
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={tienda.crecimientoPorcentaje}
+                                onChange={e =>
+                                  actualizarCampoVenta(
+                                    tienda.codigo,
+                                    'crecimientoPorcentaje',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className={`w-20 px-1.5 py-0.5 text-center font-mono font-bold rounded border focus:outline-none ${
+                                  tienda.crecimientoPorcentaje >= 0
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : 'bg-rose-50 text-rose-900 border-rose-300'
+                                }`}
+                              />
+                              <span className="text-[11px] font-semibold text-slate-500">%</span>
+                            </div>
+                          </td>
+
+                          {/* Diagnóstico */}
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                            {cumpleMeta ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                <CheckCircle className="w-3 h-3" /> Meta Superada
+                              </span>
+                            ) : esCritico ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                                <AlertCircle className="w-3 h-3" /> Foco Crítico
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                                Cerca a Meta
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                      <td colSpan={2} className="py-2.5 px-3 text-left">
+                        Total / Promedio Zona B:
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono text-emerald-900">
+                        S/ {totalVentaCalculada.toLocaleString('es-PE')}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-500">
+                        S/{' '}
+                        {datosVenta
+                          .reduce((acc, t) => acc + Math.round((t.ventaSoles / (t.logroPorcentaje / 100)) || 0), 0)
+                          .toLocaleString('es-PE')}
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono text-emerald-800 bg-emerald-50">
+                        {promedioLogroVenta}%
+                      </td>
+                      <td
+                        className={`py-2.5 px-3 text-center font-mono ${
+                          parseFloat(promedioCrecimientoVenta) >= 0
+                            ? 'text-emerald-800 bg-emerald-50'
+                            : 'text-rose-800 bg-rose-50'
+                        }`}
+                      >
+                        {parseFloat(promedioCrecimientoVenta) >= 0 ? '+' : ''}
+                        {promedioCrecimientoVenta}%
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="text-[10px] text-slate-600 font-medium">
+                          {tiendasCumplenMetaVenta} de 11 cumplen meta
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Panel Foco Semana: Síntesis Ejecutiva */}
+            <div className="bg-gradient-to-br from-rose-50/50 via-white to-amber-50/30 rounded-2xl border border-rose-200 p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-rose-200/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                    !
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Foco de la Semana - Tiendas con Alerta de Ventas ({semanaSeleccionada})
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Listado automático para la presentación del Boletín Semanal J06 (Zona B).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const textoFoco = `Foco Semana (${semanaSeleccionada}) - Zona B:\n` +
+                      tiendasFocoVenta
+                        .sort((a, b) => a.crecimientoPorcentaje - b.crecimientoPorcentaje)
+                        .map(
+                          t =>
+                            `- ${t.nombre.replace(/^\d+\s*-\s*/, '')}: Crec. ${t.crecimientoPorcentaje >= 0 ? '+' : ''}${t.crecimientoPorcentaje.toFixed(2)}% | Logro: ${t.logroPorcentaje.toFixed(2)}%`
+                        )
+                        .join('\n')
+                    navigator.clipboard.writeText(textoFoco)
+                    toast.success('¡Síntesis de Foco Semana copiada!')
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-rose-300 text-rose-800 hover:bg-rose-50 text-xs font-semibold shadow-sm transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copiar Foco Semana
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {tiendasFocoVenta
+                  .sort((a, b) => a.crecimientoPorcentaje - b.crecimientoPorcentaje)
+                  .map(t => (
+                    <div
+                      key={t.codigo}
+                      className="p-3 bg-white rounded-xl border border-rose-100 shadow-sm flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="font-bold text-slate-900 text-xs">{t.nombre}</div>
+                        <div className="text-[11px] text-slate-500">{t.lider}</div>
+                      </div>
+                      <div className="text-right">
+                        <div
+                          className={`font-mono font-bold text-xs ${
+                            t.crecimientoPorcentaje < 0 ? 'text-rose-600' : 'text-emerald-600'
+                          }`}
+                        >
+                          {t.crecimientoPorcentaje >= 0 ? '+' : ''}
+                          {t.crecimientoPorcentaje.toFixed(2)}%
+                        </div>
+                        <div className="text-[10px] text-slate-400">Logro: {t.logroPorcentaje.toFixed(2)}%</div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              <div className="p-3 bg-white/80 rounded-xl border border-slate-200 text-xs text-slate-600">
+                <strong className="text-slate-800 font-semibold">Resumen para Boletín:</strong>{' '}
+                {tiendasFocoVenta
+                  .sort((a, b) => a.crecimientoPorcentaje - b.crecimientoPorcentaje)
+                  .map(t => `${t.nombre.replace(/^\d+\s*-\s*/, '')}: ${t.crecimientoPorcentaje.toFixed(1)}%`)
+                  .join(' | ')}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: APP VENCIMIENTO (PEGAR WEB) */}
         {activeTab === 'vencimiento' && (
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -2857,22 +3543,447 @@ export default function BoletinJ06Page() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Boletín J06 - Sección: KPI&apos;S (Inventario, Implementación, Disponibilidad, Calidad)
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                  Boletín Semanal J06 ({semanaSeleccionada}) - Consolidado Zona B
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Secciones automatizadas: <strong className="text-emerald-700">Ajustes</strong>,{' '}
-                  <strong className="text-emerald-700">Negativos</strong>,{' '}
-                  <strong className="text-emerald-700">Registro A-C</strong>,{' '}
-                  <strong className="text-emerald-700">Incidencias DDF</strong>,{' '}
-                  <strong className="text-emerald-700">Disponibilidad (NSG, Bodega, Quiebre)</strong>,{' '}
-                  <strong className="text-emerald-700">App Vencimiento</strong> y{' '}
-                  <strong className="text-emerald-700">Calidad Auditoría</strong>.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Visualización consolidada de todos los indicadores clave: Ventas, Scorecard de Líderes y Detalle de KPI&apos;s operativos.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 9 Indicadores Sincronizados
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 10 Indicadores Sincronizados
+                </span>
+              </div>
+            </div>
+
+            {/* BANNER GENERAL INSTITUCIONAL ZONA B (COMO EN LA PLANTILLA OFICIAL) */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs font-black text-slate-700 tracking-wider uppercase">
+                  Zona B - Indicadores Clave
+                </span>
+                <span className="text-[11px] text-slate-500 font-semibold">{semanaSeleccionada}</span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 text-center text-xs">
+                {/* Venta */}
+                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
+                  <div className="text-[10px] text-[#2e7d32] font-semibold">Venta</div>
+                  <div className="font-bold text-[#1b5e20] text-xs">
+                    {usarTotalBannerManual
+                      ? `S/ ${ventaTotalBannerManual.toLocaleString('es-PE')}`
+                      : `S/ ${totalVentaCalculada.toLocaleString('es-PE')}`}
+                  </div>
+                </div>
+
+                {/* Cumplimiento Venta */}
+                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
+                  <div className="text-[10px] text-[#2e7d32] font-semibold">Cumpl.%</div>
+                  <div className="font-bold text-[#1b5e20] text-xs">
+                    {usarTotalBannerManual ? `${cumplimientoBannerManual}%` : `${promedioLogroVenta}%`}
+                  </div>
+                </div>
+
+                {/* Crecimiento Venta */}
+                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
+                  <div className="text-[10px] text-[#2e7d32] font-semibold">Crec.%</div>
+                  <div
+                    className={`font-bold text-xs ${
+                      (usarTotalBannerManual ? crecimientoBannerManual : parseFloat(promedioCrecimientoVenta)) >= 0
+                        ? 'text-[#1b5e20]'
+                        : 'text-rose-700'
+                    }`}
+                  >
+                    {usarTotalBannerManual
+                      ? `${crecimientoBannerManual >= 0 ? '+' : ''}${crecimientoBannerManual}%`
+                      : `${parseFloat(promedioCrecimientoVenta) >= 0 ? '+' : ''}${promedioCrecimientoVenta}%`}
+                  </div>
+                </div>
+
+                {/* Merma */}
+                <div className="p-2 rounded-lg bg-[#fff9c4] border border-[#fff59d]">
+                  <div className="text-[10px] text-amber-900 font-semibold">Merma</div>
+                  <div className="font-bold text-amber-950 text-xs">4.29%</div>
+                  <div className="text-[9px] text-amber-700">obj. 4.84%</div>
+                </div>
+
+                {/* Amabilidad */}
+                <div className="p-2 rounded-lg bg-[#ffe0b2] border border-[#ffcc80]">
+                  <div className="text-[10px] text-[#e65100] font-semibold">Amabilidad *</div>
+                  <div className="font-bold text-[#e65100] text-xs">101.90%</div>
+                  <div className="text-[9px] text-orange-700">&gt;91%</div>
+                </div>
+
+                {/* MOP */}
+                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
+                  <div className="text-[10px] text-[#2e7d32] font-semibold">MOP *</div>
+                  <div className="font-bold text-[#1b5e20] text-xs">102.00%</div>
+                  <div className="text-[9px] text-emerald-700">&gt;100%</div>
+                </div>
+
+                {/* Productividad */}
+                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
+                  <div className="text-[10px] text-[#2e7d32] font-semibold">Productividad *</div>
+                  <div className="font-bold text-[#1b5e20] text-xs">105%</div>
+                  <div className="text-[9px] text-emerald-700">&gt;100%</div>
+                </div>
+
+                {/* NSG */}
+                <div className="p-2 rounded-lg bg-[#fff9c4] border border-[#fff59d]">
+                  <div className="text-[10px] text-amber-900 font-semibold">NSG</div>
+                  <div className="font-bold text-amber-950 text-xs">91.82%</div>
+                  <div className="text-[9px] text-amber-700">Obj. 95%</div>
+                </div>
+
+                {/* Calidad */}
+                <div className="p-2 rounded-lg bg-[#fff9c4] border border-[#fff59d]">
+                  <div className="text-[10px] text-amber-900 font-semibold">Calidad</div>
+                  <div className="font-bold text-amber-950 text-xs">{promedioCalidad}%</div>
+                  <div className="text-[9px] text-amber-700">&gt;90%</div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 1: TABLA DE VENTAS, ACUMULADO, FOCO DE LA SEMANA Y FEEDBACK */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Tabla de Ventas Semanal (lg:col-span-5) */}
+              <div className="lg:col-span-5 space-y-2">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                  <span className="font-bold text-xs text-slate-800">
+                    Ventas Semanales ({semanaSeleccionada})
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    S/ {totalVentaCalculada.toLocaleString('es-PE')}
+                  </span>
+                </div>
+                <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full text-[11px] text-center border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 font-bold text-slate-700 border-b border-slate-300">
+                        <th className="py-1.5 px-2 text-left border-r border-slate-300">Tienda</th>
+                        <th className="py-1.5 px-2 border-r border-slate-300 text-right">Venta</th>
+                        <th className="py-1.5 px-2 border-r border-slate-300 bg-emerald-50 text-emerald-900">
+                          % Logro
+                        </th>
+                        <th className="py-1.5 px-2">% Crec.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {datosVenta.map(t => (
+                        <tr key={t.codigo} className="hover:bg-slate-50">
+                          <td className="py-1 px-2 text-left font-semibold text-slate-800 border-r border-slate-200 whitespace-nowrap">
+                            {t.nombre}
+                          </td>
+                          <td className="py-1 px-2 text-right font-mono text-slate-700 border-r border-slate-200 whitespace-nowrap">
+                            S/ {t.ventaSoles.toLocaleString('es-PE')}
+                          </td>
+                          <td
+                            className={`py-1 px-2 font-bold border-r border-slate-200 ${
+                              t.logroPorcentaje >= 100
+                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                : t.logroPorcentaje >= 90
+                                ? 'bg-[#ffe0b2] text-[#e65100]'
+                                : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}
+                          >
+                            {t.logroPorcentaje.toFixed(2)}%
+                          </td>
+                          <td
+                            className={`py-1 px-2 font-bold ${
+                              t.crecimientoPorcentaje >= 0
+                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}
+                          >
+                            {t.crecimientoPorcentaje >= 0 ? '+' : ''}
+                            {t.crecimientoPorcentaje.toFixed(2)}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Acumulado MOP y Productividad (lg:col-span-2) */}
+              <div className="lg:col-span-2 space-y-2">
+                <div className="pb-1 border-b border-slate-200">
+                  <span className="font-bold text-xs text-slate-800">Acumulado *</span>
+                </div>
+                <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full text-[11px] text-center border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 font-bold text-slate-700 border-b border-slate-300">
+                        <th className="py-1.5 px-2 border-r border-slate-300 bg-[#e8f5e9] text-[#1b5e20]">MOP</th>
+                        <th className="py-1.5 px-2 bg-[#e8f5e9] text-[#1b5e20]">Productividad</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {TIENDAS_ZONA_B.map(t => (
+                        <tr key={t.codigo} className="hover:bg-slate-50">
+                          <td className="py-1 px-2 border-r border-slate-200 font-mono text-slate-600 bg-emerald-50/20">
+                            0.00%
+                          </td>
+                          <td className="py-1 px-2 font-mono text-slate-600 bg-emerald-50/20">
+                            0.00%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Foco de la Semana y Categoría (lg:col-span-5) */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Resumen Panadería / Pastelería */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-xs">
+                    <div className="font-bold text-slate-900 border-b border-slate-200 pb-1">
+                      {semanaSeleccionada}
+                    </div>
+                    <div className="text-slate-700 space-y-1">
+                      <div>
+                        <span className="font-semibold text-slate-800">- Panadería:</span>{' '}
+                        <span className="font-mono text-emerald-800 font-bold">Cump: 88.6%</span>{' '}
+                        <span className="font-mono text-rose-700 font-bold">Crec: -5.9%</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-800">- Pastelería:</span>{' '}
+                        <span className="font-mono text-emerald-800 font-bold">Cump: 94.7%</span>{' '}
+                        <span className="font-mono text-rose-700 font-bold">Crec: -2.1%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Foco Semana */}
+                  <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1.5 text-xs">
+                    <div className="font-bold text-rose-950 flex items-center justify-between border-b border-rose-200 pb-1">
+                      <span>Foco Semana</span>
+                      <span className="text-[10px] bg-rose-200 text-rose-900 px-1.5 rounded font-bold">
+                        {tiendasFocoVenta.length}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5 text-slate-700 max-h-24 overflow-y-auto pr-1">
+                      {tiendasFocoVenta
+                        .sort((a, b) => a.crecimientoPorcentaje - b.crecimientoPorcentaje)
+                        .map(t => (
+                          <div key={t.codigo} className="flex items-center justify-between text-[11px]">
+                            <span className="font-medium text-slate-800">- {t.nombre.replace(/^\d+\s*-\s*/, '')}:</span>
+                            <span className="font-mono font-bold text-rose-700">
+                              {t.crecimientoPorcentaje >= 0 ? '+' : ''}{t.crecimientoPorcentaje.toFixed(1)}%
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Qué Funcionó y No Funcionó */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1 text-xs">
+                    <div className="font-bold text-emerald-950 flex items-center gap-1.5 border-b border-emerald-200 pb-0.5">
+                      <ThumbsUp className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Funcionó</span>
+                    </div>
+                    <div className="text-[10px] text-slate-700 max-h-16 overflow-y-auto leading-relaxed">
+                      {datosDDF.find(t => t.textoFunciono && t.textoFunciono.trim().length > 0)?.textoFunciono ||
+                        '50% en enrollados de pizza, queso y hot dog x un, keke redondo tottus + s/1.00 gaseosa Inka/Coca 1.5Lt'}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1 text-xs">
+                    <div className="font-bold text-rose-950 flex items-center gap-1.5 border-b border-rose-200 pb-0.5">
+                      <ThumbsDown className="w-3.5 h-3.5 text-rose-700" />
+                      <span>No funcionó</span>
+                    </div>
+                    <div className="text-[10px] text-slate-700 max-h-16 overflow-y-auto leading-relaxed">
+                      {datosDDF.find(t => t.textoNoFunciono && t.textoNoFunciono.trim().length > 0)?.textoNoFunciono ||
+                        'Compra de keke redondo tottus + S/1.00 agreg una gaseosa inka cola o coca cola x 1.5Lt'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 2: DESEMPEÑO DE INDICADORES LÍDERES (SCORECARD PONDERADO) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                <h3 className="text-sm font-black text-slate-800 tracking-wide uppercase flex items-center gap-2">
+                  <Award className="w-4 h-4 text-emerald-600" />
+                  Desempeño de Indicadores Líderes
+                </h3>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Evaluación Ponderada de 9 Criterios (Total 100%)
+                </span>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-300 rounded-xl">
+                <table className="w-full text-[11px] border-collapse text-center">
+                  <thead>
+                    {/* Fila Metas */}
+                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-300 text-[10px]">
+                      <th colSpan={3} className="py-1 px-2 border-r border-slate-300 text-left">Objetivo</th>
+                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-50 text-emerald-900 font-black">&gt;100%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">&gt;100%</th>
+                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-100 text-emerald-950 font-black">&gt;95%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-50 text-emerald-900 font-black">&gt;90%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">&gt;90.3%</th>
+                      <th className="py-1 px-1 bg-slate-200 text-slate-900 font-black">Total</th>
+                    </tr>
+                    {/* Fila Pesos */}
+                    <tr className="bg-slate-200/80 text-slate-700 font-bold border-b border-slate-300 text-[10px]">
+                      <th colSpan={3} className="py-1 px-2 border-r border-slate-300 text-right pr-3">Peso</th>
+                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-100 text-emerald-950 font-black">5%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">10%</th>
+                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-black">20%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">10%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">5%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">5%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">5%</th>
+                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-100 text-emerald-950 font-black">10%</th>
+                      <th className="py-1 px-1 border-r border-slate-300">30%</th>
+                      <th className="py-1 px-1 bg-slate-300 text-slate-900 font-black">100%</th>
+                    </tr>
+                    {/* Fila Encabezados de Columna */}
+                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-[11px]">
+                      <th className="py-2 px-3 text-left border-r border-slate-300">Tienda</th>
+                      <th className="py-2 px-3 text-left border-r border-slate-300">Líder J06</th>
+                      <th className="py-2 px-2 border-r border-slate-300 text-center">Dotación</th>
+                      <th className="py-2 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-950">Venta ⭐</th>
+                      <th className="py-2 px-2 border-r border-slate-300">producción</th>
+                      <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-black">Inventario ⭐</th>
+                      <th className="py-2 px-2 border-r border-slate-300">d (Disp) ⭐</th>
+                      <th className="py-2 px-2 border-r border-slate-300">Merma</th>
+                      <th className="py-2 px-2 border-r border-slate-300">Reporte</th>
+                      <th className="py-2 px-2 border-r border-slate-300">Equipo</th>
+                      <th className="py-2 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-950">Calidad ⭐</th>
+                      <th className="py-2 px-2 border-r border-slate-300">Amabilidad</th>
+                      <th className="py-2 px-2 bg-slate-200 text-slate-950 font-black">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {TIENDAS_ZONA_B.map(tienda => {
+                      const rowVenta = datosVenta.find(v => v.codigo === tienda.codigo)
+                      const rowAjuste = datosAjustes.find(a => a.codigo === tienda.codigo)
+                      const rowNegativo = datosNegativos.find(n => n.codigo === tienda.codigo)
+                      const rowDisp = datosDisponibilidad.find(d => d.codigo === tienda.codigo)
+                      const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === tienda.codigo)
+                      const base = METRICAS_LIDERES_BASE[tienda.codigo] || {
+                        dotacion: 3.0, produccion: 90.0, merma: 95.0, reporte: 100.0, equipo: 100.0, amabilidad: 100.0
+                      }
+
+                      const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
+                      const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
+                      const notaInventario = parseFloat(((pctAjuste + pctNegativo) / 2).toFixed(2))
+
+                      const valVenta = rowVenta ? rowVenta.logroPorcentaje : 100.0
+                      const valProd = base.produccion
+                      const valDisp = rowDisp ? rowDisp.nsg : 95.0
+                      const valMerma = base.merma
+                      const valReporte = base.reporte
+                      const valEquipo = base.equipo
+                      const valCalidad = rowCalidad ? rowCalidad.nota : 100.0
+                      const valAmabilidad = base.amabilidad
+
+                      const totalScore = parseFloat((
+                        (valVenta * 0.05) +
+                        (valProd * 0.10) +
+                        (notaInventario * 0.20) +
+                        (valDisp * 0.10) +
+                        (valMerma * 0.05) +
+                        (valReporte * 0.05) +
+                        (valEquipo * 0.05) +
+                        (valCalidad * 0.10) +
+                        (valAmabilidad * 0.30)
+                      ).toFixed(2))
+
+                      return (
+                        <tr key={tienda.codigo} className="hover:bg-slate-50">
+                          <td className="py-1.5 px-3 text-left font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {tienda.nombre}
+                          </td>
+                          <td className="py-1.5 px-3 text-left text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {tienda.lider}
+                          </td>
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-center font-mono text-slate-700 bg-amber-50/60">
+                            {base.dotacion.toFixed(1)}
+                          </td>
+                          {/* Venta (5%) */}
+                          <td className={`py-1.5 px-2 border-r border-slate-200 font-bold ${
+                            valVenta >= 100 ? 'bg-emerald-50 text-emerald-900' : valVenta >= 90 ? 'bg-amber-50 text-amber-900' : 'bg-rose-50 text-rose-900'
+                          }`}>
+                            {valVenta.toFixed(2)}%
+                          </td>
+                          {/* Producción (10%) */}
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
+                            {valProd.toFixed(2)}%
+                          </td>
+                          {/* Inventario (20%) */}
+                          <td className={`py-1.5 px-2 border-r border-slate-200 font-bold ${
+                            notaInventario >= 90 ? 'bg-emerald-100 text-emerald-950' : 'bg-amber-50 text-amber-900'
+                          }`}>
+                            {notaInventario.toFixed(2)}%
+                          </td>
+                          {/* Disponibilidad (10%) */}
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
+                            {valDisp.toFixed(2)}%
+                          </td>
+                          {/* Merma (5%) */}
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
+                            {valMerma.toFixed(2)}%
+                          </td>
+                          {/* Reporte (5%) */}
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
+                            {valReporte.toFixed(2)}%
+                          </td>
+                          {/* Equipo (5%) */}
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
+                            {valEquipo.toFixed(2)}%
+                          </td>
+                          {/* Calidad (10%) */}
+                          <td className={`py-1.5 px-2 border-r border-slate-200 font-bold ${
+                            valCalidad >= 90 ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'
+                          }`}>
+                            {valCalidad.toFixed(2)}%
+                          </td>
+                          {/* Amabilidad (30%) */}
+                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
+                            {valAmabilidad.toFixed(2)}%
+                          </td>
+                          {/* Total Ponderado (100%) */}
+                          <td className={`py-1.5 px-2 font-black ${
+                            totalScore >= 95
+                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                              : totalScore >= 90
+                              ? 'bg-[#e8f5e9] text-[#2e7d32]'
+                              : totalScore >= 85
+                              ? 'bg-[#ffe0b2] text-[#e65100]'
+                              : 'bg-[#ffcdd2] text-[#b71c1c]'
+                          }`}>
+                            {totalScore.toFixed(2)}%
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* SECCIÓN 3: KPI'S DETALLADOS (INVENTARIO, IMPLEMENTACIÓN, DISPONIBILIDAD, CALIDAD) */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                <h3 className="text-sm font-black text-slate-800 tracking-wide uppercase">
+                  Detalle de KPI&apos;S Operativos (Inventario, Implementación, Disponibilidad, Calidad)
+                </h3>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Valores operativos directos
                 </span>
               </div>
             </div>
@@ -3234,6 +4345,10 @@ export default function BoletinJ06Page() {
                 </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
                   <span>✓ Registro A-C (Apertura/Cierre)</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
+                </div>
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
+                  <span>✓ Ventas (% Logro / Crec.)</span>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
                 </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
