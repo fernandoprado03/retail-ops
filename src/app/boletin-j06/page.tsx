@@ -48,6 +48,49 @@ export const TIENDAS_ZONA_B: TiendaZonaB[] = [
   { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal' },
 ]
 
+// Mapeo de nombres alternativos y aliases comunes en Excel/Looker
+export const ALIASES_TIENDAS: Record<string, string[]> = {
+  '103': ['MEGA PLAZA', 'MEGAPLAZA', 'MEGA', '103'],
+  '107': ['ATOCONGO', '107'],
+  '110': ['HUAYLAS', '110'],
+  '118': ['BELLAVISTA', 'BELLA VISTA', '118'],
+  '155': ['SANTA ANITA', 'SANTAANITA', '155'],
+  '175': ['LIMA SUR', 'LIMASUR', '175'],
+  '193': ['PURUCHUCO', '193'],
+  '311': ['TRUJILLO 1', 'TRUJILLO1', 'TRUJILLO I', '311'],
+  '314': ['TRUJILLO 2', 'TRUJILLO2', 'TRUJILLO II', '314'],
+  '335': ['CHIMBOTE', '335'],
+  '357': ['CUSCO', 'CUSCO LA CULTURA', 'LA CULTURA', 'CULTURA', '357'],
+}
+
+export function identificarTienda(celda: string): TiendaZonaB | undefined {
+  if (!celda) return undefined
+  const celdaUpper = celda.toUpperCase().trim()
+  if (!celdaUpper) return undefined
+
+  return TIENDAS_ZONA_B.find(t => {
+    // 1. Coincidencia por código de tienda (ej. 357)
+    if (celdaUpper === t.codigo || celdaUpper.startsWith(t.codigo + ' ') || celdaUpper.includes(` ${t.codigo} `)) {
+      return true
+    }
+
+    // 2. Coincidencia por diccionario de aliases
+    const aliases = ALIASES_TIENDAS[t.codigo] || []
+    if (aliases.some(alias => celdaUpper === alias || celdaUpper.includes(alias) || alias.includes(celdaUpper))) {
+      return true
+    }
+
+    // 3. Coincidencia por nombre sin código (ej. "Cusco La Cultura")
+    const nombreSinCodigo = t.nombre.toUpperCase().replace(/^\d+\s*-\s*/, '').trim()
+    if (celdaUpper === nombreSinCodigo || celdaUpper.includes(nombreSinCodigo) || nombreSinCodigo.includes(celdaUpper)) {
+      return true
+    }
+
+    return false
+  })
+}
+
+
 // Cuotas predeterminadas de Negativos por tienda (Soles negativos)
 export const CUOTAS_NEGATIVOS_DEFAULT: Record<string, number> = {
   '103': -750,
@@ -545,12 +588,8 @@ export default function BoletinJ06Page() {
         const encontradas: { colIdx: number; tienda: TiendaZonaB }[] = []
 
         fila.forEach((celda, cIdx) => {
-          const celdaUpper = celda.toUpperCase().trim()
-          const match = TIENDAS_ZONA_B.find(t => {
-            const nomClean = t.nombre.toUpperCase().replace(/^\d+\s*-\s*/, '')
-            return celdaUpper === nomClean || celdaUpper.includes(nomClean)
-          })
-          if (match) {
+          const match = identificarTienda(celda)
+          if (match && !encontradas.some(e => e.tienda.codigo === match.codigo)) {
             encontradas.push({ colIdx: cIdx, tienda: match })
           }
         })
@@ -564,7 +603,7 @@ export default function BoletinJ06Page() {
 
       if (mapaColTienda.length === 0) {
         toast.error(
-          'No se identificaron las columnas de tiendas (ej. MEGA PLAZA, ATOCONGO, etc.). Asegúrate de copiar desde la fila de encabezados.'
+          'No se identificaron las columnas de tiendas (ej. MEGA PLAZA, ATOCONGO, CUSCO, etc.). Asegúrate de copiar desde la fila de encabezados.'
         )
         return
       }
