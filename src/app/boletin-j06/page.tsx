@@ -1641,66 +1641,64 @@ export default function BoletinJ06Page() {
           }
 
           if (tiendaMatch) {
-            const limpiarNumero = (valStr: string): number | null => {
-              const limpio = valStr
-                .replace(/S\/\.?/gi, '')
-                .replace(/\$/g, '')
-                .replace(/%/g, '')
-                .replace(/,/g, '')
-                .trim()
-              const num = parseFloat(limpio)
-              return isNaN(num) ? null : num
+            let lineaSinTienda = linea
+            if (tiendaMatch.codigo) {
+              lineaSinTienda = lineaSinTienda.replace(new RegExp(`\\b${tiendaMatch.codigo}\\b`, 'g'), '')
+            }
+            if (tiendaMatch.nombre) {
+              const nombreLimpio = tiendaMatch.nombre.replace(/^\d+\s*-\s*/, '')
+              lineaSinTienda = lineaSinTienda.replace(new RegExp(nombreLimpio, 'gi'), '')
             }
 
-            let ventaVal: number | null = null
+            // 1. Extraer porcentajes (soporta coma y punto decimal, ej: 99,4% o 99.4%)
+            const matchesPct = Array.from(lineaSinTienda.matchAll(/([+\-]?\d+(?:[,\.]\d+)?)\s*%/g))
+              .map(m => parseFloat(m[1].replace(',', '.')))
+              .filter(n => !isNaN(n))
+
             let logroVal: number | null = null
             let crecVal: number | null = null
-
-            if (partes.length >= 3) {
-              const colsNumericas = partes
-                .map(limpiarNumero)
-                .filter((v): v is number => v !== null)
-
-              if (colsNumericas.length >= 3) {
-                ventaVal = colsNumericas[0]
-                logroVal = colsNumericas[1]
-                crecVal = colsNumericas[2]
-              } else if (colsNumericas.length === 2) {
-                if (colsNumericas[0] > 1000) {
-                  ventaVal = colsNumericas[0]
-                  logroVal = colsNumericas[1]
-                } else {
-                  logroVal = colsNumericas[0]
-                  crecVal = colsNumericas[1]
-                }
-              }
+            if (matchesPct.length >= 2) {
+              logroVal = matchesPct[0]
+              crecVal = matchesPct[1]
+            } else if (matchesPct.length === 1) {
+              if (matchesPct[0] < 0) crecVal = matchesPct[0]
+              else logroVal = matchesPct[0]
             }
 
-            if (ventaVal === null || logroVal === null || crecVal === null) {
-              const matchVenta = linea.match(/(?:S\/\s*)?([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{4,7}(?:\.[0-9]+)?)/)
-              if (matchVenta && ventaVal === null) {
-                ventaVal = parseFloat(matchVenta[1].replace(/,/g, ''))
-              }
+            // 2. Extraer montos en soles (Venta Real y Plan Venta)
+            const tokensMontos = lineaSinTienda
+              .replace(/S\/\.?/gi, '')
+              .replace(/\$/g, '')
+              .split(/[\t\s]+/)
+              .map(t => t.trim())
+              .filter(tok => {
+                if (!tok || tok.includes('%') || tok.includes('PP') || tok === '-') return false
+                return /^-?\d{1,3}([\.,]\d{3})+(?:[\.,]\d+)?$/.test(tok) || /^-?\d+([,\.]\d+)?$/.test(tok)
+              })
 
-              const matchesPct = Array.from(linea.matchAll(/([+\-]?\d+(?:\.\d+)?)\s*%/g))
-              if (matchesPct.length >= 2) {
-                if (logroVal === null) logroVal = parseFloat(matchesPct[0][1])
-                if (crecVal === null) crecVal = parseFloat(matchesPct[1][1])
-              } else if (matchesPct.length === 1) {
-                const val = parseFloat(matchesPct[0][1])
-                if (val < 0) {
-                  if (crecVal === null) crecVal = val
-                } else {
-                  if (logroVal === null) logroVal = val
-                }
-              }
+            const parseMontoToken = (tok: string): number => {
+              if (/^\d{1,3}(\.\d{3})+$/.test(tok)) return parseInt(tok.replace(/\./g, ''), 10)
+              if (/^\d{1,3}(,\d{3})+$/.test(tok)) return parseInt(tok.replace(/,/g, ''), 10)
+              const limpio = tok.replace(/\./g, '').replace(',', '.')
+              return Math.round(parseFloat(limpio))
+            }
+            const montos = tokensMontos.map(parseMontoToken).filter(n => !isNaN(n))
+
+            let ventaVal: number | null = null
+            let metaVal: number | null = null
+            if (montos.length >= 2) {
+              ventaVal = montos[0]
+              metaVal = montos[1]
+            } else if (montos.length === 1) {
+              ventaVal = montos[0]
             }
 
             const idx = nuevosDatos.findIndex(t => t.codigo === tiendaMatch!.codigo)
             if (idx !== -1) {
               nuevosDatos[idx] = {
                 ...nuevosDatos[idx],
-                ventaSoles: ventaVal !== null ? Math.round(ventaVal) : nuevosDatos[idx].ventaSoles,
+                ventaSoles: ventaVal !== null ? ventaVal : nuevosDatos[idx].ventaSoles,
+                metaSoles: metaVal !== null ? metaVal : nuevosDatos[idx].metaSoles,
                 logroPorcentaje: logroVal !== null ? parseFloat(logroVal.toFixed(2)) : nuevosDatos[idx].logroPorcentaje,
                 crecimientoPorcentaje: crecVal !== null ? parseFloat(crecVal.toFixed(2)) : nuevosDatos[idx].crecimientoPorcentaje,
               }
