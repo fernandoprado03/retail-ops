@@ -24,7 +24,12 @@ import {
   FileText,
   Smartphone,
   CheckCircle,
-  Award
+  Award,
+  Camera,
+  CheckCheck,
+  Minus,
+  Plus,
+  RotateCcw
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -65,21 +70,39 @@ export const ALIASES_TIENDAS: Record<string, string[]> = {
   '357': ['CUSCO', 'CUSCO LA CULTURA', 'LA CULTURA', 'CULTURA', '357'],
 }
 
+const PALABRAS_EXCLUIDAS_TIENDA = new Set([
+  'SI',
+  'NO',
+  'SÍ',
+  'APERTURA',
+  'CIERRE',
+  'TOTAL',
+  'CUMPLIMIENTO',
+  'FECHA',
+  'DIA',
+  'DÍA',
+  'EVIDENCIA',
+  'FOTOGRÁFICA',
+  'FOTOGRAFICA',
+  'LOCAL',
+  'TIENDA',
+])
+
 export function identificarTienda(celda: string): TiendaZonaB | undefined {
   if (!celda) return undefined
   const celdaUpper = celda.toUpperCase().trim()
-  if (!celdaUpper) return undefined
+  if (!celdaUpper || PALABRAS_EXCLUIDAS_TIENDA.has(celdaUpper)) return undefined
 
   return TIENDAS_ZONA_B.find(t => {
     if (celdaUpper === t.codigo || celdaUpper.startsWith(t.codigo + '-') || celdaUpper.startsWith(t.codigo + ' ') || celdaUpper.includes(` ${t.codigo} `)) {
       return true
     }
     const aliases = ALIASES_TIENDAS[t.codigo] || []
-    if (aliases.some(alias => celdaUpper === alias || celdaUpper.includes(alias) || alias.includes(celdaUpper))) {
+    if (aliases.some(alias => celdaUpper === alias || (celdaUpper.length >= 4 && celdaUpper.includes(alias)) || (alias.length >= 4 && alias.includes(celdaUpper)))) {
       return true
     }
     const nombreSinCodigo = t.nombre.toUpperCase().replace(/^\d+\s*-\s*/, '').trim()
-    if (celdaUpper === nombreSinCodigo || celdaUpper.includes(nombreSinCodigo) || nombreSinCodigo.includes(celdaUpper)) {
+    if (celdaUpper === nombreSinCodigo || (celdaUpper.length >= 4 && celdaUpper.includes(nombreSinCodigo)) || (nombreSinCodigo.length >= 4 && nombreSinCodigo.includes(celdaUpper))) {
       return true
     }
     return false
@@ -185,6 +208,23 @@ export interface FilaCalidadAuditoriaTienda {
   mesEvaluado: string
   esArrastre: boolean
   otrosComentarios?: string
+}
+
+// Interfaces Registro A-C (Evidencia Fotográfica Apertura y Cierre)
+export interface SlotRegistroAC {
+  fecha: string
+  tipo: 'Apertura' | 'Cierre'
+  cumple: boolean
+}
+
+export interface FilaRegistroACTienda {
+  codigo: string
+  nombre: string
+  lider: string
+  slots: SlotRegistroAC[]
+  registrosCumplidos: number
+  totalRegistros: number
+  cumplimientoPorcentaje: number
 }
 
 const NOMBRES_7_CAMPOS_DDF = [
@@ -374,10 +414,44 @@ const DATOS_EJEMPLO_CALIDAD_AUDITORIA: FilaCalidadAuditoriaTienda[] = [
   { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', nota: 96.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
 ]
 
+// Fechas y generador para Registro A-C (Apertura y Cierre)
+const FECHAS_REGISTRO_AC_DEFAULT = [
+  '5-Oct',
+  '6-Oct',
+  '7-Oct',
+  '8-Oct',
+  '9-Oct',
+  '10-Oct',
+  '11-Oct',
+]
+
+function generarSlotsACDefault(todasCumplen = true): SlotRegistroAC[] {
+  const slots: SlotRegistroAC[] = []
+  FECHAS_REGISTRO_AC_DEFAULT.forEach(fecha => {
+    slots.push({ fecha, tipo: 'Apertura', cumple: todasCumplen })
+    slots.push({ fecha, tipo: 'Cierre', cumple: todasCumplen })
+  })
+  return slots
+}
+
+// Datos de muestra Registro A-C (100% por default con 14 registros completos para todas las tiendas)
+const DATOS_EJEMPLO_REGISTRO_AC: FilaRegistroACTienda[] = TIENDAS_ZONA_B.map(t => {
+  const slots = generarSlotsACDefault(true)
+  return {
+    codigo: t.codigo,
+    nombre: t.nombre,
+    lider: t.lider,
+    slots,
+    registrosCumplidos: 14,
+    totalRegistros: 14,
+    cumplimientoPorcentaje: 100.0,
+  }
+})
+
 export default function BoletinJ06Page() {
   const [activeTab, setActiveTab] = useState<
-    'vencimiento' | 'calidad_auditoria' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'
-  >('calidad_auditoria')
+    'vencimiento' | 'calidad_auditoria' | 'registro_ac' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'
+  >('registro_ac')
 
   // Estado App Vencimiento
   const [datosVencimiento, setDatosVencimiento] = useState<FilaAppVencimientoTienda[]>(DATOS_EJEMPLO_VENCIMIENTO)
@@ -389,6 +463,12 @@ export default function BoletinJ06Page() {
   const [textoPegadoCalidad, setTextoPegadoCalidad] = useState<string>('')
   const [copiadoCalidad, setCopiadoCalidad] = useState(false)
   const [mesObjetivoAuditoria, setMesObjetivoAuditoria] = useState<string>('octubre')
+
+  // Estado Registro A-C (Evidencia Fotográfica Apertura y Cierre)
+  const [datosRegistroAC, setDatosRegistroAC] = useState<FilaRegistroACTienda[]>(DATOS_EJEMPLO_REGISTRO_AC)
+  const [fechasAC, setFechasAC] = useState<string[]>(FECHAS_REGISTRO_AC_DEFAULT)
+  const [textoPegadoAC, setTextoPegadoAC] = useState<string>('')
+  const [copiadoAC, setCopiadoAC] = useState(false)
 
   // Estado DDF
   const [datosDDF, setDatosDDF] = useState<FilaDDFTienda[]>(DATOS_EJEMPLO_DDF_SEM_41)
@@ -807,6 +887,219 @@ export default function BoletinJ06Page() {
     setTimeout(() => setCopiadoCalidad(false), 2500)
   }
 
+  // Procesar Texto Pegado de Registro A-C (Evidencia Fotográfica Apertura y Cierre)
+  const procesarTextoPegadoRegistroAC = (rawText: string) => {
+    if (!rawText || rawText.trim().length === 0) {
+      toast.error('El portapapeles está vacío o no contiene texto.')
+      return
+    }
+
+    try {
+      const rows = parseTSVWithQuotes(rawText)
+      const isTSV = rows.length > 1 && rows.some(r => r.length >= 3)
+
+      if (isTSV) {
+        // Detectar si en las filas iniciales hay fechas
+        const filaFechas = rows.find(r => r.filter(c => /\d{1,2}-[A-Za-z]{3}|\d{1,2}\/\d{1,2}|\d{4}-\d{2}-\d{2}/i.test(c)).length >= 5)
+        let fechasDetectadas = [...fechasAC]
+        if (filaFechas) {
+          const extraidas = filaFechas.filter(c => /\d{1,2}-[A-Za-z]{3}|\d{1,2}\/\d{1,2}|\d{4}-\d{2}-\d{2}/i.test(c))
+          if (extraidas.length >= 7) {
+            fechasDetectadas = extraidas.slice(0, 7)
+            setFechasAC(fechasDetectadas)
+          }
+        }
+
+        const resultado: FilaRegistroACTienda[] = TIENDAS_ZONA_B.map(t => {
+          const storeRow = rows.find(r => r.some(c => identificarTienda(c)?.codigo === t.codigo))
+          if (!storeRow) {
+            const def = datosRegistroAC.find(d => d.codigo === t.codigo)
+            return def || {
+              codigo: t.codigo,
+              nombre: t.nombre,
+              lider: t.lider,
+              slots: generarSlotsACDefault(true),
+              registrosCumplidos: 14,
+              totalRegistros: 14,
+              cumplimientoPorcentaje: 100.0,
+            }
+          }
+
+          const storeColIdx = storeRow.findIndex(c => identificarTienda(c)?.codigo === t.codigo)
+          const cellsAfterStore = storeRow.slice(storeColIdx + 1)
+
+          const slots: SlotRegistroAC[] = []
+          let cumplidos = 0
+
+          for (let d = 0; d < 7; d++) {
+            const f = fechasDetectadas[d] || FECHAS_REGISTRO_AC_DEFAULT[d] || `Día ${d + 1}`
+            const apVal = (cellsAfterStore[d * 2] || '').trim().toLowerCase()
+            const ciVal = (cellsAfterStore[d * 2 + 1] || '').trim().toLowerCase()
+
+            const apCumple = apVal === 'si' || apVal === 'sí' || apVal === '1' || apVal === 'x' || apVal === 'ok'
+            const ciCumple = ciVal === 'si' || ciVal === 'sí' || ciVal === '1' || ciVal === 'x' || ciVal === 'ok'
+
+            if (apCumple) cumplidos++
+            if (ciCumple) cumplidos++
+
+            slots.push({ fecha: f, tipo: 'Apertura', cumple: apCumple })
+            slots.push({ fecha: f, tipo: 'Cierre', cumple: ciCumple })
+          }
+
+          // Si vino celda de porcentaje explícita al final (ej 100%)
+          const lastCell = cellsAfterStore[cellsAfterStore.length - 1] || ''
+          const matchPct = lastCell.match(/(\d+(?:\.\d+)?)\s*%/)
+          let pct = parseFloat(((cumplidos / 14) * 100).toFixed(2))
+          if (cumplidos === 0 && matchPct) {
+            pct = parseFloat(matchPct[1])
+            cumplidos = Math.round((pct / 100) * 14)
+          }
+
+          return {
+            codigo: t.codigo,
+            nombre: t.nombre,
+            lider: t.lider,
+            slots,
+            registrosCumplidos: cumplidos,
+            totalRegistros: 14,
+            cumplimientoPorcentaje: pct,
+          }
+        })
+
+        setDatosRegistroAC(resultado)
+        setTextoPegadoAC(rawText)
+        toast.success('¡Registro A-C procesado exitosamente desde la tabla pegada!')
+        return
+      }
+
+      // Si no es TSV, procesar como texto plano
+      const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+      const resultado: FilaRegistroACTienda[] = TIENDAS_ZONA_B.map(t => {
+        const line = lineas.find(l => identificarTienda(l)?.codigo === t.codigo)
+        if (!line) {
+          const def = datosRegistroAC.find(d => d.codigo === t.codigo)
+          return def || {
+            codigo: t.codigo,
+            nombre: t.nombre,
+            lider: t.lider,
+            slots: generarSlotsACDefault(true),
+            registrosCumplidos: 14,
+            totalRegistros: 14,
+            cumplimientoPorcentaje: 100.0,
+          }
+        }
+
+        const palabras = line.split(/\s+/).map(p => p.toLowerCase())
+        const conteoSi = palabras.filter(p => p === 'si' || p === 'sí' || p === '1' || p === 'x').length
+        const cumplidos = Math.min(14, conteoSi > 0 ? conteoSi : 14)
+        const pct = parseFloat(((cumplidos / 14) * 100).toFixed(2))
+
+        const slots = generarSlotsACDefault(false).map((s, idx) => ({
+          ...s,
+          cumple: idx < cumplidos,
+        }))
+
+        return {
+          codigo: t.codigo,
+          nombre: t.nombre,
+          lider: t.lider,
+          slots,
+          registrosCumplidos: cumplidos,
+          totalRegistros: 14,
+          cumplimientoPorcentaje: pct,
+        }
+      })
+
+      setDatosRegistroAC(resultado)
+      setTextoPegadoAC(rawText)
+      toast.success('¡Registro A-C procesado desde texto copiado!')
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al procesar el texto de Registro A-C.')
+    }
+  }
+
+  // Pegar directo desde portapapeles para Registro A-C
+  const handlePegarACPortapapeles = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto) {
+        procesarTextoPegadoRegistroAC(texto)
+      } else {
+        toast.warning('El portapapeles está vacío.')
+      }
+    } catch {
+      toast.info('Presiona Ctrl+V dentro del recuadro inferior para pegar el reporte de Registro A-C.')
+    }
+  }
+
+  // Copiar Notas de Registro A-C
+  const copiarNotasAC = () => {
+    const texto = datosRegistroAC
+      .map(item => `${item.nombre}\t${item.registrosCumplidos}/14\t${item.cumplimientoPorcentaje.toFixed(2)}%`)
+      .join('\n')
+    navigator.clipboard.writeText(`Local\tRegistros Cumplidos\tCumplimiento\n${texto}`)
+    setCopiadoAC(true)
+    toast.success('¡Notas de Registro A-C copiadas al portapapeles!')
+    setTimeout(() => setCopiadoAC(false), 2500)
+  }
+
+  // Confirmar o restablecer todas las tiendas a 100%
+  const confirmarTodas100AC = () => {
+    setDatosRegistroAC(prev =>
+      prev.map(t => ({
+        ...t,
+        registrosCumplidos: 14,
+        cumplimientoPorcentaje: 100.0,
+        slots: t.slots.map(s => ({ ...s, cumple: true })),
+      }))
+    )
+    toast.success('¡Todas las tiendas confirmadas al 100% (14/14 registros)!')
+  }
+
+  // Modificar cumplimiento de una tienda específica
+  const actualizarCumplidosTiendaAC = (codigo: string, nuevosCumplidos: number) => {
+    const val = Math.max(0, Math.min(14, nuevosCumplidos))
+    setDatosRegistroAC(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const pct = parseFloat(((val / 14) * 100).toFixed(2))
+        const nuevosSlots = t.slots.map((s, idx) => ({
+          ...s,
+          cumple: idx < val,
+        }))
+        return {
+          ...t,
+          registrosCumplidos: val,
+          cumplimientoPorcentaje: pct,
+          slots: nuevosSlots,
+        }
+      })
+    )
+  }
+
+  // Alternar slot individual (Apertura o Cierre)
+  const toggleSlotAC = (codigo: string, slotIdx: number) => {
+    setDatosRegistroAC(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const nuevosSlots = [...t.slots]
+        nuevosSlots[slotIdx] = {
+          ...nuevosSlots[slotIdx],
+          cumple: !nuevosSlots[slotIdx].cumple,
+        }
+        const cumplidos = nuevosSlots.filter(s => s.cumple).length
+        const pct = parseFloat(((cumplidos / 14) * 100).toFixed(2))
+        return {
+          ...t,
+          slots: nuevosSlots,
+          registrosCumplidos: cumplidos,
+          cumplimientoPorcentaje: pct,
+        }
+      })
+    )
+  }
+
   // Procesar DDF
   const procesarTextoPegadoDDF = (rawText: string) => {
     if (!rawText || rawText.trim().length === 0) {
@@ -893,6 +1186,15 @@ export default function BoletinJ06Page() {
   const tiendasDesvioCalidad = datosCalidadAuditoria.filter(t => t.nota < 90).length
   const tiendasArrastreCalidad = datosCalidadAuditoria.filter(t => t.esArrastre).length
 
+  // Estadísticas Registro A-C
+  const promedioAC =
+    datosRegistroAC.length > 0
+      ? (datosRegistroAC.reduce((acc, t) => acc + t.cumplimientoPorcentaje, 0) / datosRegistroAC.length).toFixed(2)
+      : '0.00'
+  const tiendas100AC = datosRegistroAC.filter(t => t.cumplimientoPorcentaje === 100).length
+  const tiendasObservadasAC = datosRegistroAC.filter(t => t.cumplimientoPorcentaje < 100).length
+  const totalRegistrosCompletados = datosRegistroAC.reduce((acc, t) => acc + t.registrosCumplidos, 0)
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 md:p-8 space-y-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -944,6 +1246,7 @@ export default function BoletinJ06Page() {
                 setDatosDDF(DATOS_EJEMPLO_DDF_SEM_41)
                 setDatosVencimiento(DATOS_EJEMPLO_VENCIMIENTO)
                 setDatosCalidadAuditoria(DATOS_EJEMPLO_CALIDAD_AUDITORIA)
+                setDatosRegistroAC(DATOS_EJEMPLO_REGISTRO_AC)
                 toast.info('Se cargaron los datos de ejemplo.')
               }}
               className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors cursor-pointer"
@@ -984,6 +1287,21 @@ export default function BoletinJ06Page() {
           </button>
 
           <button
+            onClick={() => setActiveTab('registro_ac')}
+            className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'registro_ac'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Camera className="w-4 h-4" />
+            3. Registro A-C (Apertura/Cierre)
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+              100% Default
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('ddf')}
             className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'ddf'
@@ -992,7 +1310,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ClipboardPaste className="w-4 h-4" />
-            3. Incidencias DDF (Pegar Tabla)
+            4. Incidencias DDF (Pegar Tabla)
           </button>
 
           <button
@@ -1004,7 +1322,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            4. Disponibilidad (ResumGTda)
+            5. Disponibilidad (ResumGTda)
           </button>
 
           <button
@@ -1515,7 +1833,302 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 3: INCIDENCIAS DDF */}
+        {/* TAB 3: REGISTRO A-C (EVIDENCIA FOTOGRÁFICA APERTURA Y CIERRE) */}
+        {activeTab === 'registro_ac' && (
+          <div className="space-y-6">
+            {/* Panel de Ingesta y Control */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Camera className="w-5 h-5 text-emerald-600" />
+                    Registro A-C (Evidencia Fotográfica Apertura y Cierre)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Control semanal de 14 registros fotográficos por tienda (Apertura y Cierre de 7 días). Meta: <strong>100%</strong> (14/14 registros). Cada registro faltante reduce la nota proporcionalmente hasta llegar a <strong>0%</strong> si no llenan nada.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={confirmarTodas100AC}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    Confirmar Todas al 100%
+                  </button>
+
+                  <button
+                    onClick={handlePegarACPortapapeles}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition-colors border border-slate-300 cursor-pointer whitespace-nowrap"
+                  >
+                    <ClipboardPaste className="w-4 h-4 text-emerald-700" />
+                    Pegar desde Portapapeles
+                  </button>
+
+                  <button
+                    onClick={copiarNotasAC}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    {copiadoAC ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                    {copiadoAC ? '¡Copiado!' : 'Copiar Notas'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <textarea
+                  value={textoPegadoAC}
+                  onChange={e => {
+                    setTextoPegadoAC(e.target.value)
+                    procesarTextoPegadoRegistroAC(e.target.value)
+                  }}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text')
+                    if (pasted) {
+                      e.preventDefault()
+                      setTextoPegadoAC(pasted)
+                      procesarTextoPegadoRegistroAC(pasted)
+                    }
+                  }}
+                  placeholder="Pega aquí la tabla copiada desde Excel con las 14 columnas de Apertura y Cierre (7 días) o el consolidado de cumplimiento..."
+                  rows={3}
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-slate-50/50 transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 text-[11px] text-emerald-800 flex items-start gap-2">
+                <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Regla de Evaluación de Registro A-C:</strong> Cada tienda cuenta con 14 casillas de control (Apertura y Cierre de Lunes a Domingo). La calificación se calcula como <code>(Registros Cumplidos / 14) × 100%</code>. Con 14/14 = <strong>100%</strong>; 13/14 = <strong>92.86%</strong>; 10/14 = <strong>71.43%</strong>; 7/14 = <strong>50.00%</strong>; y con 0 registros = <strong>0%</strong>. Por defecto todas inician en <strong>100%</strong> para que puedas confirmar rápidamente con un clic o ajustar individualmente.
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjetas KPI de Registro A-C */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Promedio Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioAC}%</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Meta semanal: 100%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Camera className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplen al 100% (14/14)</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {tiendas100AC} <span className="text-sm font-medium text-slate-400">/ {datosRegistroAC.length}</span>
+                  </p>
+                  <p className="text-xs text-emerald-700 font-semibold mt-0.5">
+                    {datosRegistroAC.length > 0 ? ((tiendas100AC / datosRegistroAC.length) * 100).toFixed(1) : 0}% de cumplimiento
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Con Observaciones (&lt;100%)</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">
+                    {tiendasObservadasAC} <span className="text-sm font-medium text-slate-400">/ {datosRegistroAC.length}</span>
+                  </p>
+                  <p className="text-xs text-amber-600 font-medium mt-0.5">Faltan evidencias de A o C</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Evidencias</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">
+                    {totalRegistrosCompletados} <span className="text-sm font-medium text-slate-400">/ {datosRegistroAC.length * 14}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">Aperturas y Cierres validados</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <FileCheck className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Detallada Registro A-C */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    REGISTRO A-C - Evidencias Fotográficas Apertura y Cierre
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Haz clic en cualquier casilla [si] o [no] para alternar su estado, o ajusta directamente el contador de registros.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={confirmarTodas100AC}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset Todas a 100%
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    {/* Fila 1: Fechas agrupadas */}
+                    <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
+                      <th rowSpan={2} className="py-2.5 px-3 text-left border-r border-emerald-800 min-w-[140px]">
+                        Tienda
+                      </th>
+                      <th rowSpan={2} className="py-2.5 px-3 text-left border-r border-emerald-800 min-w-[140px]">
+                        Líder J06
+                      </th>
+                      {fechasAC.map((fecha, idx) => (
+                        <th key={idx} colSpan={2} className="py-1 px-2 border-r border-emerald-800 bg-[#2e7d32] text-center text-[11px]">
+                          {fecha}
+                        </th>
+                      ))}
+                      <th rowSpan={2} className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[110px] text-center">
+                        Cumplidos
+                      </th>
+                      <th rowSpan={2} className="py-2.5 px-3 bg-[#2e7d32] border-r border-emerald-800 min-w-[110px] text-center">
+                        Cumplimiento
+                      </th>
+                      <th rowSpan={2} className="py-2.5 px-3 bg-[#1b5e20] min-w-[110px] text-center">
+                        Acción Rápida
+                      </th>
+                    </tr>
+
+                    {/* Fila 2: Sub-cabeceras Apertura (A) y Cierre (C) */}
+                    <tr className="bg-[#2e7d32] text-emerald-100 font-semibold text-center border-b border-emerald-900 text-[10px]">
+                      {fechasAC.map((_, idx) => (
+                        <span key={idx} className="contents">
+                          <th className="py-1 px-1.5 border-r border-emerald-800 text-center">Ap</th>
+                          <th className="py-1 px-1.5 border-r border-emerald-800 text-center">Ci</th>
+                        </span>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosRegistroAC.map((item, idx) => {
+                      const es100 = item.cumplimientoPorcentaje === 100
+                      const esDesvio = item.cumplimientoPorcentaje < 70
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap text-[11px]">
+                            {item.lider}
+                          </td>
+
+                          {/* 14 Slots interactivos (Apertura y Cierre) */}
+                          {item.slots.map((slot, sIdx) => (
+                            <td
+                              key={sIdx}
+                              className="py-1 px-1 text-center border-r border-slate-200"
+                              title={`${slot.fecha} - ${slot.tipo}: ${slot.cumple ? 'Cumple (clic para alternar)' : 'No cumple (clic para alternar)'}`}
+                            >
+                              <button
+                                onClick={() => toggleSlotAC(item.codigo, sIdx)}
+                                className={`w-6 h-6 rounded text-[10px] font-black transition-transform hover:scale-110 cursor-pointer flex items-center justify-center mx-auto border ${
+                                  slot.cumple
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                                    : 'bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200'
+                                }`}
+                              >
+                                {slot.cumple ? 'si' : 'no'}
+                              </button>
+                            </td>
+                          ))}
+
+                          {/* Registros Cumplidos con Stepper */}
+                          <td className="py-2 px-3 text-center border-r border-slate-200 whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => actualizarCumplidosTiendaAC(item.codigo, item.registrosCumplidos - 1)}
+                                disabled={item.registrosCumplidos <= 0}
+                                className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-700 cursor-pointer text-xs"
+                                title="Restar 1 registro"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="font-bold text-slate-800 text-xs min-w-[42px]">
+                                {item.registrosCumplidos}/14
+                              </span>
+                              <button
+                                onClick={() => actualizarCumplidosTiendaAC(item.codigo, item.registrosCumplidos + 1)}
+                                disabled={item.registrosCumplidos >= 14}
+                                className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-700 cursor-pointer text-xs"
+                                title="Sumar 1 registro"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Porcentaje Cumplimiento */}
+                          <td className="py-2.5 px-3 text-center font-black border-r border-slate-200 whitespace-nowrap">
+                            <span
+                              className={`inline-block px-3 py-1 rounded-md text-xs font-bold border ${
+                                es100
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : esDesvio
+                                  ? 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                                  : 'bg-[#ffe0b2] text-[#e65100] border-[#ffcc80]'
+                              }`}
+                            >
+                              {item.cumplimientoPorcentaje.toFixed(2)}%
+                            </span>
+                          </td>
+
+                          {/* Acciones Rápidas */}
+                          <td className="py-2 px-3 text-center whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => actualizarCumplidosTiendaAC(item.codigo, 14)}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
+                                title="Marcar 14/14 (100%)"
+                              >
+                                100%
+                              </button>
+                              <button
+                                onClick={() => actualizarCumplidosTiendaAC(item.codigo, 0)}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-800 border border-slate-300 transition-colors cursor-pointer"
+                                title="Marcar 0/14 (0%)"
+                              >
+                                0%
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: INCIDENCIAS DDF */}
         {activeTab === 'ddf' && (
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -1580,6 +2193,7 @@ export default function BoletinJ06Page() {
                 <p className="text-xs text-slate-500">
                   Secciones automatizadas: <strong className="text-emerald-700">Ajustes</strong>,{' '}
                   <strong className="text-emerald-700">Negativos</strong>,{' '}
+                  <strong className="text-emerald-700">Registro A-C</strong>,{' '}
                   <strong className="text-emerald-700">Incidencias DDF</strong>,{' '}
                   <strong className="text-emerald-700">Disponibilidad (NSG, Bodega, Quiebre)</strong>,{' '}
                   <strong className="text-emerald-700">App Vencimiento</strong> y{' '}
@@ -1588,7 +2202,7 @@ export default function BoletinJ06Page() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 8 Indicadores Sincronizados
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 9 Indicadores Sincronizados
                 </span>
               </div>
             </div>
@@ -1598,7 +2212,7 @@ export default function BoletinJ06Page() {
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0"></span>
                 <span className="text-xs text-emerald-950 font-semibold">
-                  Inventario: Nota calculada como promedio de Ajustes y Negativos. Pistoleo Pan fijado en 100% por default (columna ERI eliminada).
+                  Inventario: Nota calculada como promedio de Ajustes y Negativos. Pistoleo Pan fijado en 100% por default (columna ERI eliminada). Registro A-C evaluado sobre 14 registros (100% default).
                 </span>
               </div>
               <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md shrink-0">
@@ -1650,7 +2264,9 @@ export default function BoletinJ06Page() {
                     </th>
 
                     {/* Implementación Objetivos */}
-                    <th className="py-1 px-2 border-r border-slate-300">100%</th>
+                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
+                      100% (Registro A-C)
+                    </th>
                     <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
                       100% (Incidencias DDF)
                     </th>
@@ -1689,7 +2305,9 @@ export default function BoletinJ06Page() {
                       Nota Inventario ⭐
                     </th>
 
-                    <th className="py-2 px-2 border-r border-slate-300">Registro A-C</th>
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
+                      Registro A-C ⭐
+                    </th>
                     <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
                       Incidencias DDF ⭐
                     </th>
@@ -1720,11 +2338,13 @@ export default function BoletinJ06Page() {
                     const rowDDF = datosDDF.find(df => df.codigo === tienda.codigo)
                     const rowVenc = datosVencimiento.find(v => v.codigo === tienda.codigo)
                     const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === tienda.codigo)
+                    const rowAC = datosRegistroAC.find(a => a.codigo === tienda.codigo)
 
                     const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
                     const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
                     const notaInventario = parseFloat(((pctAjuste + pctNegativo) / 2).toFixed(2))
 
+                    const pctAC = rowAC ? rowAC.cumplimientoPorcentaje : 100.0
                     const pctDDF = rowDDF ? rowDDF.cumplimientoPorcentaje : 0
                     const pctVenc = rowVenc ? rowVenc.totalPorcentaje : 100.0
                     const notaAuditoria = rowCalidad ? rowCalidad.nota : 100.0
@@ -1780,7 +2400,25 @@ export default function BoletinJ06Page() {
                           {notaInventario.toFixed(2)}%
                         </td>
 
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600">100.00%</td>
+                        {/* REGISTRO A-C */}
+                        <td
+                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
+                            pctAC === 100
+                              ? 'bg-emerald-50 text-emerald-900'
+                              : pctAC >= 70
+                              ? 'bg-amber-50 text-amber-900'
+                              : 'bg-rose-50 text-rose-900'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span>{pctAC.toFixed(2)}%</span>
+                            {rowAC && rowAC.registrosCumplidos < 14 && (
+                              <span className="text-[9px] font-semibold text-amber-800 bg-amber-100 px-1 rounded leading-tight mt-0.5">
+                                {rowAC.registrosCumplidos}/14
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
                         {/* INCIDENCIAS DDF */}
                         <td
@@ -1915,6 +2553,10 @@ export default function BoletinJ06Page() {
                 </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
                   <span>✓ Negativos (Looker)</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
+                </div>
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
+                  <span>✓ Registro A-C (Apertura/Cierre)</span>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
                 </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
