@@ -35,7 +35,9 @@ import {
   ThumbsDown,
   X,
   ChevronRight,
-  DollarSign
+  DollarSign,
+  Printer,
+  Filter
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -162,6 +164,98 @@ export const METRICAS_LIDERES_BASE: Record<
   '314': { dotacion: 2.0, produccion: 92.00, merma: 97.68, reporte: 100.0, equipo: 100.0, amabilidad: 105.0 },
   '335': { dotacion: 2.5, produccion: 66.00, merma: 92.29, reporte: 100.0, equipo: 100.0, amabilidad: 93.0 },
   '357': { dotacion: 3.0, produccion: 96.00, merma: 92.22, reporte: 100.0, equipo: 100.0, amabilidad: 108.0 },
+}
+
+// Datos Oficiales de Referencia de la Plantilla Excel (Semana 40)
+export const DATOS_SEMANA_40_EXCEL = {
+  kpis: {
+    ventaTotal: 2294972,
+    cumplimiento: 94.0,
+    crecimiento: -0.4,
+    merma: 4.29,
+    mermaObj: 4.84,
+    amabilidad: 101.90,
+    amabilidadObj: 91.0,
+    mop: 102.00,
+    mopObj: 100.0,
+    productividad: 105.0,
+    productividadObj: 100.0,
+    nsg: 91.82,
+    nsgObj: 95.0,
+    calidad: 92.10,
+    calidadObj: 90.0,
+  },
+  panaderia: { cumplimiento: 88.6, crecimiento: -5.9 },
+  pasteleria: { cumplimiento: 94.7, crecimiento: -2.1 },
+  tiendasVentas: [
+    { codigo: '103', nombre: '103 - Mega Plaza', venta: 88692, logro: 91.89, crec: -3.23 },
+    { codigo: '107', nombre: '107 - Atocongo', venta: 38643, logro: 97.96, crec: -0.13 },
+    { codigo: '110', nombre: '110 - Huaylas', venta: 37596, logro: 100.32, crec: 5.09 },
+    { codigo: '118', nombre: '118 - Bellavista', venta: 48885, logro: 92.84, crec: -2.97 },
+    { codigo: '155', nombre: '155 - Santa Anita', venta: 58551, logro: 85.65, crec: -16.11 },
+    { codigo: '175', nombre: '175 - Lima Sur', venta: 70620, logro: 91.20, crec: -4.90 },
+    { codigo: '193', nombre: '193 - Puruchuco', venta: 59562, logro: 100.85, crec: 11.99 },
+    { codigo: '311', nombre: '311 - Trujillo 1', venta: 50323, logro: 84.79, crec: -9.79 },
+    { codigo: '314', nombre: '314 - Trujillo 2', venta: 32569, logro: 95.84, crec: -0.95 },
+    { codigo: '335', nombre: '335 - Chimbote', venta: 24637, logro: 82.14, crec: -8.84 },
+    { codigo: '357', nombre: '357 - Cusco La Cultura', venta: 26755, logro: 96.89, crec: -2.39 },
+  ],
+  focoSemana: [
+    { tienda: 'Mega Plaza', crec: -3.2 },
+    { tienda: 'Bellavista', crec: -3.0 },
+    { tienda: 'Santa Anita', crec: -16.1 },
+    { tienda: 'Lima Sur', crec: -4.9 },
+    { tienda: 'Trujillo 1', crec: -9.8 },
+    { tienda: 'Trujillo 2', crec: -1.0 },
+  ],
+  funciono:
+    '50% EN ENROLLADOS DE PIZZA, QUESO Y HOT DOG X UN, COMPRA DE UN KEKE REDONDO TOTTUS + S/1.00 AGREGATE UNA GASEOSA INKA/ COCA 1.5 LT, TORTA HELADA MEDIANA DE FRESA/ DURAZNO A S/42.9 CON CMR S/39.9',
+  noFunciono:
+    'Compra de un keke redondo tottus + S/.1,00 agreg una gaseosa inka cola o coca cola x 1.5Lt',
+  kpisOperativos: {
+    '103': { eri: 0.0, pistoleo: 100.0, ajustes: 100.0, negativos: 42.86, registroAC: 100.0, ddf: 100.0, nsg: 92.70, bodega: 0.0, quiebre: 7.30, nota: 100.0, appVenc: 100.0 },
+    '107': { eri: 0.0, pistoleo: 100.0, ajustes: 100.0, negativos: 100.0, registroAC: 100.0, ddf: 100.0, nsg: 98.80, bodega: 1.20, quiebre: 0.0, nota: 87.00, appVenc: 100.0 },
+    '110': { eri: 0.0, pistoleo: 100.0, ajustes: 85.71, negativos: 71.43, registroAC: 100.0, ddf: 0.0, nsg: 91.00, bodega: 0.0, quiebre: 9.00, nota: 94.74, appVenc: 100.0 },
+    '118': { eri: 0.0, pistoleo: 100.0, ajustes: 85.71, negativos: 100.0, registroAC: 100.0, ddf: 100.0, nsg: 84.40, bodega: 2.80, quiebre: 12.70, nota: 100.0, appVenc: 100.0 },
+    '155': { eri: 0.0, pistoleo: 100.0, ajustes: 100.0, negativos: 71.43, registroAC: 100.0, ddf: 100.0, nsg: 93.70, bodega: 2.00, quiebre: 4.40, nota: 87.10, appVenc: 100.0 },
+    '175': { eri: 0.0, pistoleo: 100.0, ajustes: 85.71, negativos: 100.0, registroAC: 100.0, ddf: 100.0, nsg: 88.90, bodega: 2.50, quiebre: 8.50, nota: 95.00, appVenc: 100.0 },
+    '193': { eri: 0.0, pistoleo: 100.0, ajustes: 85.71, negativos: 85.71, registroAC: 100.0, ddf: 100.0, nsg: 87.00, bodega: 3.70, quiebre: 9.30, nota: 99.00, appVenc: 100.0 },
+    '311': { eri: 0.0, pistoleo: 100.0, ajustes: 100.0, negativos: 57.14, registroAC: 100.0, ddf: 100.0, nsg: 94.40, bodega: 0.0, quiebre: 5.60, nota: 88.31, appVenc: 100.0 },
+    '314': { eri: 0.0, pistoleo: 100.0, ajustes: 100.0, negativos: 100.0, registroAC: 100.0, ddf: 100.0, nsg: 96.60, bodega: 0.0, quiebre: 3.40, nota: 77.92, appVenc: 100.0 },
+    '335': { eri: 0.0, pistoleo: 100.0, ajustes: 100.0, negativos: 0.0, registroAC: 100.0, ddf: 100.0, nsg: 85.70, bodega: 7.60, quiebre: 6.70, nota: 88.00, appVenc: 100.0 },
+    '357': { eri: 0.0, pistoleo: 100.0, ajustes: 57.14, negativos: 57.14, registroAC: 100.0, ddf: 100.0, nsg: 94.20, bodega: 0.0, quiebre: 5.80, nota: 96.00, appVenc: 100.0 },
+  } as Record<string, { eri: number; pistoleo: number; ajustes: number; negativos: number; registroAC: number; ddf: number; nsg: number; bodega: number; quiebre: number; nota: number; appVenc: number }>,
+  desempenoLideres: {
+    '103': { dotacion: 7.0, venta: 91.89, produccion: 99.00, inventario: 80.95, d: 92.70, merma: 99.84, reporte: 100.0, equipo: 100.0, calidad: 100.0, amabilidad: 100.0, total: 94.95 },
+    '107': { dotacion: 3.0, venta: 97.96, produccion: 85.00, inventario: 100.0, d: 98.80, merma: 98.37, reporte: 100.0, equipo: 100.0, calidad: 93.50, amabilidad: 101.0, total: 97.55 },
+    '110': { dotacion: 3.0, venta: 100.32, produccion: 90.00, inventario: 85.71, d: 91.00, merma: 92.48, reporte: 50.0, equipo: 100.0, calidad: 97.37, amabilidad: 106.0, total: 92.10 },
+    '118': { dotacion: 3.0, venta: 92.84, produccion: 92.00, inventario: 95.24, d: 84.40, merma: 98.09, reporte: 100.0, equipo: 100.0, calidad: 100.0, amabilidad: 104.0, total: 96.23 },
+    '155': { dotacion: 3.0, venta: 85.65, produccion: 92.00, inventario: 90.48, d: 93.70, merma: 96.73, reporte: 100.0, equipo: 100.0, calidad: 93.55, amabilidad: 103.0, total: 95.14 },
+    '175': { dotacion: 4.0, venta: 91.20, produccion: 92.00, inventario: 95.24, d: 88.90, merma: 98.49, reporte: 100.0, equipo: 100.0, calidad: 97.50, amabilidad: 98.0, total: 95.77 },
+    '193': { dotacion: 4.0, venta: 100.85, produccion: 95.00, inventario: 90.48, d: 87.00, merma: 101.12, reporte: 100.0, equipo: 100.0, calidad: 99.50, amabilidad: 102.0, total: 96.25 },
+    '311': { dotacion: 4.0, venta: 84.79, produccion: 92.00, inventario: 85.71, d: 94.40, merma: 95.34, reporte: 100.0, equipo: 100.0, calidad: 94.16, amabilidad: 102.0, total: 94.20 },
+    '314': { dotacion: 2.0, venta: 95.84, produccion: 92.00, inventario: 100.0, d: 96.60, merma: 97.68, reporte: 100.0, equipo: 100.0, calidad: 88.96, amabilidad: 105.0, total: 97.43 },
+    '335': { dotacion: 2.5, venta: 82.14, produccion: 66.00, inventario: 66.67, d: 85.70, merma: 92.29, reporte: 100.0, equipo: 100.0, calidad: 94.00, amabilidad: 93.0, total: 84.52 },
+    '357': { dotacion: 3.0, venta: 96.89, produccion: 96.00, inventario: 71.43, d: 94.20, merma: 92.22, reporte: 100.0, equipo: 100.0, calidad: 98.00, amabilidad: 108.0, total: 92.56 },
+  } as Record<string, { dotacion: number; venta: number; produccion: number; inventario: number; d: number; merma: number; reporte: number; equipo: number; calidad: number; amabilidad: number; total: number }>,
+}
+
+// Histórico de Evolutivo Gestión de Líderes (Semanas 36 a 40 oficiales del Excel de referencia)
+export const EVOLUTIVO_LIDERES_HISTORICO: Record<
+  string,
+  { s36: number; s37: number; s38: number; s39: number; s40: number }
+> = {
+  '103': { s36: 90.72, s37: 90.96, s38: 93.19, s39: 96.66, s40: 94.95 },
+  '107': { s36: 92.20, s37: 94.67, s38: 97.36, s39: 95.90, s40: 97.55 },
+  '110': { s36: 87.77, s37: 89.67, s38: 94.54, s39: 95.61, s40: 92.10 },
+  '118': { s36: 94.02, s37: 91.61, s38: 93.51, s39: 98.06, s40: 96.23 },
+  '155': { s36: 82.16, s37: 90.37, s38: 92.99, s39: 96.15, s40: 95.14 },
+  '175': { s36: 97.91, s37: 94.65, s38: 96.58, s39: 95.16, s40: 95.77 },
+  '193': { s36: 98.38, s37: 97.33, s38: 97.98, s39: 95.80, s40: 96.25 },
+  '311': { s36: 89.55, s37: 91.31, s38: 96.65, s39: 96.69, s40: 94.20 },
+  '314': { s36: 95.29, s37: 95.36, s38: 95.52, s39: 91.43, s40: 97.43 },
+  '335': { s36: 95.34, s37: 88.07, s38: 85.78, s39: 87.89, s40: 84.52 },
+  '357': { s36: 98.42, s37: 88.30, s38: 93.02, s39: 95.68, s40: 92.56 },
 }
 
 // Interfaces Ajustes
@@ -3717,762 +3811,1127 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 7: VISTA PREVIA BOLETÍN J06 */}
-        {activeTab === 'boletin_preview' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                  Boletín Semanal J06 ({semanaSeleccionada}) - Consolidado Zona B
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Visualización consolidada de todos los indicadores clave: Ventas, Scorecard de Líderes y Detalle de KPI&apos;s operativos.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 10 Indicadores Sincronizados
-                </span>
-              </div>
-            </div>
+        {/* TAB 9: VISTA PREVIA BOLETÍN J06 (RÉPLICA EXACTA DE LA PLANTILLA EXCEL OFICIAL) */}
+        {activeTab === 'boletin_preview' && (() => {
+          const esSemana40 = semanaSeleccionada === 'Semana 40'
 
-            {/* BANNER GENERAL INSTITUCIONAL ZONA B (COMO EN LA PLANTILLA OFICIAL) */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-xs font-black text-slate-700 tracking-wider uppercase">
-                  Zona B - Indicadores Clave
-                </span>
-                <span className="text-[11px] text-slate-500 font-semibold">{semanaSeleccionada}</span>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 text-center text-xs">
-                {/* Venta */}
-                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
-                  <div className="text-[10px] text-[#2e7d32] font-semibold">Venta</div>
-                  <div className="font-bold text-[#1b5e20] text-xs">
-                    {usarTotalBannerManual
-                      ? `S/ ${ventaTotalBannerManual.toLocaleString('es-PE')}`
-                      : `S/ ${totalVentaCalculada.toLocaleString('es-PE')}`}
+          // Valores del Banner Superior
+          const ventaTotalBanner = esSemana40
+            ? DATOS_SEMANA_40_EXCEL.kpis.ventaTotal
+            : usarTotalBannerManual
+            ? ventaTotalBannerManual
+            : totalVentaCalculada
+          const cumplimientoBanner = esSemana40 ? '94%' : `${logroFinalZonaB}%`
+          const crecimientoBanner = esSemana40 ? '-0.4%' : `${crecimientoFinalZonaB}%`
+          const mermaBanner = esSemana40 ? '4.29%' : '4.29%'
+          const amabilidadBanner = esSemana40 ? '101.90%' : '101.90%'
+          const mopBanner = esSemana40 ? '102.00%' : '102.00%'
+          const prodBanner = esSemana40 ? '105%' : '105%'
+          const nsgBanner = esSemana40 ? '91.82%' : '91.82%'
+          const calidadBanner = esSemana40 ? '92.10%' : `${promedioCalidad}%`
+
+          // Datos de Tabla Ventas Semanales
+          const filasVentasFinales = TIENDAS_ZONA_B.map(t => {
+            if (esSemana40) {
+              const ref = DATOS_SEMANA_40_EXCEL.tiendasVentas.find(x => x.codigo === t.codigo)!
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                ventaSoles: ref.venta,
+                logro: ref.logro,
+                crec: ref.crec,
+              }
+            } else {
+              const live = datosVenta.find(v => v.codigo === t.codigo)
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                ventaSoles: live?.ventaSoles || 0,
+                logro: live?.logroPorcentaje || 0,
+                crec: live?.crecimientoPorcentaje || 0,
+              }
+            }
+          })
+
+          // Datos de Desempeño de Indicadores Líderes
+          const filasDesempenoFinales = TIENDAS_ZONA_B.map(t => {
+            if (esSemana40) {
+              const ref = DATOS_SEMANA_40_EXCEL.desempenoLideres[t.codigo]
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                lider: t.lider,
+                dotacion: ref.dotacion,
+                venta: ref.venta,
+                produccion: ref.produccion,
+                inventario: ref.inventario,
+                d: ref.d,
+                merma: ref.merma,
+                reporte: ref.reporte,
+                equipo: ref.equipo,
+                calidad: ref.calidad,
+                amabilidad: ref.amabilidad,
+                total: ref.total,
+              }
+            } else {
+              const base = METRICAS_LIDERES_BASE[t.codigo] || {
+                dotacion: 3.0, produccion: 90.0, merma: 95.0, reporte: 100.0, equipo: 100.0, amabilidad: 100.0
+              }
+              const rowVenta = datosVenta.find(v => v.codigo === t.codigo)
+              const rowAjuste = datosAjustes.find(a => a.codigo === t.codigo)
+              const rowNegativo = datosNegativos.find(n => n.codigo === t.codigo)
+              const rowDisp = datosDisponibilidad.find(d => d.codigo === t.codigo)
+              const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === t.codigo)
+              const rowAC = datosRegistroAC.find(a => a.codigo === t.codigo)
+              const rowDDF = datosDDF.find(df => df.codigo === t.codigo)
+              const rowVenc = datosVencimiento.find(v => v.codigo === t.codigo)
+
+              const valVenta = rowVenta ? rowVenta.logroPorcentaje : 100.0
+              const valProd = base.produccion
+              const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 100.0
+              const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 100.0
+              // Inventario oficial = (Pistoleo Pan [100%] + Ajustes + Negativos) / 3
+              const valInventario = parseFloat(((100.0 + pctAjuste + pctNegativo) / 3).toFixed(2))
+              const valDisp = rowDisp ? rowDisp.nsg : 95.0
+              const valMerma = base.merma
+              const valReporte = rowAC ? rowAC.cumplimientoPorcentaje : 100.0
+              const valEquipo = rowDDF ? rowDDF.cumplimientoPorcentaje : 100.0
+              const valNota = rowCalidad ? rowCalidad.nota : 100.0
+              const valVenc = rowVenc ? rowVenc.totalPorcentaje : 100.0
+              // Calidad oficial = (Nota Auditoría + App Vencimiento) / 2
+              const valCalidad = parseFloat(((valNota + valVenc) / 2).toFixed(2))
+              const valAmabilidad = base.amabilidad
+
+              const valTotal = parseFloat((
+                (valVenta * 0.05) +
+                (valProd * 0.10) +
+                (valInventario * 0.20) +
+                (valDisp * 0.10) +
+                (valMerma * 0.05) +
+                (valReporte * 0.05) +
+                (valEquipo * 0.05) +
+                (valCalidad * 0.10) +
+                (valAmabilidad * 0.30)
+              ).toFixed(2))
+
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                lider: t.lider,
+                dotacion: base.dotacion,
+                venta: valVenta,
+                produccion: valProd,
+                inventario: valInventario,
+                d: valDisp,
+                merma: valMerma,
+                reporte: valReporte,
+                equipo: valEquipo,
+                calidad: valCalidad,
+                amabilidad: valAmabilidad,
+                total: valTotal,
+              }
+            }
+          })
+
+          // Datos de KPI'S Operativos
+          const filasKpisFinales = TIENDAS_ZONA_B.map(t => {
+            if (esSemana40) {
+              const ref = DATOS_SEMANA_40_EXCEL.kpisOperativos[t.codigo]
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                lider: t.lider,
+                ...ref,
+              }
+            } else {
+              const rowAjuste = datosAjustes.find(a => a.codigo === t.codigo)
+              const rowNegativo = datosNegativos.find(n => n.codigo === t.codigo)
+              const rowDisp = datosDisponibilidad.find(d => d.codigo === t.codigo)
+              const rowDDF = datosDDF.find(df => df.codigo === t.codigo)
+              const rowVenc = datosVencimiento.find(v => v.codigo === t.codigo)
+              const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === t.codigo)
+              const rowAC = datosRegistroAC.find(a => a.codigo === t.codigo)
+
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                lider: t.lider,
+                eri: 0.0,
+                pistoleo: 100.0,
+                ajustes: rowAjuste ? rowAjuste.cumplimientoPorcentaje : 100.0,
+                negativos: rowNegativo ? rowNegativo.cumplimientoPorcentaje : 100.0,
+                registroAC: rowAC ? rowAC.cumplimientoPorcentaje : 100.0,
+                ddf: rowDDF ? rowDDF.cumplimientoPorcentaje : 100.0,
+                nsg: rowDisp ? rowDisp.nsg : 95.0,
+                bodega: rowDisp ? rowDisp.bodega : 0.0,
+                quiebre: rowDisp ? rowDisp.quiebre : 0.0,
+                nota: rowCalidad ? rowCalidad.nota : 100.0,
+                appVenc: rowVenc ? rowVenc.totalPorcentaje : 100.0,
+              }
+            }
+          })
+
+          // Datos de Evolutivo Gestión de Líderes
+          const filasEvolutivoFinales = TIENDAS_ZONA_B.map(t => {
+            const hist = EVOLUTIVO_LIDERES_HISTORICO[t.codigo]
+            const desempItem = filasDesempenoFinales.find(d => d.codigo === t.codigo)
+            const scoreActual = desempItem ? desempItem.total : hist.s40
+
+            if (esSemana40) {
+              const semAnt = parseFloat((hist.s40 - hist.s39).toFixed(2))
+              const prom = parseFloat(((hist.s36 + hist.s37 + hist.s38 + hist.s39 + hist.s40) / 5).toFixed(2))
+              const des: 'SOBRESALIENTE' | 'CUMPLE SATISFACTORIO' | 'CUMPLE PARCIAL' =
+                prom >= 95.0 ? 'SOBRESALIENTE' : prom >= 90.0 ? 'CUMPLE SATISFACTORIO' : 'CUMPLE PARCIAL'
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                lider: t.lider,
+                s1: hist.s36,
+                s2: hist.s37,
+                s3: hist.s38,
+                s4: hist.s39,
+                s5: hist.s40,
+                semAnt,
+                promedio: prom,
+                desempeno: des,
+              }
+            } else {
+              // En Semana 41 (en vivo): Semanas 37, 38, 39, 40, 41
+              const semAnt = parseFloat((scoreActual - hist.s40).toFixed(2))
+              const prom = parseFloat(((hist.s37 + hist.s38 + hist.s39 + hist.s40 + scoreActual) / 5).toFixed(2))
+              const des: 'SOBRESALIENTE' | 'CUMPLE SATISFACTORIO' | 'CUMPLE PARCIAL' =
+                prom >= 95.0 ? 'SOBRESALIENTE' : prom >= 90.0 ? 'CUMPLE SATISFACTORIO' : 'CUMPLE PARCIAL'
+              return {
+                codigo: t.codigo,
+                nombre: t.nombre,
+                lider: t.lider,
+                s1: hist.s37,
+                s2: hist.s38,
+                s3: hist.s39,
+                s4: hist.s40,
+                s5: scoreActual,
+                semAnt,
+                promedio: prom,
+                desempeno: des,
+              }
+            }
+          })
+
+          // Notas y Feedback
+          const panaderiaCump = esSemana40 ? '88.6%' : '88.6%'
+          const panaderiaCrec = esSemana40 ? '-5.9%' : '-5.9%'
+          const pasteleriaCump = esSemana40 ? '94.7%' : '94.7%'
+          const pasteleriaCrec = esSemana40 ? '-2.1%' : '-2.1%'
+
+          const listaFoco = esSemana40
+            ? DATOS_SEMANA_40_EXCEL.focoSemana
+            : tiendasFocoVenta.map(t => ({
+                tienda: t.nombre.replace(/^\d+\s*-\s*/, ''),
+                crec: t.crecimientoPorcentaje,
+              }))
+
+          const textoFunciono = esSemana40
+            ? DATOS_SEMANA_40_EXCEL.funciono
+            : datosDDF.find(t => t.textoFunciono && t.textoFunciono.trim().length > 0)?.textoFunciono ||
+              DATOS_SEMANA_40_EXCEL.funciono
+
+          const textoNoFunciono = esSemana40
+            ? DATOS_SEMANA_40_EXCEL.noFunciono
+            : datosDDF.find(t => t.textoNoFunciono && t.textoNoFunciono.trim().length > 0)?.textoNoFunciono ||
+              DATOS_SEMANA_40_EXCEL.noFunciono
+
+          // Exportar a portapapeles en formato TSV (para pegar en Excel con celdas directas)
+          const copiarVistaExcelCompleta = () => {
+            let tsv = ''
+            tsv += `Boletín Semanal J06 (${semanaSeleccionada})\n\n`
+            tsv += `Zona B\tVenta\tCumpl.%\tCrec.%\tMerma (obj. 4.84%)\tAmabilidad (>91%)\tMOP (>100%)\tProductividad (>100%)\tNSG (Obj. 95%)\tCalidad (>90%)\n`
+            tsv += `Zona B\tS/ ${ventaTotalBanner.toLocaleString('es-PE')}\t${cumplimientoBanner}\t${crecimientoBanner}\t${mermaBanner}\t${amabilidadBanner}\t${mopBanner}\t${prodBanner}\t${nsgBanner}\t${calidadBanner}\n\n`
+
+            tsv += `Ventas Semanales (${semanaSeleccionada})\t\t\t\tAcumulado *\t\n`
+            tsv += `Tienda\tVenta\t% Logro\t% Crec.\tMOP\tProductividad\n`
+            filasVentasFinales.forEach(f => {
+              tsv += `${f.nombre}\tS/ ${f.ventaSoles.toLocaleString('es-PE')}\t${f.logro.toFixed(2)}%\t${f.crec.toFixed(2)}%\t0.00%\t0.00%\n`
+            })
+            tsv += `\n`
+
+            tsv += `Desempeño de Indicadores Líderes\t\t\t>100%\t>100%\t>95%\t100%\t100%\t100%\t100%\t>90%\t>90.3%\tTotal\n`
+            tsv += `\t\tPeso\t5%\t10%\t20%\t10%\t5%\t5%\t5%\t10%\t30%\t100%\n`
+            tsv += `Tienda\tLíder J0\tDotación\tVenta\tproducción\tInventario\td\tMerma\tReporte\tEquipo\tCalidad\tAmabilidad\tTotal\n`
+            filasDesempenoFinales.forEach(d => {
+              tsv += `${d.nombre}\t${d.lider}\t${d.dotacion.toFixed(1)}\t${d.venta.toFixed(2)}%\t${d.produccion.toFixed(2)}%\t${d.inventario.toFixed(2)}%\t${d.d.toFixed(2)}%\t${d.merma.toFixed(2)}%\t${d.reporte.toFixed(2)}%\t${d.equipo.toFixed(2)}%\t${d.calidad.toFixed(2)}%\t${d.amabilidad.toFixed(2)}%\t${d.total.toFixed(2)}%\n`
+            })
+            tsv += `\n`
+
+            tsv += `KPI'S\t\tObjetivo\tInventario\t\t\tImplementación\t\tDisponibilidad\t\t\tCalidad\t\n`
+            tsv += `\t\t>98%\t100%\tDiario\tObj. Por tienda\t100%\t100%\t>95%\t< 1%\t< 5%\t>90%\t100%\n`
+            tsv += `Tienda\tLíder J06\tERI\tPistoleo Pan\tAjustes\tNegativos\tRegistro A-C\tIncidencias DDF-Tácticos\tNSG\tBodega\tQuiebre\tNota\tApp vencimiento\n`
+            filasKpisFinales.forEach(k => {
+              tsv += `${k.nombre}\t${k.lider}\t${k.eri.toFixed(2)}%\t${k.pistoleo.toFixed(2)}%\t${k.ajustes.toFixed(2)}%\t${k.negativos.toFixed(2)}%\t${k.registroAC.toFixed(2)}%\t${k.ddf.toFixed(2)}%\t${k.nsg.toFixed(2)}%\t${k.bodega.toFixed(2)}%\t${k.quiebre.toFixed(2)}%\t${k.nota.toFixed(2)}%\t${k.appVenc.toFixed(2)}%\n`
+            })
+            tsv += `\n`
+
+            tsv += `Evolutivo Gestión de Líderes\t\tSemana 36\tSemana 37\tSemana 38\tSemana 39\tSemana 40\tSem\t\t\n`
+            tsv += `Tienda\tLíder J03\tTotal\tTotal8\tTotal9\tTotal10\tTotal11\tAnt.\tPromedio\tDesempeño\n`
+            filasEvolutivoFinales.forEach(e => {
+              tsv += `${e.nombre}\t${e.lider}\t${e.s1.toFixed(2)}%\t${e.s2.toFixed(2)}%\t${e.s3.toFixed(2)}%\t${e.s4.toFixed(2)}%\t${e.s5.toFixed(2)}%\t${e.semAnt.toFixed(2)}%\t${e.promedio.toFixed(2)}%\t${e.desempeno}\n`
+            })
+
+            navigator.clipboard.writeText(tsv)
+            toast.success('¡Vista copiada al portapapeles en formato Excel!')
+          }
+
+          // Exportar a archivo XLSX real
+          const exportarExcelCompleto = () => {
+            try {
+              const wb = XLSX.utils.book_new()
+              const wsData: any[][] = [
+                ['Boletín Semanal J06 - Consolidado Zona B', `Semana: ${semanaSeleccionada}`],
+                [],
+                ['Zona B', 'Venta', 'Cumpl.%', 'Crec.%', 'Merma (obj. 4.84%)', 'Amabilidad (>91%)', 'MOP (>100%)', 'Productividad (>100%)', 'NSG (obj. 95%)', 'Calidad (>90%)'],
+                [
+                  'Zona B',
+                  `S/ ${ventaTotalBanner.toLocaleString('es-PE')}`,
+                  cumplimientoBanner,
+                  crecimientoBanner,
+                  mermaBanner,
+                  amabilidadBanner,
+                  mopBanner,
+                  prodBanner,
+                  nsgBanner,
+                  calidadBanner,
+                ],
+                [],
+                [`Ventas Semanales (${semanaSeleccionada})`, '', '', '', 'Acumulado *', ''],
+                ['Tienda', 'Venta', '% Logro', '% Crec.', 'MOP', 'Productividad'],
+                ...filasVentasFinales.map(f => [
+                  f.nombre,
+                  f.ventaSoles,
+                  `${f.logro.toFixed(2)}%`,
+                  `${f.crec.toFixed(2)}%`,
+                  '0.00%',
+                  '0.00%',
+                ]),
+                [],
+                ['Desempeño de Indicadores Líderes', '', '', 'Objetivo:', '>100%', '>100%', '>95%', '100%', '100%', '100%', '100%', '>90%', '>90.3%', 'Total'],
+                ['', '', 'Peso:', '', '5%', '10%', '20%', '10%', '5%', '5%', '5%', '10%', '30%', '100%'],
+                ['Tienda', 'Líder J06', 'Dotación', 'Venta', 'producción', 'Inventario', 'd', 'Merma', 'Reporte', 'Equipo', 'Calidad', 'Amabilidad', 'Total'],
+                ...filasDesempenoFinales.map(d => [
+                  d.nombre,
+                  d.lider,
+                  d.dotacion,
+                  `${d.venta.toFixed(2)}%`,
+                  `${d.produccion.toFixed(2)}%`,
+                  `${d.inventario.toFixed(2)}%`,
+                  `${d.d.toFixed(2)}%`,
+                  `${d.merma.toFixed(2)}%`,
+                  `${d.reporte.toFixed(2)}%`,
+                  `${d.equipo.toFixed(2)}%`,
+                  `${d.calidad.toFixed(2)}%`,
+                  `${d.amabilidad.toFixed(2)}%`,
+                  `${d.total.toFixed(2)}%`,
+                ]),
+                [],
+                ['KPI\'S', '', 'Objetivo', 'Inventario', '', '', 'Implementación', '', 'Disponibilidad', '', '', 'Calidad', ''],
+                ['', '', '>98%', '100%', 'Diario', 'Obj. Por tienda', '100%', '100%', '>95%', '< 1%', '< 5%', '>90%', '100%'],
+                ['Tienda', 'Líder J06', 'ERI', 'Pistoleo Pan', 'Ajustes', 'Negativos', 'Registro A-C', 'Incidencias DDF-Tácticos', 'NSG', 'Bodega', 'Quiebre', 'Nota', 'App vencimiento'],
+                ...filasKpisFinales.map(k => [
+                  k.nombre,
+                  k.lider,
+                  `${k.eri.toFixed(2)}%`,
+                  `${k.pistoleo.toFixed(2)}%`,
+                  `${k.ajustes.toFixed(2)}%`,
+                  `${k.negativos.toFixed(2)}%`,
+                  `${k.registroAC.toFixed(2)}%`,
+                  `${k.ddf.toFixed(2)}%`,
+                  `${k.nsg.toFixed(2)}%`,
+                  `${k.bodega.toFixed(2)}%`,
+                  `${k.quiebre.toFixed(2)}%`,
+                  `${k.nota.toFixed(2)}%`,
+                  `${k.appVenc.toFixed(2)}%`,
+                ]),
+                [],
+                ['Evolutivo Gestión de Líderes', '', 'Semana 36', 'Semana 37', 'Semana 38', 'Semana 39', 'Semana 40', 'Sem Ant.', 'Promedio', 'Desempeño'],
+                ['Tienda', 'Líder J06', 'Total', 'Total8', 'Total9', 'Total10', 'Total11', 'Ant.', 'Promedio', 'Desempeño'],
+                ...filasEvolutivoFinales.map(e => [
+                  e.nombre,
+                  e.lider,
+                  `${e.s1.toFixed(2)}%`,
+                  `${e.s2.toFixed(2)}%`,
+                  `${e.s3.toFixed(2)}%`,
+                  `${e.s4.toFixed(2)}%`,
+                  `${e.s5.toFixed(2)}%`,
+                  `${e.semAnt.toFixed(2)}%`,
+                  `${e.promedio.toFixed(2)}%`,
+                  e.desempeno,
+                ]),
+              ]
+
+              const ws = XLSX.utils.aoa_to_sheet(wsData)
+              XLSX.utils.book_append_sheet(wb, ws, 'Boletín J06')
+              XLSX.writeFile(wb, `Boletin_Semanal_J06_${semanaSeleccionada.replace(/\s+/g, '_')}.xlsx`)
+              toast.success('¡Archivo Excel (.xlsx) exportado exitosamente!')
+            } catch (err: any) {
+              toast.error('Error al exportar a Excel: ' + (err.message || 'error desconocido'))
+            }
+          }
+
+          // Icono simulador de filtro de Excel
+          const ExcelFilter = () => (
+            <span className="inline-flex items-center justify-center ml-1 px-0.5 py-0.2 bg-slate-200 border border-slate-300 rounded text-[7px] text-slate-700 select-none shadow-[0_1px_1px_rgba(0,0,0,0.05)]">
+              ▼
+            </span>
+          )
+
+          return (
+            <div className="space-y-4">
+              {/* BARRA DE HERRAMIENTAS Y ACCIONES RÁPIDAS */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-100 text-emerald-800">
+                    <FileSpreadsheet className="w-5 h-5" />
                   </div>
-                </div>
-
-                {/* Cumplimiento Venta */}
-                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
-                  <div className="text-[10px] text-[#2e7d32] font-semibold">Cumpl.%</div>
-                  <div className="font-bold text-[#1b5e20] text-xs">
-                    {logroFinalZonaB}%
-                  </div>
-                </div>
-
-                {/* Crecimiento Venta */}
-                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
-                  <div className="text-[10px] text-[#2e7d32] font-semibold">Crec.%</div>
-                  <div
-                    className={`font-bold text-xs ${
-                      parseFloat(crecimientoFinalZonaB) >= 0
-                        ? 'text-[#1b5e20]'
-                        : 'text-rose-700'
-                    }`}
-                  >
-                    {parseFloat(crecimientoFinalZonaB) >= 0 ? '+' : ''}
-                    {crecimientoFinalZonaB}%
-                  </div>
-                </div>
-
-                {/* Merma */}
-                <div className="p-2 rounded-lg bg-[#fff9c4] border border-[#fff59d]">
-                  <div className="text-[10px] text-amber-900 font-semibold">Merma</div>
-                  <div className="font-bold text-amber-950 text-xs">4.29%</div>
-                  <div className="text-[9px] text-amber-700">obj. 4.84%</div>
-                </div>
-
-                {/* Amabilidad */}
-                <div className="p-2 rounded-lg bg-[#ffe0b2] border border-[#ffcc80]">
-                  <div className="text-[10px] text-[#e65100] font-semibold">Amabilidad *</div>
-                  <div className="font-bold text-[#e65100] text-xs">101.90%</div>
-                  <div className="text-[9px] text-orange-700">&gt;91%</div>
-                </div>
-
-                {/* MOP */}
-                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
-                  <div className="text-[10px] text-[#2e7d32] font-semibold">MOP *</div>
-                  <div className="font-bold text-[#1b5e20] text-xs">102.00%</div>
-                  <div className="text-[9px] text-emerald-700">&gt;100%</div>
-                </div>
-
-                {/* Productividad */}
-                <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
-                  <div className="text-[10px] text-[#2e7d32] font-semibold">Productividad *</div>
-                  <div className="font-bold text-[#1b5e20] text-xs">105%</div>
-                  <div className="text-[9px] text-emerald-700">&gt;100%</div>
-                </div>
-
-                {/* NSG */}
-                <div className="p-2 rounded-lg bg-[#fff9c4] border border-[#fff59d]">
-                  <div className="text-[10px] text-amber-900 font-semibold">NSG</div>
-                  <div className="font-bold text-amber-950 text-xs">91.82%</div>
-                  <div className="text-[9px] text-amber-700">Obj. 95%</div>
-                </div>
-
-                {/* Calidad */}
-                <div className="p-2 rounded-lg bg-[#fff9c4] border border-[#fff59d]">
-                  <div className="text-[10px] text-amber-900 font-semibold">Calidad</div>
-                  <div className="font-bold text-amber-950 text-xs">{promedioCalidad}%</div>
-                  <div className="text-[9px] text-amber-700">&gt;90%</div>
-                </div>
-              </div>
-            </div>
-
-            {/* SECCIÓN 1: TABLA DE VENTAS, ACUMULADO, FOCO DE LA SEMANA Y FEEDBACK */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* Tabla de Ventas Semanal (lg:col-span-5) */}
-              <div className="lg:col-span-5 space-y-2">
-                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                  <span className="font-bold text-xs text-slate-800">
-                    Ventas Semanales ({semanaSeleccionada})
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    S/ {totalVentaCalculada.toLocaleString('es-PE')}
-                  </span>
-                </div>
-                <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
-                  <table className="w-full text-[11px] text-center border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 font-bold text-slate-700 border-b border-slate-300">
-                        <th className="py-1.5 px-2 text-left border-r border-slate-300">Tienda</th>
-                        <th className="py-1.5 px-2 border-r border-slate-300 text-right">Venta</th>
-                        <th className="py-1.5 px-2 border-r border-slate-300 bg-emerald-50 text-emerald-900">
-                          % Logro
-                        </th>
-                        <th className="py-1.5 px-2">% Crec.</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {datosVenta.map(t => (
-                        <tr key={t.codigo} className="hover:bg-slate-50">
-                          <td className="py-1 px-2 text-left font-semibold text-slate-800 border-r border-slate-200 whitespace-nowrap">
-                            {t.nombre}
-                          </td>
-                          <td className="py-1 px-2 text-right font-mono text-slate-700 border-r border-slate-200 whitespace-nowrap">
-                            S/ {t.ventaSoles.toLocaleString('es-PE')}
-                          </td>
-                          <td
-                            className={`py-1 px-2 font-bold border-r border-slate-200 ${
-                              t.logroPorcentaje >= 100
-                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                                : t.logroPorcentaje >= 90
-                                ? 'bg-[#ffe0b2] text-[#e65100]'
-                                : 'bg-[#ffcdd2] text-[#b71c1c]'
-                            }`}
-                          >
-                            {t.logroPorcentaje.toFixed(2)}%
-                          </td>
-                          <td
-                            className={`py-1 px-2 font-bold ${
-                              t.crecimientoPorcentaje >= 0
-                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                                : 'bg-[#ffcdd2] text-[#b71c1c]'
-                            }`}
-                          >
-                            {t.crecimientoPorcentaje >= 0 ? '+' : ''}
-                            {t.crecimientoPorcentaje.toFixed(2)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Acumulado MOP y Productividad (lg:col-span-2) */}
-              <div className="lg:col-span-2 space-y-2">
-                <div className="pb-1 border-b border-slate-200">
-                  <span className="font-bold text-xs text-slate-800">Acumulado *</span>
-                </div>
-                <div className="border border-slate-300 rounded-xl overflow-hidden shadow-sm">
-                  <table className="w-full text-[11px] text-center border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 font-bold text-slate-700 border-b border-slate-300">
-                        <th className="py-1.5 px-2 border-r border-slate-300 bg-[#e8f5e9] text-[#1b5e20]">MOP</th>
-                        <th className="py-1.5 px-2 bg-[#e8f5e9] text-[#1b5e20]">Productividad</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {TIENDAS_ZONA_B.map(t => (
-                        <tr key={t.codigo} className="hover:bg-slate-50">
-                          <td className="py-1 px-2 border-r border-slate-200 font-mono text-slate-600 bg-emerald-50/20">
-                            0.00%
-                          </td>
-                          <td className="py-1 px-2 font-mono text-slate-600 bg-emerald-50/20">
-                            0.00%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Foco de la Semana y Categoría (lg:col-span-5) */}
-              <div className="lg:col-span-5 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Resumen Panadería / Pastelería */}
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-xs">
-                    <div className="font-bold text-slate-900 border-b border-slate-200 pb-1">
-                      {semanaSeleccionada}
-                    </div>
-                    <div className="text-slate-700 space-y-1">
-                      <div>
-                        <span className="font-semibold text-slate-800">- Panadería:</span>{' '}
-                        <span className="font-mono text-emerald-800 font-bold">Cump: 88.6%</span>{' '}
-                        <span className="font-mono text-rose-700 font-bold">Crec: -5.9%</span>
-                      </div>
-                      <div>
-                        <span className="font-semibold text-slate-800">- Pastelería:</span>{' '}
-                        <span className="font-mono text-emerald-800 font-bold">Cump: 94.7%</span>{' '}
-                        <span className="font-mono text-rose-700 font-bold">Crec: -2.1%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Foco Semana */}
-                  <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1.5 text-xs">
-                    <div className="font-bold text-rose-950 flex items-center justify-between border-b border-rose-200 pb-1">
-                      <span>Foco Semana</span>
-                      <span className="text-[10px] bg-rose-200 text-rose-900 px-1.5 rounded font-bold">
-                        {tiendasFocoVenta.length}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-slate-900">
+                        Boletín Semanal J06 - Vista Hoja de Cálculo
+                      </h2>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        esSemana40
+                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                          : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                      }`}>
+                        {esSemana40 ? 'Plantilla Oficial (Semana 40)' : 'Datos en Vivo Sincronizados (Semana 41)'}
                       </span>
                     </div>
-                    <div className="space-y-0.5 text-slate-700 max-h-24 overflow-y-auto pr-1">
-                      {tiendasFocoVenta
-                        .sort((a, b) => a.crecimientoPorcentaje - b.crecimientoPorcentaje)
-                        .map(t => (
-                          <div key={t.codigo} className="flex items-center justify-between text-[11px]">
-                            <span className="font-medium text-slate-800">- {t.nombre.replace(/^\d+\s*-\s*/, '')}:</span>
-                            <span className="font-mono font-bold text-rose-700">
-                              {t.crecimientoPorcentaje >= 0 ? '+' : ''}{t.crecimientoPorcentaje.toFixed(1)}%
-                            </span>
-                          </div>
-                        ))}
+                    <p className="text-[11px] text-slate-500">
+                      Réplica exacta de la estructura, tablas y fórmulas de la plantilla corporativa oficial de Excel.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={copiarVistaExcelCompleta}
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-300"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-slate-600" />
+                    Copiar Vista Completa (Excel)
+                  </button>
+
+                  <button
+                    onClick={exportarExcelCompleto}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Descargar XLSX
+                  </button>
+
+                  <button
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Imprimir / PDF
+                  </button>
+                </div>
+              </div>
+
+              {/* LIENZO DE LA HOJA DE EXCEL */}
+              <div className="bg-white rounded-xl border-2 border-slate-300 shadow-sm p-4 md:p-6 space-y-6 overflow-x-auto font-sans">
+                {/* 1. ENCABEZADO SUPERIOR: SELECTOR DE SEMANA Y TÍTULO CENTRADO */}
+                <div className="relative flex items-center justify-between pb-2">
+                  {/* Selector Excel: Elige semana */}
+                  <div className="inline-block border border-slate-400 bg-white shadow-xs z-10">
+                    <div className="bg-[#a5d6a7] px-3 py-0.5 text-[10px] font-black text-[#1b5e20] text-center border-b border-slate-300 tracking-wider">
+                      Elige semana
+                    </div>
+                    <select
+                      value={semanaSeleccionada}
+                      onChange={e => {
+                        const s = e.target.value
+                        setSemanaSeleccionada(s)
+                        if (s.includes('40') || s.includes('41')) {
+                          setMesObjetivoAuditoria('octubre')
+                        }
+                      }}
+                      className="w-full text-xs font-bold text-slate-900 px-3 py-1 bg-white border-none focus:outline-none cursor-pointer"
+                    >
+                      <option value="Semana 40">Semana 40</option>
+                      <option value="Semana 41">Semana 41</option>
+                    </select>
+                  </div>
+
+                  {/* Título Oficial Centrado */}
+                  <div className="absolute inset-x-0 text-center pointer-events-none">
+                    <h1 className="text-2xl md:text-3xl font-black text-[#1b5e20] tracking-tight">
+                      Boletín Semanal J06
+                    </h1>
+                  </div>
+
+                  {/* Espacio para balance simétrico */}
+                  <div className="w-28 hidden md:block"></div>
+                </div>
+
+                {/* 2. BANNER SUPERIOR DE KPIS EN FILA CONTINUA (ZONA B) */}
+                <div className="overflow-x-auto border border-slate-300 bg-white">
+                  <div className="flex items-stretch min-w-[950px] divide-x divide-slate-300 text-center text-xs">
+                    {/* Zona B */}
+                    <div className="px-6 py-2.5 font-black text-[#1b5e20] text-sm md:text-base bg-white flex items-center justify-center shrink-0">
+                      Zona B
+                    </div>
+
+                    {/* Venta */}
+                    <div className="px-4 py-2 bg-[#e8f5e9] flex-1">
+                      <div className="text-[10px] text-slate-600 font-semibold">Venta</div>
+                      <div className="text-xs font-black text-[#1b5e20] mt-0.5 whitespace-nowrap">
+                        S/ {ventaTotalBanner.toLocaleString('es-PE')}
+                      </div>
+                    </div>
+
+                    {/* Cumpl.% */}
+                    <div className="px-4 py-2 bg-[#c8e6c9] flex-1">
+                      <div className="text-[10px] text-[#1b5e20] font-semibold">Cumpl.%</div>
+                      <div className="text-xs font-black text-[#1b5e20] mt-0.5">{cumplimientoBanner}</div>
+                    </div>
+
+                    {/* Crec.% */}
+                    <div className="px-4 py-2 bg-[#fff9c4] flex-1">
+                      <div className="text-[10px] text-amber-900 font-semibold">Crec.%</div>
+                      <div className="text-xs font-black text-amber-950 mt-0.5">{crecimientoBanner}</div>
+                    </div>
+
+                    {/* Merma */}
+                    <div className="px-4 py-2 bg-[#fff9c4] flex-1">
+                      <div className="text-[10px] text-amber-900 font-semibold">Merma</div>
+                      <div className="text-[9px] text-amber-700 leading-none">obj.4.84%</div>
+                      <div className="text-xs font-black text-amber-950 mt-0.5">{mermaBanner}</div>
+                    </div>
+
+                    {/* Amabilidad * */}
+                    <div className="px-4 py-2 bg-[#ffe0b2] flex-1">
+                      <div className="text-[10px] text-[#e65100] font-semibold whitespace-nowrap">Amabilidad *</div>
+                      <div className="text-[9px] text-orange-700 leading-none">&gt;91%</div>
+                      <div className="text-xs font-black text-[#e65100] mt-0.5">{amabilidadBanner}</div>
+                    </div>
+
+                    {/* MOP * */}
+                    <div className="px-4 py-2 bg-[#e8f5e9] flex-1">
+                      <div className="text-[10px] text-[#2e7d32] font-semibold whitespace-nowrap">MOP *</div>
+                      <div className="text-[9px] text-emerald-700 leading-none">&gt; 100%</div>
+                      <div className="text-xs font-black text-[#1b5e20] mt-0.5">{mopBanner}</div>
+                    </div>
+
+                    {/* Productividad * */}
+                    <div className="px-4 py-2 bg-[#e8f5e9] flex-1">
+                      <div className="text-[10px] text-[#2e7d32] font-semibold whitespace-nowrap">Productividad *</div>
+                      <div className="text-[9px] text-emerald-700 leading-none">&gt;100%</div>
+                      <div className="text-xs font-black text-[#1b5e20] mt-0.5">{prodBanner}</div>
+                    </div>
+
+                    {/* NSG */}
+                    <div className="px-4 py-2 bg-[#fff9c4] flex-1">
+                      <div className="text-[10px] text-amber-900 font-semibold">NSG</div>
+                      <div className="text-[9px] text-amber-700 leading-none">Obj. 95%</div>
+                      <div className="text-xs font-black text-amber-950 mt-0.5">{nsgBanner}</div>
+                    </div>
+
+                    {/* Calidad */}
+                    <div className="px-4 py-2 bg-[#fff9c4] flex-1">
+                      <div className="text-[10px] text-amber-900 font-semibold">Calidad</div>
+                      <div className="text-[9px] text-amber-700 leading-none">&gt;90%</div>
+                      <div className="text-xs font-black text-amber-950 mt-0.5">{calidadBanner}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Qué Funcionó y No Funcionó */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1 text-xs">
-                    <div className="font-bold text-emerald-950 flex items-center gap-1.5 border-b border-emerald-200 pb-0.5">
-                      <ThumbsUp className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Funcionó</span>
+                {/* 3. SECCIÓN SUPERIOR: 3 BLOQUES (VENTAS SEMANALES, ACUMULADO *, NOTAS OPERATIVAS) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  {/* Columna 1: Ventas Semanales (lg:col-span-5) */}
+                  <div className="lg:col-span-5 space-y-1">
+                    <div className="font-bold text-xs text-slate-900">
+                      {semanaSeleccionada}
                     </div>
-                    <div className="text-[10px] text-slate-700 max-h-16 overflow-y-auto leading-relaxed">
-                      {datosDDF.find(t => t.textoFunciono && t.textoFunciono.trim().length > 0)?.textoFunciono ||
-                        '50% en enrollados de pizza, queso y hot dog x un, keke redondo tottus + s/1.00 gaseosa Inka/Coca 1.5Lt'}
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 space-y-1 text-xs">
-                    <div className="font-bold text-rose-950 flex items-center gap-1.5 border-b border-rose-200 pb-0.5">
-                      <ThumbsDown className="w-3.5 h-3.5 text-rose-700" />
-                      <span>No funcionó</span>
-                    </div>
-                    <div className="text-[10px] text-slate-700 max-h-16 overflow-y-auto leading-relaxed">
-                      {datosDDF.find(t => t.textoNoFunciono && t.textoNoFunciono.trim().length > 0)?.textoNoFunciono ||
-                        'Compra de keke redondo tottus + S/1.00 agreg una gaseosa inka cola o coca cola x 1.5Lt'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SECCIÓN 2: DESEMPEÑO DE INDICADORES LÍDERES (SCORECARD PONDERADO) */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                <h3 className="text-sm font-black text-slate-800 tracking-wide uppercase flex items-center gap-2">
-                  <Award className="w-4 h-4 text-emerald-600" />
-                  Desempeño de Indicadores Líderes
-                </h3>
-                <span className="text-[11px] font-semibold text-slate-500">
-                  Evaluación Ponderada de 9 Criterios (Total 100%)
-                </span>
-              </div>
-
-              <div className="overflow-x-auto border border-slate-300 rounded-xl">
-                <table className="w-full text-[11px] border-collapse text-center">
-                  <thead>
-                    {/* Fila Metas */}
-                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-300 text-[10px]">
-                      <th colSpan={3} className="py-1 px-2 border-r border-slate-300 text-left">Objetivo</th>
-                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-50 text-emerald-900 font-black">&gt;100%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">&gt;100%</th>
-                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-100 text-emerald-950 font-black">&gt;95%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">100%</th>
-                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-50 text-emerald-900 font-black">&gt;90%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">&gt;90.3%</th>
-                      <th className="py-1 px-1 bg-slate-200 text-slate-900 font-black">Total</th>
-                    </tr>
-                    {/* Fila Pesos */}
-                    <tr className="bg-slate-200/80 text-slate-700 font-bold border-b border-slate-300 text-[10px]">
-                      <th colSpan={3} className="py-1 px-2 border-r border-slate-300 text-right pr-3">Peso</th>
-                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-100 text-emerald-950 font-black">5%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">10%</th>
-                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-black">20%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">10%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">5%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">5%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">5%</th>
-                      <th className="py-1 px-1 border-r border-slate-300 bg-emerald-100 text-emerald-950 font-black">10%</th>
-                      <th className="py-1 px-1 border-r border-slate-300">30%</th>
-                      <th className="py-1 px-1 bg-slate-300 text-slate-900 font-black">100%</th>
-                    </tr>
-                    {/* Fila Encabezados de Columna */}
-                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-[11px]">
-                      <th className="py-2 px-3 text-left border-r border-slate-300">Tienda</th>
-                      <th className="py-2 px-3 text-left border-r border-slate-300">Líder J06</th>
-                      <th className="py-2 px-2 border-r border-slate-300 text-center">Dotación</th>
-                      <th className="py-2 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-950">Venta ⭐</th>
-                      <th className="py-2 px-2 border-r border-slate-300">producción</th>
-                      <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-black">Inventario ⭐</th>
-                      <th className="py-2 px-2 border-r border-slate-300">d (Disp) ⭐</th>
-                      <th className="py-2 px-2 border-r border-slate-300">Merma</th>
-                      <th className="py-2 px-2 border-r border-slate-300">Reporte</th>
-                      <th className="py-2 px-2 border-r border-slate-300">Equipo</th>
-                      <th className="py-2 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-950">Calidad ⭐</th>
-                      <th className="py-2 px-2 border-r border-slate-300">Amabilidad</th>
-                      <th className="py-2 px-2 bg-slate-200 text-slate-950 font-black">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {TIENDAS_ZONA_B.map(tienda => {
-                      const rowVenta = datosVenta.find(v => v.codigo === tienda.codigo)
-                      const rowAjuste = datosAjustes.find(a => a.codigo === tienda.codigo)
-                      const rowNegativo = datosNegativos.find(n => n.codigo === tienda.codigo)
-                      const rowDisp = datosDisponibilidad.find(d => d.codigo === tienda.codigo)
-                      const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === tienda.codigo)
-                      const base = METRICAS_LIDERES_BASE[tienda.codigo] || {
-                        dotacion: 3.0, produccion: 90.0, merma: 95.0, reporte: 100.0, equipo: 100.0, amabilidad: 100.0
-                      }
-
-                      const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
-                      const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
-                      const notaInventario = parseFloat(((pctAjuste + pctNegativo) / 2).toFixed(2))
-
-                      const valVenta = rowVenta ? rowVenta.logroPorcentaje : 100.0
-                      const valProd = base.produccion
-                      const valDisp = rowDisp ? rowDisp.nsg : 95.0
-                      const valMerma = base.merma
-                      const valReporte = base.reporte
-                      const valEquipo = base.equipo
-                      const valCalidad = rowCalidad ? rowCalidad.nota : 100.0
-                      const valAmabilidad = base.amabilidad
-
-                      const totalScore = parseFloat((
-                        (valVenta * 0.05) +
-                        (valProd * 0.10) +
-                        (notaInventario * 0.20) +
-                        (valDisp * 0.10) +
-                        (valMerma * 0.05) +
-                        (valReporte * 0.05) +
-                        (valEquipo * 0.05) +
-                        (valCalidad * 0.10) +
-                        (valAmabilidad * 0.30)
-                      ).toFixed(2))
-
-                      return (
-                        <tr key={tienda.codigo} className="hover:bg-slate-50">
-                          <td className="py-1.5 px-3 text-left font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
-                            {tienda.nombre}
-                          </td>
-                          <td className="py-1.5 px-3 text-left text-slate-600 border-r border-slate-200 whitespace-nowrap">
-                            {tienda.lider}
-                          </td>
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-center font-mono text-slate-700 bg-amber-50/60">
-                            {base.dotacion.toFixed(1)}
-                          </td>
-                          {/* Venta (5%) */}
-                          <td className={`py-1.5 px-2 border-r border-slate-200 font-bold ${
-                            valVenta >= 100 ? 'bg-emerald-50 text-emerald-900' : valVenta >= 90 ? 'bg-amber-50 text-amber-900' : 'bg-rose-50 text-rose-900'
-                          }`}>
-                            {valVenta.toFixed(2)}%
-                          </td>
-                          {/* Producción (10%) */}
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
-                            {valProd.toFixed(2)}%
-                          </td>
-                          {/* Inventario (20%) */}
-                          <td className={`py-1.5 px-2 border-r border-slate-200 font-bold ${
-                            notaInventario >= 90 ? 'bg-emerald-100 text-emerald-950' : 'bg-amber-50 text-amber-900'
-                          }`}>
-                            {notaInventario.toFixed(2)}%
-                          </td>
-                          {/* Disponibilidad (10%) */}
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
-                            {valDisp.toFixed(2)}%
-                          </td>
-                          {/* Merma (5%) */}
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
-                            {valMerma.toFixed(2)}%
-                          </td>
-                          {/* Reporte (5%) */}
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
-                            {valReporte.toFixed(2)}%
-                          </td>
-                          {/* Equipo (5%) */}
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
-                            {valEquipo.toFixed(2)}%
-                          </td>
-                          {/* Calidad (10%) */}
-                          <td className={`py-1.5 px-2 border-r border-slate-200 font-bold ${
-                            valCalidad >= 90 ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'
-                          }`}>
-                            {valCalidad.toFixed(2)}%
-                          </td>
-                          {/* Amabilidad (30%) */}
-                          <td className="py-1.5 px-2 border-r border-slate-200 text-slate-700">
-                            {valAmabilidad.toFixed(2)}%
-                          </td>
-                          {/* Total Ponderado (100%) */}
-                          <td className={`py-1.5 px-2 font-black ${
-                            totalScore >= 95
-                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                              : totalScore >= 90
-                              ? 'bg-[#e8f5e9] text-[#2e7d32]'
-                              : totalScore >= 85
-                              ? 'bg-[#ffe0b2] text-[#e65100]'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}>
-                            {totalScore.toFixed(2)}%
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* SECCIÓN 3: KPI'S DETALLADOS (INVENTARIO, IMPLEMENTACIÓN, DISPONIBILIDAD, CALIDAD) */}
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                <h3 className="text-sm font-black text-slate-800 tracking-wide uppercase">
-                  Detalle de KPI&apos;S Operativos (Inventario, Implementación, Disponibilidad, Calidad)
-                </h3>
-                <span className="text-[11px] font-semibold text-slate-500">
-                  Valores operativos directos
-                </span>
-              </div>
-            </div>
-
-            {/* Banner Informativo de Inventario */}
-            <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0"></span>
-                <span className="text-xs text-emerald-950 font-semibold">
-                  Inventario: Nota calculada como promedio de Ajustes y Negativos. Pistoleo Pan fijado en 100% por default (columna ERI eliminada). Registro A-C evaluado sobre 14 registros (100% default).
-                </span>
-              </div>
-              <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md shrink-0">
-                Promedio Inventario Zona B: {(TIENDAS_ZONA_B.reduce((acc, t) => {
-                  const a = datosAjustes.find(x => x.codigo === t.codigo)?.cumplimientoPorcentaje || 0
-                  const n = datosNegativos.find(x => x.codigo === t.codigo)?.cumplimientoPorcentaje || 0
-                  return acc + (a + n) / 2
-                }, 0) / TIENDAS_ZONA_B.length).toFixed(2)}%
-              </span>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-300 rounded-xl">
-              <table className="w-full text-xs border-collapse text-center">
-                <thead>
-                  {/* Fila Criterio Principal */}
-                  <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-300">
-                    <th colSpan={2} className="py-2 border-r border-slate-300">
-                      KPI&apos;S
-                    </th>
-                    <th colSpan={4} className="py-2 border-r border-slate-300 bg-slate-200">
-                      Inventario ⭐ (Promedio Ajustes + Negativos)
-                    </th>
-                    <th colSpan={2} className="py-2 border-r border-slate-300 bg-[#e8f5e9] text-[#1b5e20]">
-                      Implementación ⭐
-                    </th>
-                    <th colSpan={3} className="py-2 border-r border-slate-300 bg-[#e8f5e9] text-[#1b5e20]">
-                      Disponibilidad ⭐
-                    </th>
-                    <th colSpan={2} className="py-2 bg-[#e8f5e9] text-[#1b5e20]">
-                      Calidad ⭐
-                    </th>
-                  </tr>
-
-                  {/* Fila Objetivos */}
-                  <tr className="bg-slate-50 text-slate-600 text-[11px] border-b border-slate-300">
-                    <th className="py-1 px-3 text-left border-r border-slate-300">Tienda</th>
-                    <th className="py-1 px-3 text-left border-r border-slate-300">Líder J06</th>
-
-                    {/* Inventario Objetivos */}
-                    <th className="py-1 px-2 border-r border-slate-300 bg-slate-100">100% (Fijo)</th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      Diario (Ajustes)
-                    </th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      Obj. Por tienda (Negativos)
-                    </th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-black">
-                      Promedio
-                    </th>
-
-                    {/* Implementación Objetivos */}
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      100% (Registro A-C)
-                    </th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      100% (Incidencias DDF-Tácticos)
-                    </th>
-
-                    {/* Disponibilidad Objetivos */}
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      &gt;95%
-                    </th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      &lt;1%
-                    </th>
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      &lt;5%
-                    </th>
-
-                    {/* Calidad Objetivos */}
-                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
-                      &gt;90% (Auditoría)
-                    </th>
-                    <th className="py-1 px-2 bg-emerald-100 text-emerald-900 font-bold">100% (App Vencimiento)</th>
-                  </tr>
-
-                  {/* Fila Nombres de Columnas */}
-                  <tr className="bg-slate-200/80 font-bold text-slate-800 border-b border-slate-300">
-                    <th className="py-2 px-3 text-left border-r border-slate-300">Tienda</th>
-                    <th className="py-2 px-3 text-left border-r border-slate-300">Líder J06</th>
-
-                    <th className="py-2 px-2 border-r border-slate-300 text-slate-500">Pistoleo Pan</th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
-                      Ajustes ⭐
-                    </th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
-                      Negativos ⭐
-                    </th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-300 text-emerald-950 font-black">
-                      Nota Inventario ⭐
-                    </th>
-
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
-                      Registro A-C ⭐
-                    </th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
-                      Incidencias DDF-Tácticos ⭐
-                    </th>
-
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
-                      NSG ⭐
-                    </th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
-                      Bodega ⭐
-                    </th>
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950">
-                      Quiebre ⭐
-                    </th>
-
-                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
-                      Nota Auditoría ⭐
-                    </th>
-                    <th className="py-2 px-2 bg-emerald-200 text-emerald-950 font-bold">
-                      App vencimiento ⭐
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {TIENDAS_ZONA_B.map(tienda => {
-                    const rowAjuste = datosAjustes.find(a => a.codigo === tienda.codigo)
-                    const rowNegativo = datosNegativos.find(n => n.codigo === tienda.codigo)
-                    const rowDisp = datosDisponibilidad.find(d => d.codigo === tienda.codigo)
-                    const rowDDF = datosDDF.find(df => df.codigo === tienda.codigo)
-                    const rowVenc = datosVencimiento.find(v => v.codigo === tienda.codigo)
-                    const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === tienda.codigo)
-                    const rowAC = datosRegistroAC.find(a => a.codigo === tienda.codigo)
-
-                    const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
-                    const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
-                    const notaInventario = parseFloat(((pctAjuste + pctNegativo) / 2).toFixed(2))
-
-                    const pctAC = rowAC ? rowAC.cumplimientoPorcentaje : 100.0
-                    const pctDDF = rowDDF ? rowDDF.cumplimientoPorcentaje : 0
-                    const pctVenc = rowVenc ? rowVenc.totalPorcentaje : 100.0
-                    const notaAuditoria = rowCalidad ? rowCalidad.nota : 100.0
-                    const esArrastreAuditoria = rowCalidad ? rowCalidad.esArrastre : false
-                    const mesCalidad = rowCalidad ? rowCalidad.mesEvaluado : 'Octubre'
-
-                    const nsgVal = rowDisp ? rowDisp.nsg : 0
-                    const bodegaVal = rowDisp ? rowDisp.bodega : 0
-                    const quiebreVal = rowDisp ? rowDisp.quiebre : 0
-
-                    return (
-                      <tr key={tienda.codigo} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 text-left font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
-                          {tienda.nombre}
-                        </td>
-                        <td className="py-2 px-3 text-left text-slate-600 border-r border-slate-200 whitespace-nowrap">
-                          {tienda.lider}
-                        </td>
-
-                        {/* PISTOLEO PAN */}
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600 bg-slate-50">
-                          100.00%
-                        </td>
-
-                        {/* AJUSTES */}
-                        <td className="py-2 px-2 border-r border-slate-200 font-bold bg-emerald-50 text-emerald-900">
-                          {pctAjuste.toFixed(2)}%
-                        </td>
-
-                        {/* NEGATIVOS */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            pctNegativo === 100
-                              ? 'bg-emerald-50 text-emerald-900'
-                              : pctNegativo > 0
-                              ? 'bg-amber-50 text-amber-900'
-                              : 'bg-rose-50 text-rose-900'
-                          }`}
-                        >
-                          {pctNegativo.toFixed(2)}%
-                        </td>
-
-                        {/* NOTA INVENTARIO */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-black ${
-                            notaInventario >= 90
-                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                              : notaInventario >= 70
-                              ? 'bg-[#ffe0b2] text-[#e65100]'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}
-                        >
-                          {notaInventario.toFixed(2)}%
-                        </td>
-
-                        {/* REGISTRO A-C */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            pctAC === 100
-                              ? 'bg-emerald-50 text-emerald-900'
-                              : pctAC >= 70
-                              ? 'bg-amber-50 text-amber-900'
-                              : 'bg-rose-50 text-rose-900'
-                          }`}
-                        >
-                          <div className="flex flex-col items-center">
-                            <span>{pctAC.toFixed(2)}%</span>
-                            {rowAC && rowAC.registrosCumplidos < 14 && (
-                              <span className="text-[9px] font-semibold text-amber-800 bg-amber-100 px-1 rounded leading-tight mt-0.5">
-                                {rowAC.registrosCumplidos}/14
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* INCIDENCIAS DDF-TÁCTICOS */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            pctDDF === 100
-                              ? 'bg-emerald-50 text-emerald-900'
-                              : pctDDF >= 70
-                              ? 'bg-amber-50 text-amber-900'
-                              : 'bg-rose-50 text-rose-900'
-                          }`}
-                        >
-                          <div className="flex flex-col items-center">
-                            <span>{pctDDF.toFixed(2)}%</span>
-                            {rowDDF && rowDDF.camposLlenos < 7 && (
-                              <span className="text-[9px] font-semibold text-amber-800 bg-amber-100 px-1 rounded leading-tight mt-0.5">
-                                {rowDDF.camposLlenos}/7
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* DISPONIBILIDAD: NSG */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            nsgVal >= 95
-                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                              : nsgVal >= 90
-                              ? 'bg-[#ffe0b2] text-[#e65100]'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}
-                        >
-                          {nsgVal.toFixed(2)}%
-                        </td>
-
-                        {/* DISPONIBILIDAD: BODEGA */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            bodegaVal <= 1.0
-                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}
-                        >
-                          {bodegaVal.toFixed(2)}%
-                        </td>
-
-                        {/* DISPONIBILIDAD: QUIEBRE */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            quiebreVal <= 5.0
-                              ? 'bg-[#c8e6c9] text-[#1b5e20]'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}
-                        >
-                          {quiebreVal.toFixed(2)}%
-                        </td>
-
-                        {/* CALIDAD: NOTA AUDITORÍA (AUTOMATIZADO) */}
-                        <td
-                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
-                            notaAuditoria >= 90
-                              ? 'bg-emerald-50 text-emerald-900'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}
-                        >
-                          <div className="flex flex-col items-center">
-                            <span>{notaAuditoria.toFixed(2)}%</span>
-                            {esArrastreAuditoria && (
-                              <span
-                                title={`Arrastre: ${mesCalidad}`}
-                                className="text-[9px] font-semibold text-amber-800 bg-amber-100 px-1 rounded leading-tight mt-0.5"
+                    <div className="border border-slate-300 overflow-x-auto">
+                      <table className="w-full text-[11px] text-center border-collapse">
+                        <thead>
+                          <tr className="bg-slate-200/90 font-bold text-slate-800 border-b border-slate-300">
+                            <th className="py-1 px-2 text-left border-r border-slate-300">Tienda</th>
+                            <th className="py-1 px-2 border-r border-slate-300 text-right">Venta</th>
+                            <th className="py-1 px-2 border-r border-slate-300 bg-emerald-50 text-emerald-950">
+                              % Logro
+                            </th>
+                            <th className="py-1 px-2">% Crec.</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 text-slate-800">
+                          {filasVentasFinales.map(f => (
+                            <tr key={f.codigo} className="hover:bg-slate-50">
+                              <td className="py-1 px-2 text-left font-semibold border-r border-slate-300 whitespace-nowrap">
+                                {f.nombre}
+                              </td>
+                              <td className="py-1 px-2 text-right font-mono border-r border-slate-300 whitespace-nowrap">
+                                S/ {f.ventaSoles.toLocaleString('es-PE')}
+                              </td>
+                              <td
+                                className={`py-1 px-2 font-bold border-r border-slate-300 ${
+                                  f.logro >= 100
+                                    ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                    : f.logro >= 90
+                                    ? 'bg-[#ffe0b2] text-[#c2410c]'
+                                    : 'bg-[#ffcdd2] text-[#b71c1c]'
+                                }`}
                               >
-                                Arrastre
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                                {f.logro.toFixed(2)}%
+                              </td>
+                              <td
+                                className={`py-1 px-2 font-bold ${
+                                  f.crec >= 0
+                                    ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                    : 'bg-[#ffcdd2] text-[#b71c1c]'
+                                }`}
+                              >
+                                {f.crec >= 0 ? '' : ''}
+                                {f.crec.toFixed(2)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
 
-                        {/* CALIDAD: APP VENCIMIENTO (AUTOMATIZADO) */}
-                        <td
-                          className={`py-2 px-2 font-bold ${
-                            pctVenc === 100
-                              ? 'bg-emerald-50 text-emerald-900'
-                              : 'bg-[#ffcdd2] text-[#b71c1c]'
-                          }`}
-                        >
-                          {pctVenc.toFixed(2)}%
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                  {/* Columna 2: Acumulado * (lg:col-span-2) */}
+                  <div className="lg:col-span-2 space-y-1">
+                    <div className="font-bold text-xs text-slate-900">
+                      Acumulado *
+                    </div>
+                    <div className="border border-slate-300 overflow-x-auto">
+                      <table className="w-full text-[11px] text-center border-collapse">
+                        <thead>
+                          <tr className="bg-slate-200/90 font-bold text-slate-800 border-b border-slate-300">
+                            <th className="py-1 px-2 border-r border-slate-300 bg-[#e8f5e9] text-[#1b5e20]">MOP</th>
+                            <th className="py-1 px-2 bg-[#e8f5e9] text-[#1b5e20]">Productividad</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {TIENDAS_ZONA_B.map(t => (
+                            <tr key={t.codigo} className="hover:bg-slate-50">
+                              <td className="py-1 px-2 border-r border-slate-300 font-mono text-slate-600 bg-[#e8f5e9]/50">
+                                0.00%
+                              </td>
+                              <td className="py-1 px-2 font-mono text-slate-600 bg-[#e8f5e9]/50">
+                                0.00%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Columna 3: Notas Operativas, Panadería/Pastelería, Foco, Funcionó/No Funcionó (lg:col-span-5) */}
+                  <div className="lg:col-span-5 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Resumen Semanal & Foco */}
+                      <div className="space-y-2 text-xs">
+                        {/* Categorías */}
+                        <div className="border border-slate-300 p-2.5 bg-white space-y-1 shadow-2xs">
+                          <div className="font-black text-slate-900 text-xs pb-1 border-b border-slate-200">
+                            {semanaSeleccionada}
+                          </div>
+                          <div className="text-slate-800 space-y-1 pt-1">
+                            <div>
+                              <span className="font-semibold">- Panaderia:</span>{' '}
+                              <span className="font-bold text-emerald-800 font-mono">Cump: {panaderiaCump}</span>{' '}
+                              <span className="font-bold text-rose-700 font-mono">Crec: {panaderiaCrec}</span>
+                            </div>
+                            <div>
+                              <span className="font-semibold">- Pasteleria:</span>{' '}
+                              <span className="font-bold text-emerald-800 font-mono">Cump: {pasteleriaCump}</span>{' '}
+                              <span className="font-bold text-rose-700 font-mono">Crec: {pasteleriaCrec}*</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Foco Semana */}
+                        <div className="border border-slate-300 p-2.5 bg-white space-y-1 shadow-2xs">
+                          <div className="font-black text-slate-900 text-xs pb-1 border-b border-slate-200">
+                            Foco Semana
+                          </div>
+                          <div className="space-y-0.5 pt-1 text-[11px]">
+                            {listaFoco.map((f, idx) => (
+                              <div key={idx} className="flex items-center justify-between">
+                                <span className="text-slate-700 font-medium">- {f.tienda}:</span>
+                                <span className="font-mono font-bold text-rose-700">{f.crec.toFixed(1)}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Qué Funcionó y No Funcionó */}
+                      <div className="space-y-2 text-xs">
+                        {/* Funcionó */}
+                        <div className="border border-slate-300 p-2.5 bg-white space-y-1 shadow-2xs">
+                          <div className="font-black text-[#2e7d32] text-xs pb-1 border-b border-slate-200 flex items-center gap-1.5">
+                            <ThumbsUp className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Funcionó</span>
+                          </div>
+                          <div className="text-[10px] text-slate-800 leading-relaxed font-semibold max-h-24 overflow-y-auto">
+                            {textoFunciono}
+                          </div>
+                        </div>
+
+                        {/* No funcionó */}
+                        <div className="border border-slate-300 p-2.5 bg-white space-y-1 shadow-2xs">
+                          <div className="font-black text-rose-800 text-xs pb-1 border-b border-slate-200 flex items-center gap-1.5">
+                            <ThumbsDown className="w-3.5 h-3.5 text-rose-600" />
+                            <span>No funcionó</span>
+                          </div>
+                          <div className="text-[10px] text-slate-800 leading-relaxed font-medium max-h-24 overflow-y-auto">
+                            {textoNoFunciono}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. SECCIÓN 2: DESEMPEÑO DE INDICADORES LÍDERES (OFICIAL SCORECARD) */}
+                <div className="space-y-1">
+                  <div className="border border-slate-300 overflow-x-auto">
+                    <table className="w-full text-[11px] border-collapse text-center">
+                      <thead>
+                        {/* Fila Metas / Objetivos */}
+                        <tr className="bg-slate-200 font-bold text-slate-800 border-b border-slate-300 text-[10px]">
+                          <th colSpan={3} className="py-1 px-2 border-r border-slate-300 text-left font-black">
+                            Desempeño de Indicadores Líderes
+                          </th>
+                          <th className="py-1 px-1 border-r border-slate-300">&gt;100%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">&gt;100%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">&gt;95%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">&gt;90%</th>
+                          <th className="py-1 px-1 border-r border-slate-300">&gt;90.3%</th>
+                          <th className="py-1 px-1 bg-slate-300 text-slate-900 font-black">Total</th>
+                        </tr>
+                        {/* Fila Pesos */}
+                        <tr className="bg-slate-200/80 font-bold text-slate-800 border-b border-slate-300 text-[10px]">
+                          <th colSpan={3} className="py-1 px-2 border-r border-slate-300 text-right pr-3 font-black">
+                            Peso
+                          </th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">5%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">10%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">20%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">10%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">5%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">5%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">5%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">10%</th>
+                          <th className="py-1 px-1 border-r border-slate-300 font-black">30%</th>
+                          <th className="py-1 px-1 bg-slate-300 text-slate-900 font-black">100%</th>
+                        </tr>
+                        {/* Fila Encabezados de Columna con Icono de Filtro de Excel */}
+                        <tr className="bg-slate-100 font-bold text-slate-800 border-b border-slate-300 text-[11px]">
+                          <th className="py-1 px-2 text-left border-r border-slate-300 whitespace-nowrap">
+                            Tienda <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 text-left border-r border-slate-300 whitespace-nowrap">
+                            Líder J0 <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Dotación <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Venta <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            producción <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Inventar <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            d <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Merma <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Reporte <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Equipo <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Calidad <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Amabilid <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 bg-slate-200 text-slate-950 font-black whitespace-nowrap">
+                            Total <ExcelFilter />
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {filasDesempenoFinales.map(d => (
+                          <tr key={d.codigo} className="hover:bg-slate-50 text-[11px]">
+                            {/* Tienda */}
+                            <td className="py-1 px-2 text-left font-semibold text-slate-900 border-r border-slate-300 whitespace-nowrap">
+                              {d.nombre}
+                            </td>
+                            {/* Líder J0 */}
+                            <td className="py-1 px-2 text-left text-slate-700 border-r border-slate-300 whitespace-nowrap">
+                              {d.lider}
+                            </td>
+                            {/* Dotación */}
+                            <td className="py-1 px-2 border-r border-slate-300 font-mono text-slate-800 bg-[#fce4ec]">
+                              {d.dotacion.toFixed(1)}
+                            </td>
+                            {/* Venta (5%) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              d.venta >= 100 ? 'bg-[#c8e6c9] text-[#1b5e20]' : d.venta >= 90 ? 'bg-[#ffe0b2] text-[#c2410c]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {d.venta.toFixed(2)}%
+                            </td>
+                            {/* Producción (10%) */}
+                            <td className="py-1 px-2 border-r border-slate-300 text-slate-800">
+                              {d.produccion.toFixed(2)}%
+                            </td>
+                            {/* Inventario (20%) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              d.inventario >= 90 ? 'bg-[#c8e6c9] text-[#1b5e20]' : d.inventario >= 80 ? 'bg-[#ffe0b2] text-[#c2410c]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {d.inventario.toFixed(2)}%
+                            </td>
+                            {/* d (Disponibilidad NSG) (10%) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 ${
+                              d.d >= 90 ? 'text-slate-800' : 'bg-[#ffcdd2] text-[#b71c1c] font-bold'
+                            }`}>
+                              {d.d.toFixed(2)}%
+                            </td>
+                            {/* Merma (5%) */}
+                            <td className="py-1 px-2 border-r border-slate-300 text-slate-800">
+                              {d.merma.toFixed(2)}%
+                            </td>
+                            {/* Reporte (5%) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 ${
+                              d.reporte < 100 ? 'bg-[#ffcdd2] text-[#b71c1c] font-bold' : 'text-slate-800'
+                            }`}>
+                              {d.reporte.toFixed(2)}%
+                            </td>
+                            {/* Equipo (5%) */}
+                            <td className="py-1 px-2 border-r border-slate-300 text-slate-800">
+                              {d.equipo.toFixed(2)}%
+                            </td>
+                            {/* Calidad (10%) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              d.calidad >= 90 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {d.calidad.toFixed(2)}%
+                            </td>
+                            {/* Amabilidad (30%) */}
+                            <td className="py-1 px-2 border-r border-slate-300 text-slate-800">
+                              {d.amabilidad.toFixed(2)}%
+                            </td>
+                            {/* Total (100%) */}
+                            <td className={`py-1 px-2 font-black ${
+                              d.total >= 90
+                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                : d.total >= 85
+                                ? 'bg-[#ffe0b2] text-[#c2410c]'
+                                : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {d.total.toFixed(2)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 5. SECCIÓN 3: KPI'S (DETALLE OPERATIVO DE INDICADORES) */}
+                <div className="space-y-1">
+                  <div className="border border-slate-300 overflow-x-auto">
+                    <table className="w-full text-[11px] border-collapse text-center">
+                      <thead>
+                        {/* Fila Grupos Principales */}
+                        <tr className="bg-slate-200/90 font-black text-slate-800 border-b border-slate-300">
+                          <th colSpan={2} className="py-1 border-r border-slate-300 text-left px-2">
+                            KPI&apos;S
+                          </th>
+                          <th className="py-1 border-r border-slate-300">Objetivo</th>
+                          <th colSpan={3} className="py-1 border-r border-slate-300">
+                            Inventario
+                          </th>
+                          <th colSpan={2} className="py-1 border-r border-slate-300">
+                            Implementación
+                          </th>
+                          <th colSpan={3} className="py-1 border-r border-slate-300">
+                            Disponibilidad
+                          </th>
+                          <th colSpan={2} className="py-1">
+                            Calidad
+                          </th>
+                        </tr>
+                        {/* Fila Metas y Tipos */}
+                        <tr className="bg-slate-100 font-bold text-slate-700 border-b border-slate-300 text-[10px]">
+                          <th colSpan={2} className="py-1 px-2 border-r border-slate-300"></th>
+                          <th className="py-1 px-2 border-r border-slate-300">&gt;98%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">Diario</th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">Obj. Por tienda</th>
+                          <th className="py-1 px-2 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">100%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">&gt;95%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">&lt; 1%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">&lt; 5%</th>
+                          <th className="py-1 px-2 border-r border-slate-300">&gt;90%</th>
+                          <th className="py-1 px-2">100%</th>
+                        </tr>
+                        {/* Fila Nombres de Columnas */}
+                        <tr className="bg-slate-200/90 font-bold text-slate-800 border-b border-slate-300 text-[11px]">
+                          <th className="py-1.5 px-2 text-left border-r border-slate-300 whitespace-nowrap">Tienda</th>
+                          <th className="py-1.5 px-2 text-left border-r border-slate-300 whitespace-nowrap">Líder J06</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">ERI</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Pistoleo Pan</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Ajustes</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Negativos</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Registro A-C</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300 whitespace-nowrap">Incidencias DDF-Tácticos</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">NSG</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Bodega</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Quiebre</th>
+                          <th className="py-1.5 px-2 border-r border-slate-300">Nota</th>
+                          <th className="py-1.5 px-2 whitespace-nowrap">App vencimiento</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {filasKpisFinales.map(k => (
+                          <tr key={k.codigo} className="hover:bg-slate-50 text-[11px]">
+                            {/* Tienda */}
+                            <td className="py-1 px-2 text-left font-semibold text-slate-900 border-r border-slate-300 whitespace-nowrap">
+                              {k.nombre}
+                            </td>
+                            {/* Líder J06 */}
+                            <td className="py-1 px-2 text-left text-slate-700 border-r border-slate-300 whitespace-nowrap">
+                              {k.lider}
+                            </td>
+                            {/* ERI */}
+                            <td className="py-1 px-2 border-r border-slate-300 font-mono text-slate-600 bg-[#e8f5e9]/40">
+                              {k.eri.toFixed(2)}%
+                            </td>
+                            {/* Pistoleo Pan */}
+                            <td className="py-1 px-2 border-r border-slate-300 font-bold bg-[#c8e6c9] text-[#1b5e20]">
+                              {k.pistoleo.toFixed(2)}%
+                            </td>
+                            {/* Ajustes */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.ajustes === 100 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffe0b2] text-[#c2410c]'
+                            }`}>
+                              {k.ajustes.toFixed(2)}%
+                            </td>
+                            {/* Negativos */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.negativos === 100
+                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                : k.negativos >= 70
+                                ? 'bg-[#ffe0b2] text-[#c2410c]'
+                                : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {k.negativos.toFixed(2)}%
+                            </td>
+                            {/* Registro A-C */}
+                            <td className="py-1 px-2 border-r border-slate-300 font-bold bg-[#c8e6c9] text-[#1b5e20]">
+                              {k.registroAC.toFixed(2)}%
+                            </td>
+                            {/* Incidencias DDF-Tácticos */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.ddf === 100 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {k.ddf.toFixed(2)}%
+                            </td>
+                            {/* NSG */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.nsg >= 95 ? 'bg-[#c8e6c9] text-[#1b5e20]' : k.nsg >= 90 ? 'bg-[#ffe0b2] text-[#c2410c]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {k.nsg.toFixed(2)}%
+                            </td>
+                            {/* Bodega */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.bodega <= 1.0 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {k.bodega.toFixed(2)}%
+                            </td>
+                            {/* Quiebre */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.quiebre <= 5.0 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {k.quiebre.toFixed(2)}%
+                            </td>
+                            {/* Nota */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              k.nota >= 90 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {k.nota.toFixed(2)}%
+                            </td>
+                            {/* App vencimiento */}
+                            <td className="py-1 px-2 font-bold bg-[#c8e6c9] text-[#1b5e20]">
+                              {k.appVenc.toFixed(2)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 6. SECCIÓN 4: EVOLUTIVO GESTIÓN DE LÍDERES (HISTÓRICO SEMANAS 36 A 40) */}
+                <div className="space-y-1">
+                  <div className="border border-slate-300 overflow-x-auto">
+                    <table className="w-full text-[11px] border-collapse text-center">
+                      <thead>
+                        {/* Fila Encabezado de Semanas */}
+                        <tr className="bg-slate-200/90 font-bold text-slate-800 border-b border-slate-300">
+                          <th colSpan={2} className="py-1 px-2 border-r border-slate-300 text-left font-black">
+                            Evolutivo Gestión de Líderes
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold">
+                            {esSemana40 ? 'Semana 36' : 'Semana 37'}
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold">
+                            {esSemana40 ? 'Semana 37' : 'Semana 38'}
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold">
+                            {esSemana40 ? 'Semana 38' : 'Semana 39'}
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold">
+                            {esSemana40 ? 'Semana 39' : 'Semana 40'}
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold">
+                            {esSemana40 ? 'Semana 40' : 'Semana 41'}
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold">Sem</th>
+                          <th className="py-1 px-2 border-r border-slate-300 font-bold"></th>
+                          <th className="py-1 px-2 font-bold"></th>
+                        </tr>
+                        {/* Fila Subheaders con Iconos de Filtro Excel */}
+                        <tr className="bg-slate-100 font-bold text-slate-800 border-b border-slate-300 text-[11px]">
+                          <th className="py-1 px-2 text-left border-r border-slate-300 whitespace-nowrap">
+                            Tienda <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 text-left border-r border-slate-300 whitespace-nowrap">
+                            Líder J03 <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Total <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Total8 <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Total9 <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Total10 <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Total11 <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            Ant. <ExcelFilter />
+                          </th>
+                          <th className="py-1 px-2 border-r border-slate-300 whitespace-nowrap">
+                            <ExcelFilter /> Promedio
+                          </th>
+                          <th className="py-1 px-2 whitespace-nowrap">
+                            Desempe <ExcelFilter />
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {filasEvolutivoFinales.map(e => (
+                          <tr key={e.codigo} className="hover:bg-slate-50 text-[11px]">
+                            {/* Tienda */}
+                            <td className="py-1 px-2 text-left font-semibold text-slate-900 border-r border-slate-300 whitespace-nowrap">
+                              {e.nombre}
+                            </td>
+                            {/* Líder J03 */}
+                            <td className="py-1 px-2 text-left text-slate-700 border-r border-slate-300 whitespace-nowrap">
+                              {e.lider}
+                            </td>
+                            {/* Semana 36 (o 37) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 ${
+                              e.s1 >= 95 ? 'bg-[#c8e6c9] text-[#1b5e20]' : e.s1 >= 90 ? 'bg-[#e8f5e9] text-[#2e7d32]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.s1.toFixed(2)}%
+                            </td>
+                            {/* Semana 37 (o 38) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 ${
+                              e.s2 >= 95 ? 'bg-[#c8e6c9] text-[#1b5e20]' : e.s2 >= 90 ? 'bg-[#e8f5e9] text-[#2e7d32]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.s2.toFixed(2)}%
+                            </td>
+                            {/* Semana 38 (o 39) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 ${
+                              e.s3 >= 95 ? 'bg-[#c8e6c9] text-[#1b5e20]' : e.s3 >= 90 ? 'bg-[#e8f5e9] text-[#2e7d32]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.s3.toFixed(2)}%
+                            </td>
+                            {/* Semana 39 (o 40) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 ${
+                              e.s4 >= 95 ? 'bg-[#c8e6c9] text-[#1b5e20]' : e.s4 >= 90 ? 'bg-[#e8f5e9] text-[#2e7d32]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.s4.toFixed(2)}%
+                            </td>
+                            {/* Semana 40 (o 41 - actual) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              e.s5 >= 95 ? 'bg-[#c8e6c9] text-[#1b5e20]' : e.s5 >= 90 ? 'bg-[#e8f5e9] text-[#2e7d32]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.s5.toFixed(2)}%
+                            </td>
+                            {/* Sem Ant (diferencia contra semana previa) */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              e.semAnt >= 0 ? 'bg-[#c8e6c9] text-[#1b5e20]' : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.semAnt >= 0 ? '' : ''}
+                              {e.semAnt.toFixed(2)}%
+                            </td>
+                            {/* Promedio de las 5 semanas */}
+                            <td className={`py-1 px-2 border-r border-slate-300 font-bold ${
+                              e.promedio >= 95
+                                ? 'bg-[#c8e6c9] text-[#1b5e20]'
+                                : e.promedio >= 90
+                                ? 'bg-[#fff9c4] text-amber-950'
+                                : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.promedio.toFixed(2)}%
+                            </td>
+                            {/* Desempeño */}
+                            <td className={`py-1 px-2 font-bold whitespace-nowrap ${
+                              e.desempeno === 'SOBRESALIENTE'
+                                ? 'bg-[#fff9c4] text-amber-950'
+                                : e.desempeno === 'CUMPLE SATISFACTORIO'
+                                ? 'bg-[#fff9c4] text-amber-950'
+                                : 'bg-[#ffcdd2] text-[#b71c1c]'
+                            }`}>
+                              {e.desempeno}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* TAB 8: CONSOLIDADO */}
         {activeTab === 'consolidado' && (
