@@ -5,25 +5,38 @@ import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSprea
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
+import { PermisosUsuario, normalizarPermisos, PERMISOS_DEFAULT_ADMIN } from '@/types/permisos'
 
 export function Navbar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [permisos, setPermisos] = useState<PermisosUsuario | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkUser = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase.from('perfiles').select('rol').eq('id', user.id).single()
-        if (data?.rol === 'admin') setIsAdmin(true)
+        const { data } = await supabase.from('perfiles').select('rol, permisos').eq('id', user.id).single()
+        if (data?.rol === 'admin') {
+          setIsAdmin(true)
+          setPermisos(PERMISOS_DEFAULT_ADMIN)
+        } else {
+          setPermisos(normalizarPermisos(data?.permisos, data?.rol))
+        }
       }
     }
-    checkAdmin()
+    checkUser()
   }, [])
 
   if (pathname === '/login') return null
+
+  // Si aún no cargó permisos, por defecto mostramos elementos básicos para evitar layout shift
+  const canSeeKpis = isAdmin || (permisos ? permisos.kpis.ver : true)
+  const canSeeHorarios = isAdmin || (permisos ? permisos.horarios_pro.ver : true)
+  const canSeeApoyo = isAdmin || (permisos ? permisos.apoyo.ver : true)
+  const canSeeBoletin = isAdmin || (permisos ? permisos.boletin_j06.ver : true)
 
   return (
     <nav className={`fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 pb-8 pt-2 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:sticky md:top-0 md:left-0 md:h-screen ${isSidebarOpen ? 'md:w-64' : 'md:w-20'} md:bg-[#25282c] md:border-none md:pb-0 md:pt-6 md:flex md:flex-col md:text-slate-300 transition-all duration-300`}>
@@ -45,50 +58,41 @@ export function Navbar() {
         </div>
 
         <ul className="flex justify-between items-center h-16 md:flex-col md:items-start md:justify-start md:h-auto md:space-y-2 md:px-3 md:flex-1">
-          {/* <li className="md:w-full">
-            <Link href="/" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <ClipboardList className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Pendientes</span>
-            </Link>
-          </li>
-          
-          <li className="-mt-6 md:mt-4 md:w-full md:order-first md:mb-4">
-            <Link href="/nueva" className="flex flex-col items-center justify-center md:block">
-              <div className={`bg-green-600 text-white rounded-full p-4 shadow-lg hover:bg-green-700 active:bg-green-800 transition-all md:rounded-md md:py-3 ${isSidebarOpen ? 'md:px-4' : 'md:px-0'} md:flex md:items-center md:justify-center md:gap-2`}>
-                <Camera className="h-7 w-7 md:h-5 md:w-5 shrink-0" />
-                <span className={`hidden md:inline font-bold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>NUEVO TICKET</span>
-              </div>
-              <span className="text-[10px] font-medium text-slate-700 mt-1 md:hidden">Nueva</span>
-            </Link>
-          </li> */}
-          
-          <li className="md:w-full">
-            <Link href="/kpis" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/kpis' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <BarChart3 className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/kpis' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
-            </Link>
-          </li>
+          {canSeeKpis && (
+            <li className="md:w-full">
+              <Link href="/kpis" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/kpis' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <BarChart3 className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/kpis' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
+              </Link>
+            </li>
+          )}
 
-          <li className="md:w-full hidden md:block">
-            <Link href="/horarios-pro" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horarios-pro' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <CalendarRange className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/horarios-pro' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
-            </Link>
-          </li>
+          {canSeeHorarios && (
+            <li className="md:w-full hidden md:block">
+              <Link href="/horarios-pro" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horarios-pro' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <CalendarRange className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/horarios-pro' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
+              </Link>
+            </li>
+          )}
 
-          <li className="md:w-full hidden md:block">
-            <Link href="/apoyo" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/apoyo' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Apoyo</span>
-            </Link>
-          </li>
+          {canSeeApoyo && (
+            <li className="md:w-full hidden md:block">
+              <Link href="/apoyo" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/apoyo' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Apoyo</span>
+              </Link>
+            </li>
+          )}
 
-          <li className="md:w-full hidden md:block">
-            <Link href="/boletin-j06" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/boletin-j06' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-              <FileSpreadsheet className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/boletin-j06' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-              <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Boletín J06</span>
-            </Link>
-          </li>
+          {canSeeBoletin && (
+            <li className="md:w-full hidden md:block">
+              <Link href="/boletin-j06" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/boletin-j06' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <FileSpreadsheet className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/boletin-j06' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Boletín J06</span>
+              </Link>
+            </li>
+          )}
 
           {isAdmin && (
             <li className="md:w-full">

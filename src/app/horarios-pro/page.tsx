@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download, Users } from 'lucide-react'
+import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download, Users, Lock, Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { jsPDF } from 'jspdf'
@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { supabase } from '@/lib/supabase'
+import { normalizarPermisos } from '@/types/permisos'
 // ----- TIPOS -----
 interface TurnoEmpleado {
   id: string
@@ -55,6 +56,10 @@ const timeToFraction = (timeStr: string): number => {
 
 
 export default function HorariosPro() {
+  const [permisoVer, setPermisoVer] = useState<boolean>(true)
+  const [permisoEditar, setPermisoEditar] = useState<boolean>(true)
+  const [cargandoPermisos, setCargandoPermisos] = useState<boolean>(true)
+
   const [demandaFile, setDemandaFile] = useState<File | null>(null)
   const [mallaFile, setMallaFile] = useState<File | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -65,6 +70,37 @@ export default function HorariosPro() {
   const [semanasGuardadas, setSemanasGuardadas] = useState<{id: string, nombre_semana: string}[]>([])
   const [semanaCargando, setSemanaCargando] = useState(false)
   const [currentSemanaId, setCurrentSemanaId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const checkPermisos = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: perfil } = await supabase
+            .from('perfiles')
+            .select('rol, permisos')
+            .eq('id', user.id)
+            .single()
+          
+          if (perfil) {
+            if (perfil.rol === 'admin') {
+              setPermisoVer(true)
+              setPermisoEditar(true)
+            } else {
+              const p = normalizarPermisos(perfil.permisos, perfil.rol)
+              setPermisoVer(p.horarios_pro.ver)
+              setPermisoEditar(p.horarios_pro.editar)
+            }
+          }
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setCargandoPermisos(false)
+      }
+    }
+    checkPermisos()
+  }, [])
 
   const cargarSemanas = async () => {
     try {
@@ -908,13 +944,41 @@ export default function HorariosPro() {
     }
   }
 
+  if (!cargandoPermisos && !permisoVer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 border border-red-100">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Acceso Restringido</h1>
+        <p className="text-slate-500 max-w-md">
+          Tu cuenta no tiene permisos para ver el módulo de Malla Horarios Pro. Contacta a un Administrador para habilitar el acceso.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="pb-12 space-y-6">
+      {!cargandoPermisos && !permisoEditar && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between text-amber-900 shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <Eye className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-xs font-medium">
+              <strong>Modo Solo Lectura:</strong> Puedes visualizar la programación semanal de horarios y turnos de cajeros. La edición y carga de mallas está deshabilitada por el Administrador.
+            </p>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded text-amber-800 shrink-0">
+            Solo Lectura
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro</h1>
-            {reporte.length > 0 && (
+            {reporte.length > 0 && permisoEditar && (
               <Button variant="outline" size="sm" onClick={() => setReporte([])} className="h-8 shadow-sm">
                 Volver a subir archivos
               </Button>

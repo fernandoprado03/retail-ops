@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, CalendarRange } from 'lucide-react'
+import { Plus, Trash2, CalendarRange, Lock, Eye } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { normalizarPermisos } from '@/types/permisos'
 
 type Area = 'PGC' | 'NON FOOD' | 'NO PROC' | 'ASISTENTE'
 
@@ -48,6 +49,10 @@ const timeToFraction = (timeStr: string): number => {
 }
 
 export default function ApoyoModule() {
+  const [permisoVer, setPermisoVer] = useState<boolean>(true)
+  const [permisoEditar, setPermisoEditar] = useState<boolean>(true)
+  const [cargandoPermisos, setCargandoPermisos] = useState<boolean>(true)
+
   const [reporte, setReporte] = useState<ReporteDia[]>([])
   const [mounted, setMounted] = useState(false)
   const [personasArea, setPersonasArea] = useState<Record<string, number>>({
@@ -60,6 +65,37 @@ export default function ApoyoModule() {
   const [semanas, setSemanas] = useState<{id: string, nombre_semana: string}[]>([])
   const [currentSemanaId, setCurrentSemanaId] = useState<string>('')
   const [cargandoSemana, setCargandoSemana] = useState(false)
+
+  useEffect(() => {
+    const checkPermisos = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: perfil } = await supabase
+            .from('perfiles')
+            .select('rol, permisos')
+            .eq('id', user.id)
+            .single()
+          
+          if (perfil) {
+            if (perfil.rol === 'admin') {
+              setPermisoVer(true)
+              setPermisoEditar(true)
+            } else {
+              const p = normalizarPermisos(perfil.permisos, perfil.rol)
+              setPermisoVer(p.apoyo.ver)
+              setPermisoEditar(p.apoyo.editar)
+            }
+          }
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setCargandoPermisos(false)
+      }
+    }
+    checkPermisos()
+  }, [])
 
   // load from local storage
   useEffect(() => {
@@ -197,8 +233,36 @@ export default function ApoyoModule() {
   const totalPersonas = AREAS_VALIDAS.reduce((a, b) => a + (Number(personasArea[b]) || 0), 0)
   const currentSemanaName = semanas.find(s => s.id === currentSemanaId)?.nombre_semana || ''
 
+  if (!cargandoPermisos && !permisoVer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 border border-red-100">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Acceso Restringido</h1>
+        <p className="text-slate-500 max-w-md">
+          Tu cuenta no tiene permisos para ver el módulo de Malla de Apoyo. Contacta a un Administrador para habilitar el acceso.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="pb-12 space-y-6 animate-in fade-in">
+      {!cargandoPermisos && !permisoEditar && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between text-amber-900 shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <Eye className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-xs font-medium">
+              <strong>Modo Solo Lectura:</strong> Puedes visualizar la distribución de horas y soporte por área. La asignación y edición está reservada al Administrador.
+            </p>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded text-amber-800 shrink-0">
+            Solo Lectura
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">

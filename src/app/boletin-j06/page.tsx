@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   FileSpreadsheet,
   Upload,
@@ -37,10 +37,13 @@ import {
   ChevronRight,
   DollarSign,
   Printer,
-  Filter
+  Filter,
+  Lock
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
+import { createClient } from '@/utils/supabase/client'
+import { normalizarPermisos } from '@/types/permisos'
 
 // Maestro de tiendas y líderes Zona B
 export interface TiendaZonaB {
@@ -727,6 +730,42 @@ export const DATOS_EJEMPLO_VENTA: FilaVentaTienda[] = [
 ]
 
 export default function BoletinJ06Page() {
+  const [permisoVer, setPermisoVer] = useState<boolean>(true)
+  const [permisoEditar, setPermisoEditar] = useState<boolean>(true)
+  const [cargandoPermisos, setCargandoPermisos] = useState<boolean>(true)
+
+  useEffect(() => {
+    const checkPermisos = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: perfil } = await supabase
+            .from('perfiles')
+            .select('rol, permisos')
+            .eq('id', user.id)
+            .single()
+          
+          if (perfil) {
+            if (perfil.rol === 'admin') {
+              setPermisoVer(true)
+              setPermisoEditar(true)
+            } else {
+              const p = normalizarPermisos(perfil.permisos, perfil.rol)
+              setPermisoVer(p.boletin_j06.ver)
+              setPermisoEditar(p.boletin_j06.editar)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando permisos:', err)
+      } finally {
+        setCargandoPermisos(false)
+      }
+    }
+    checkPermisos()
+  }, [])
+
   const [activeTab, setActiveTab] = useState<
     'ventas' | 'vencimiento' | 'calidad_auditoria' | 'registro_ac' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'
   >('ventas')
@@ -1917,9 +1956,44 @@ export default function BoletinJ06Page() {
   const tiendasCumplenMetaVenta = datosVenta.filter(t => t.logroPorcentaje >= 100).length
   const tiendasFocoVenta = datosVenta.filter(t => t.crecimientoPorcentaje < 0 || t.logroPorcentaje < 90)
 
+  if (!cargandoPermisos && !permisoVer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 border border-red-100">
+          <Lock className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Acceso Restringido</h1>
+        <p className="text-slate-500 max-w-md">
+          Tu cuenta no tiene permisos asignados para visualizar el Boletín Semanal J06. Solicita al Administrador que active este módulo en el panel de usuarios.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 md:p-8 space-y-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {!cargandoPermisos && !permisoEditar && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between text-amber-900 shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <Eye className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-semibold text-amber-900">
+                  Modo Solo Lectura (Visualización)
+                </p>
+                <p className="text-[11px] sm:text-xs text-amber-700">
+                  Tienes autorización para ver consolidados, scorecards y descargar el formato Excel oficial. La edición y carga de datos está deshabilitada por el Administrador.
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200/80 px-2.5 py-1 rounded-lg text-amber-800 shrink-0">
+              Solo Lectura
+            </span>
+          </div>
+        )}
+
         {/* Cabecera Principal */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
