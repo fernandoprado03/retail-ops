@@ -12,6 +12,9 @@ import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { supabase } from '@/lib/supabase'
 import { normalizarPermisos } from '@/types/permisos'
+import MallaSemanalExportModal from './MallaSemanalExportModal'
+import { CATALOGO_CAJEROS_DEFAULT } from '@/lib/mallaSemanalExport'
+
 // ----- TIPOS -----
 interface TurnoEmpleado {
   id: string
@@ -26,6 +29,11 @@ interface TurnoEmpleado {
   caja?: string
   customRoles?: Record<number, 'SCO' | 'CAJA'>
   area?: string
+  codigo?: string
+  contrato?: string
+  actividad?: string
+  tienda?: string
+  unidadTrabajo?: string
 }
 
 interface ReporteDia {
@@ -70,6 +78,7 @@ export default function HorariosPro() {
   const [semanasGuardadas, setSemanasGuardadas] = useState<{id: string, nombre_semana: string}[]>([])
   const [semanaCargando, setSemanaCargando] = useState(false)
   const [currentSemanaId, setCurrentSemanaId] = useState<string | null>(null)
+  const [isModalMallaOpen, setIsModalMallaOpen] = useState<boolean>(false)
 
   useEffect(() => {
     const checkPermisos = async () => {
@@ -226,15 +235,38 @@ export default function HorariosPro() {
                 isSCO = true
               }
 
+              const nombre = row[0].trim()
+              const cat = CATALOGO_CAJEROS_DEFAULT[nombre]
+              const codigo = row[1] ? String(row[1]).trim() : (cat?.dni || '')
+              const contrato = row[2] ? String(row[2]).trim().replace('_R1', '') : (cat?.contrato || 'FT')
+              let actividad = isSCO ? '713 Cajas SelfCheckout' : '701 Cajas Lineal'
+              for (const cell of row) {
+                if (typeof cell === 'string') {
+                  const trimmed = cell.trim()
+                  if (trimmed.includes('701') || trimmed.includes('Cajas Lineal')) {
+                    actividad = '701 Cajas Lineal'
+                    break
+                  } else if (trimmed.includes('713') || trimmed.includes('SelfCheckout')) {
+                    actividad = '713 Cajas SelfCheckout'
+                    break
+                  }
+                }
+              }
+
               empleados.push({
                 id: `${fechaDemanda}-${i}`,
-                nombre: row[0].trim(),
+                nombre,
                 rol: typeof row[2] === 'string' ? row[2] : 'Cajero',
                 inicio: start,
                 fin: end,
                 breakInicio: breakStart,
                 breakFin: breakEnd,
-                isSCO
+                isSCO,
+                codigo,
+                contrato,
+                actividad,
+                tienda: '357-Cuzco La Cultura',
+                unidadTrabajo: 'Unidad de trabajo Cajas'
               })
             }
           }
@@ -1015,6 +1047,14 @@ export default function HorariosPro() {
               {semanaCargando ? 'Guardando...' : (currentSemanaId ? 'Guardar Cambios' : 'Guardar Nueva Semana')}
             </Button>
           )}
+          <Button
+            onClick={() => setIsModalMallaOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium h-10 shadow-sm gap-1.5"
+            title="Ver y exportar listado de cajeros con turnos y refrigerios tipo Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Malla Semanal Cajeros
+          </Button>
         </div>
       </div>
 
@@ -1067,7 +1107,16 @@ export default function HorariosPro() {
             return (
               <Card key={idx} id={`reporte-card-${idx}`} className="overflow-hidden shadow-none ring-0 border border-slate-200 rounded-tl-none rounded-tr-md !p-0 !gap-0">
                 <div className="bg-slate-900 text-white px-4 py-3 flex justify-end items-center">
-                  <div className="flex gap-2" data-html2canvas-ignore="true">
+                  <div className="flex gap-2 flex-wrap" data-html2canvas-ignore="true">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsModalMallaOpen(true)}
+                      className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white border-none shadow-xs"
+                      title="Exportar Malla Semanal completa de todos los cajeros"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mr-1" /> Exportar Malla Semanal
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => exportToPDF(idx, dia.fecha)} disabled={isExporting === idx} className="h-8 text-xs bg-white text-slate-900 border-none hover:bg-slate-200">
                       <Download className="w-4 h-4 mr-1" /> {isExporting === idx ? "Exportando..." : "Exportar PDF"}
                     </Button>
@@ -1245,6 +1294,13 @@ export default function HorariosPro() {
           })()}
         </div>
       )}
+
+      {/* Modal de Malla Semanal Tipo Excel */}
+      <MallaSemanalExportModal
+        isOpen={isModalMallaOpen}
+        onClose={() => setIsModalMallaOpen(false)}
+        reporte={reporte}
+      />
     </div>
   )
 }
