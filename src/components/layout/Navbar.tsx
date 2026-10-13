@@ -58,57 +58,57 @@ export function Navbar() {
           </button>
         </div>
 
-        <ul className="flex justify-between items-center h-16 md:flex-col md:items-start md:justify-start md:h-auto md:space-y-2 md:px-3 md:flex-1">
+        <ul className="flex justify-around items-center h-16 md:flex-col md:items-start md:justify-start md:h-auto md:space-y-2 md:px-3 md:flex-1 overflow-x-auto gap-1">
           {canSeeKpis && (
-            <li className="md:w-full">
-              <Link href="/kpis" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/kpis' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <BarChart3 className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/kpis' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
+            <li className="shrink-0 md:w-full">
+              <Link href="/kpis" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/kpis' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <BarChart3 className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/kpis' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
               </Link>
             </li>
           )}
 
           {canSeeHorarios && (
-            <li className="md:w-full hidden md:block">
-              <Link href="/horarios-pro" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horarios-pro' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <CalendarRange className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/horarios-pro' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
+            <li className="shrink-0 md:w-full">
+              <Link href="/horarios-pro" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/horarios-pro' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <CalendarRange className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/horarios-pro' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
               </Link>
             </li>
           )}
 
           {canSeeMultifuncional && (
-            <li className="md:w-full hidden md:block">
-              <Link href="/malla-multifuncional" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Multifuncional</span>
+            <li className="shrink-0 md:w-full">
+              <Link href="/malla-multifuncional" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <Users className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Multifuncional</span>
               </Link>
             </li>
           )}
 
           {canSeeComercial && (
-            <li className="md:w-full hidden md:block">
-              <Link href="/horario-comercial" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/horario-comercial' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <CalendarDays className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/horario-comercial' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Horario Comercial</span>
+            <li className="shrink-0 md:w-full">
+              <Link href="/horario-comercial" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/horario-comercial' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <CalendarDays className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/horario-comercial' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>H. Comercial</span>
               </Link>
             </li>
           )}
 
           {canSeeBoletin && (
-            <li className="md:w-full hidden md:block">
-              <Link href="/boletin-j06" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/boletin-j06' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <FileSpreadsheet className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/boletin-j06' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Boletín J06</span>
+            <li className="shrink-0 md:w-full">
+              <Link href="/boletin-j06" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/boletin-j06' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <FileSpreadsheet className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/boletin-j06' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Boletín</span>
               </Link>
             </li>
           )}
 
           {isAdmin && (
-            <li className="md:w-full">
-              <Link href="/admin/usuarios" className={`flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:py-3 md:px-4 md:rounded-lg ${pathname === '/admin/usuarios' ? 'md:bg-green-600 md:text-white' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <Users className={`h-6 w-6 mb-1 md:mb-0 md:h-5 md:w-5 shrink-0 ${pathname === '/admin/usuarios' ? 'md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[10px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Usuarios</span>
+            <li className="shrink-0 md:w-full">
+              <Link href="/admin/usuarios" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/admin/usuarios' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <Users className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/admin/usuarios' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Usuarios</span>
               </Link>
             </li>
           )}

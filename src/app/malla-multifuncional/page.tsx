@@ -52,6 +52,7 @@ const timeToFraction = (timeStr: string): number => {
 export default function MallaMultifuncionalPage() {
   const [permisoVer, setPermisoVer] = useState<boolean>(true)
   const [permisoEditar, setPermisoEditar] = useState<boolean>(true)
+  const [permisoVerMallaPro, setPermisoVerMallaPro] = useState<boolean>(true)
   const [cargandoPermisos, setCargandoPermisos] = useState<boolean>(true)
 
   const [reporte, setReporte] = useState<ReporteDia[]>([])
@@ -110,10 +111,12 @@ export default function MallaMultifuncionalPage() {
             if (perfil.rol === 'admin') {
               setPermisoVer(true)
               setPermisoEditar(true)
+              setPermisoVerMallaPro(true)
             } else {
               const p = normalizarPermisos(perfil.permisos, perfil.rol)
               setPermisoVer(p.malla_multifuncional.ver)
               setPermisoEditar(p.malla_multifuncional.editar)
+              setPermisoVerMallaPro(p.horarios_pro.ver)
             }
           }
         }
@@ -129,14 +132,12 @@ export default function MallaMultifuncionalPage() {
   // Cargar datos al montar
   useEffect(() => {
     setMounted(true)
-    let localReporteCargado = false
     const saved = localStorage.getItem('horarios_pro_reporte')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) {
           setReporte(parsed)
-          localReporteCargado = true
         }
       } catch (e) {}
     }
@@ -150,26 +151,26 @@ export default function MallaMultifuncionalPage() {
     const currentId = localStorage.getItem('horarios_pro_current_semana_id')
     if (currentId) setCurrentSemanaId(currentId)
 
-    // Consultar semanas planificadas desde Supabase
+    // Consultar semanas planificadas desde Supabase (Fuente de verdad)
     const fetchSemanas = async () => {
       setCargandoSemana(true)
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('semanas_planificadas')
           .select('id, nombre_semana')
           .order('created_at', { ascending: false })
         
+        if (error) {
+          console.error('Error cargando semanas de Supabase:', error)
+          return
+        }
+
         if (data && data.length > 0) {
           setSemanas(data)
           const targetId = (currentId && data.some(s => s.id === currentId)) ? currentId : data[0].id
           
-          // Si el usuario no tiene datos en su localStorage (ej. entra por primera vez o en su celular),
-          // auto-cargar la semana más reciente preparada (Semana 43)
-          if (!localReporteCargado) {
-            await loadSemana(targetId)
-          } else {
-            setCurrentSemanaId(targetId)
-          }
+          // Cargar siempre la semana activa desde Supabase para garantizar datos frescos, autoritativos y compartidos
+          await loadSemana(targetId)
         }
       } catch (e) {
         console.error('Error cargando semanas de Supabase:', e)
@@ -468,12 +469,12 @@ export default function MallaMultifuncionalPage() {
           <CalendarRange className="w-8 h-8 text-emerald-600" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          {semanas.length > 0 ? "Selecciona una Semana Planificada" : "No hay malla generada"}
+          {semanas.length > 0 ? "Selecciona una Semana Planificada" : "No hay semanas generadas en el sistema"}
         </h1>
         <p className="text-slate-500 mb-6 max-w-md text-sm">
           {semanas.length > 0 
             ? "Hay semanas preparadas disponibles en el sistema. Selecciona la semana que deseas gestionar para comenzar a asignar multifuncionales:"
-            : "Para asignar áreas y nombres a los multifuncionales, primero debes subir tus archivos y generar la cuadrícula en el módulo Malla Pro."}
+            : "Aún no se ha guardado ninguna semana planificada en la base de datos. Una vez que se guarde una semana desde Malla Pro, estará disponible aquí automáticamente para todos los usuarios."}
         </p>
         {semanas.length > 0 ? (
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm">
@@ -494,10 +495,12 @@ export default function MallaMultifuncionalPage() {
               Cargar {semanas[0].nombre_semana}
             </Button>
           </div>
-        ) : (
+        ) : permisoVerMallaPro ? (
           <Link href="/horarios-pro">
-            <Button className="bg-slate-900">Ir a Malla Pro</Button>
+            <Button className="bg-slate-900">Ir a Malla Pro a generar semana</Button>
           </Link>
+        ) : (
+          <p className="text-xs text-slate-400 italic">Comunícate con el administrador para que guarde la semana planificada en Malla Pro.</p>
         )}
       </div>
     )
