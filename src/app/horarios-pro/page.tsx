@@ -34,6 +34,9 @@ interface TurnoEmpleado {
   actividad?: string
   tienda?: string
   unidadTrabajo?: string
+  inicioOriginal?: number
+  finOriginal?: number
+  modificado?: boolean
 }
 
 interface ReporteDia {
@@ -253,12 +256,17 @@ export default function HorariosPro() {
                 }
               }
 
+              const origIni = start
+              const origFin = end
               empleados.push({
                 id: `${fechaDemanda}-${i}`,
                 nombre,
                 rol: typeof row[2] === 'string' ? row[2] : 'Cajero',
                 inicio: start,
                 fin: end,
+                inicioOriginal: origIni,
+                finOriginal: origFin,
+                modificado: false,
                 breakInicio: breakStart,
                 breakFin: breakEnd,
                 isSCO,
@@ -334,7 +342,17 @@ export default function HorariosPro() {
       const inicio = timeToFraction(parts[0])
       let fin = timeToFraction(parts[1])
       if (fin < inicio) fin += 24
-      updateEmpleado(diaIndex, empId, { inicio, fin })
+      const emp = reporte[diaIndex]?.empleados.find(e => e.id === empId)
+      const origIni = emp?.inicioOriginal ?? emp?.inicio ?? inicio
+      const origFin = emp?.finOriginal ?? emp?.fin ?? fin
+      const esModificado = (inicio !== origIni) || (fin !== origFin)
+      updateEmpleado(diaIndex, empId, { 
+        inicio, 
+        fin,
+        inicioOriginal: origIni,
+        finOriginal: origFin,
+        modificado: esModificado
+      })
     }
   }
 
@@ -961,7 +979,22 @@ export default function HorariosPro() {
       const { data, error } = await supabase.from('semanas_planificadas').select('*').eq('id', id).single()
       if (error) throw error
       if (data) {
-        setReporte(data.data_reporte)
+        const rawReporte = data.data_reporte || []
+        const parsedReporte = rawReporte.map((dia: any) => ({
+          ...dia,
+          empleados: (dia.empleados || []).map((emp: any) => {
+            const origIni = emp.inicioOriginal ?? emp.inicio
+            const origFin = emp.finOriginal ?? emp.fin
+            const esModificado = emp.modificado ?? (origIni !== undefined && (emp.inicio !== origIni || emp.fin !== origFin))
+            return {
+              ...emp,
+              inicioOriginal: origIni,
+              finOriginal: origFin,
+              modificado: esModificado
+            }
+          })
+        }))
+        setReporte(parsedReporte)
         setActiveTabIndex(0)
         setCurrentSemanaId(data.id)
         if (data.data_personas) {
@@ -1214,21 +1247,40 @@ export default function HorariosPro() {
                                   </span>
                                 </div>
                               </div>
-                              <div className="flex flex-col gap-1 items-end shrink-0">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[9px] font-medium text-slate-400">CAJA</span>
-                                  <input 
-                                    className="w-8 text-xs font-bold text-center bg-slate-100 border border-slate-200 rounded outline-none focus:ring-1 focus:ring-slate-400"
-                                    value={emp.caja || ''}
-                                    onChange={(e) => updateEmpleado(idx, emp.id, { caja: e.target.value })}
-                                  />
-                                </div>
-                                <input 
-                                  className="w-20 text-[10px] font-medium text-center bg-slate-100 border border-slate-200 rounded outline-none focus:ring-1 focus:ring-slate-400"
-                                  defaultValue={`${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`}
-                                  onBlur={(e) => handleHorarioChange(idx, emp.id, e.target.value)}
-                                />
-                              </div>
+                              {(() => {
+                                const origIni = emp.inicioOriginal ?? emp.inicio
+                                const origFin = emp.finOriginal ?? emp.fin
+                                const esModificado = emp.modificado || (emp.inicio !== origIni || emp.fin !== origFin)
+                                const esBase = !emp.isMultifuncional && !emp.isSCO
+
+                                return (
+                                  <div className="flex flex-col gap-1 items-end shrink-0">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] font-medium text-slate-400">CAJA</span>
+                                      <input 
+                                        className="w-8 text-xs font-bold text-center bg-slate-100 border border-slate-200 rounded outline-none focus:ring-1 focus:ring-slate-400"
+                                        value={emp.caja || ''}
+                                        onChange={(e) => updateEmpleado(idx, emp.id, { caja: e.target.value })}
+                                      />
+                                    </div>
+                                    <input 
+                                      className={`w-20 text-[10px] font-semibold text-center rounded outline-none transition-all ${
+                                        esBase && esModificado
+                                          ? 'bg-[#5b0e1a] text-white border-2 border-[#3c0810] shadow-sm ring-1 ring-rose-400/30'
+                                          : 'bg-slate-100 text-slate-700 border border-slate-200 focus:ring-1 focus:ring-slate-400'
+                                      }`}
+                                      defaultValue={`${formatTime(emp.inicio)} - ${formatTime(emp.fin > 24 ? emp.fin - 24 : emp.fin)}`}
+                                      title={esBase && esModificado ? `Horario modificado. Original: ${formatTime(origIni)} - ${formatTime(origFin)}` : 'Horario de inicio y fin'}
+                                      onBlur={(e) => handleHorarioChange(idx, emp.id, e.target.value)}
+                                    />
+                                    {esBase && esModificado && (
+                                      <span className="text-[8px] font-bold text-[#5b0e1a] bg-rose-50 px-1 py-0.2 rounded border border-rose-200 tracking-tighter">
+                                        MODIFICADO
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })()}
 
                             {/* Actions (Reorder and Delete) visible on hover */}
                             <div className="flex flex-col opacity-0 group-hover/row:opacity-100 transition-opacity gap-1">
@@ -1258,9 +1310,21 @@ export default function HorariosPro() {
                                   bg = 'bg-yellow-300 border-yellow-400 z-10 shadow-sm'
                                 } else if (isWorking) {
                                   const currentRole = emp.customRoles?.[t] || (emp.isSCO ? 'SCO' : 'CAJA')
-                                  if (currentRole === 'SCO') bg = 'bg-purple-400 border-purple-500'
-                                  else if (emp.isMultifuncional) bg = 'bg-amber-400 border-amber-500'
-                                  else bg = 'bg-green-500 border-green-600'
+                                  const origIni = emp.inicioOriginal ?? emp.inicio
+                                  const origFin = emp.finOriginal ?? emp.fin
+                                  const esModificado = emp.modificado || (emp.inicio !== origIni || emp.fin !== origFin)
+                                  const esBase = !emp.isMultifuncional && !emp.isSCO
+
+                                  if (currentRole === 'SCO') {
+                                    bg = 'bg-purple-400 border-purple-500'
+                                  } else if (emp.isMultifuncional) {
+                                    bg = 'bg-amber-400 border-amber-500'
+                                  } else if (esBase && esModificado) {
+                                    // Cajero base con horario modificado: sombreado guinda oscuro
+                                    bg = 'bg-[#5b0e1a] border-[#3c0810] text-white shadow-xs'
+                                  } else {
+                                    bg = 'bg-green-500 border-green-600'
+                                  }
                                 }
                                 
                                 return (

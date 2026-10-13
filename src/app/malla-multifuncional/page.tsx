@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, CalendarRange, Lock, Eye } from 'lucide-react'
+import { Plus, Trash2, CalendarRange, Lock, Eye, Save } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { normalizarPermisos } from '@/types/permisos'
+import { toast } from 'sonner'
 
 type Area = 'PGC' | 'NON FOOD' | 'NO PROC' | 'ASISTENTE'
 
@@ -65,6 +66,7 @@ export default function MallaMultifuncionalPage() {
   const [semanas, setSemanas] = useState<{id: string, nombre_semana: string}[]>([])
   const [currentSemanaId, setCurrentSemanaId] = useState<string>('')
   const [cargandoSemana, setCargandoSemana] = useState(false)
+  const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
     const checkPermisos = async () => {
@@ -97,13 +99,18 @@ export default function MallaMultifuncionalPage() {
     checkPermisos()
   }, [])
 
-  // load from local storage
+  // Cargar datos al montar
   useEffect(() => {
     setMounted(true)
+    let localReporteCargado = false
     const saved = localStorage.getItem('horarios_pro_reporte')
     if (saved) {
       try {
-        setReporte(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setReporte(parsed)
+          localReporteCargado = true
+        }
       } catch (e) {}
     }
     const savedPersonas = localStorage.getItem('multifuncional_personas_area') || localStorage.getItem('apoyo_personas_area')
@@ -116,16 +123,37 @@ export default function MallaMultifuncionalPage() {
     const currentId = localStorage.getItem('horarios_pro_current_semana_id')
     if (currentId) setCurrentSemanaId(currentId)
 
+    // Consultar semanas planificadas desde Supabase
     const fetchSemanas = async () => {
+      setCargandoSemana(true)
       try {
-        const { data } = await supabase.from('semanas_planificadas').select('id, nombre_semana').order('created_at', { ascending: false })
-        if (data) setSemanas(data)
-      } catch (e) {}
+        const { data } = await supabase
+          .from('semanas_planificadas')
+          .select('id, nombre_semana')
+          .order('created_at', { ascending: false })
+        
+        if (data && data.length > 0) {
+          setSemanas(data)
+          const targetId = (currentId && data.some(s => s.id === currentId)) ? currentId : data[0].id
+          
+          // Si el usuario no tiene datos en su localStorage (ej. entra por primera vez o en su celular),
+          // auto-cargar la semana más reciente preparada (Semana 43)
+          if (!localReporteCargado) {
+            await loadSemana(targetId)
+          } else {
+            setCurrentSemanaId(targetId)
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando semanas de Supabase:', e)
+      } finally {
+        setCargandoSemana(false)
+      }
     }
     fetchSemanas()
   }, [])
 
-  // save to local storage
+  // Guardar en local storage para persistencia rápida en el navegador
   useEffect(() => {
     if (mounted && reporte.length > 0) {
       localStorage.setItem('horarios_pro_reporte', JSON.stringify(reporte))
@@ -154,16 +182,45 @@ export default function MallaMultifuncionalPage() {
     setCurrentSemanaId(id)
     setCargandoSemana(true)
     try {
-      const { data, error } = await supabase.from('semanas_planificadas').select('data_reporte, data_personas').eq('id', id).single()
+      const { data, error } = await supabase
+        .from('semanas_planificadas')
+        .select('data_reporte, data_personas')
+        .eq('id', id)
+        .single()
       if (error) throw error
       if (data) {
         if (data.data_reporte) setReporte(data.data_reporte)
         if (data.data_personas) setPersonasArea(data.data_personas)
+        localStorage.setItem('horarios_pro_current_semana_id', id)
       }
     } catch (e) {
-      console.error(e)
+      console.error('Error cargando semana:', e)
+      toast.error('No se pudo cargar la semana seleccionada')
     } finally {
       setCargandoSemana(false)
+    }
+  }
+
+  const guardarCambios = async () => {
+    if (!currentSemanaId) {
+      toast.error('No hay una semana activa seleccionada para guardar')
+      return
+    }
+    setGuardando(true)
+    try {
+      const { error } = await supabase.from('semanas_planificadas').update({
+        data_reporte: reporte,
+        data_personas: personasArea,
+        updated_at: new Date().toISOString()
+      }).eq('id', currentSemanaId)
+      
+      if (error) throw error
+      toast.success('¡Cambios guardados en la base de datos con éxito!')
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Error al guardar cambios: ' + e.message)
+    } finally {
+      setGuardando(false)
     }
   }
 
@@ -185,25 +242,60 @@ export default function MallaMultifuncionalPage() {
   const deleteBloque = (diaIndex: number, empId: string) => {
     if (!permisoEditar) return
     const newReporte = [...reporte]
-    newReporte[diaIndex].empleados.filter(e => e.id !== empId)
+    newReporte[diaIndex].empleados = newReporte[diaIndex].empleados.filter(e => e.id !== empId)
     setReporte(newReporte)
   }
 
   if (!mounted) return null 
 
+  if (cargandoSemana && reporte.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin mb-4" />
+        <h2 className="text-xl font-bold text-slate-900 mb-1">Cargando Malla Planificada...</h2>
+        <p className="text-sm text-slate-500">Sincronizando los datos de la semana desde el servidor.</p>
+      </div>
+    )
+  }
+
   if (reporte.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-          <CalendarRange className="w-8 h-8 text-slate-400" />
+          <CalendarRange className="w-8 h-8 text-emerald-600" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">No hay malla generada</h1>
-        <p className="text-slate-500 mb-6 max-w-md">
-          Para asignar áreas y nombres a los multifuncionales, primero debes subir tus archivos y generar la cuadrícula en el módulo Malla Pro.
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          {semanas.length > 0 ? "Selecciona una Semana Planificada" : "No hay malla generada"}
+        </h1>
+        <p className="text-slate-500 mb-6 max-w-md text-sm">
+          {semanas.length > 0 
+            ? "Hay semanas preparadas disponibles en el sistema. Selecciona la semana que deseas gestionar para comenzar a asignar multifuncionales:"
+            : "Para asignar áreas y nombres a los multifuncionales, primero debes subir tus archivos y generar la cuadrícula en el módulo Malla Pro."}
         </p>
-        <Link href="/horarios-pro">
-          <Button className="bg-slate-900">Ir a Malla Pro</Button>
-        </Link>
+        {semanas.length > 0 ? (
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm">
+            <select
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white shadow-sm outline-none"
+              value={currentSemanaId}
+              onChange={(e) => loadSemana(e.target.value)}
+            >
+              <option value="" disabled>Elegir semana...</option>
+              {semanas.map(s => (
+                <option key={s.id} value={s.id}>{s.nombre_semana}</option>
+              ))}
+            </select>
+            <Button 
+              onClick={() => loadSemana(semanas[0].id)} 
+              className="w-full sm:w-auto bg-slate-900 shrink-0"
+            >
+              Cargar {semanas[0].nombre_semana}
+            </Button>
+          </div>
+        ) : (
+          <Link href="/horarios-pro">
+            <Button className="bg-slate-900">Ir a Malla Pro</Button>
+          </Link>
+        )}
       </div>
     )
   }
@@ -275,17 +367,29 @@ export default function MallaMultifuncionalPage() {
           <p className="text-sm text-slate-500">Distribución de horas y cobertura multifuncional sincronizada desde Malla Pro.</p>
         </div>
         
-        <select 
-          className="border border-slate-300 rounded-md px-3 py-2 text-sm bg-white shadow-sm outline-none cursor-pointer text-slate-700 min-w-[200px]"
-          value={currentSemanaId}
-          onChange={(e) => loadSemana(e.target.value)}
-          disabled={cargandoSemana}
-        >
-          <option value="" disabled>Consultar semana anterior...</option>
-          {semanas.map(s => (
-            <option key={s.id} value={s.id}>{s.nombre_semana}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select 
+            className="border border-slate-300 rounded-md px-3 py-2 text-sm bg-white shadow-sm outline-none cursor-pointer text-slate-700 min-w-[200px]"
+            value={currentSemanaId}
+            onChange={(e) => loadSemana(e.target.value)}
+            disabled={cargandoSemana}
+          >
+            <option value="" disabled>Seleccionar semana...</option>
+            {semanas.map(s => (
+              <option key={s.id} value={s.id}>{s.nombre_semana}</option>
+            ))}
+          </select>
+          {reporte.length > 0 && permisoEditar && (
+            <Button
+              onClick={guardarCambios}
+              disabled={guardando || cargandoSemana}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 shadow-sm gap-1.5"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {guardando ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6 items-start">
