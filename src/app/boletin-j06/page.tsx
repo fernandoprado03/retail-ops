@@ -96,17 +96,33 @@ const PALABRAS_EXCLUIDAS_TIENDA = new Set([
 
 export function identificarTienda(celda: string): TiendaZonaB | undefined {
   if (!celda) return undefined
-  const celdaUpper = celda.toUpperCase().trim()
-  if (!celdaUpper || PALABRAS_EXCLUIDAS_TIENDA.has(celdaUpper)) return undefined
+  const celdaTrim = celda.trim()
+  if (!celdaTrim) return undefined
+
+  // Descartar de inmediato si es un valor puramente numérico, monto, porcentaje o variación (ej: "103.734", "103,4%", "4,5%", "-1,2%", "0,7PP", "S/ 88.096")
+  if (/^(?:S\/\.?\s*|\$\s*)?[+\-]?\d+([.,]\d+)?\s*(?:%|PP)?$/i.test(celdaTrim)) return undefined
+  if (/^(?:S\/\.?\s*|\$\s*)?[+\-]?\d{1,3}([.,]\d{3})+([.,]\d+)?\s*(?:%|PP)?$/i.test(celdaTrim)) return undefined
+
+  const celdaUpper = celdaTrim.toUpperCase()
+  if (PALABRAS_EXCLUIDAS_TIENDA.has(celdaUpper)) return undefined
 
   return TIENDAS_ZONA_B.find(t => {
-    if (celdaUpper === t.codigo || celdaUpper.startsWith(t.codigo + '-') || celdaUpper.startsWith(t.codigo + ' ') || celdaUpper.includes(` ${t.codigo} `)) {
+    if (celdaUpper === t.codigo) return true
+
+    if (
+      celdaUpper.startsWith(t.codigo + '-') ||
+      celdaUpper.startsWith(t.codigo + ' -') ||
+      celdaUpper.startsWith(t.codigo + ' ') ||
+      (new RegExp(`\\b${t.codigo}\\b`).test(celdaUpper) && /[A-ZÁÉÍÓÚÑ]/i.test(celdaUpper))
+    ) {
       return true
     }
-    const aliases = ALIASES_TIENDAS[t.codigo] || []
+
+    const aliases = (ALIASES_TIENDAS[t.codigo] || []).filter(a => a !== t.codigo)
     if (aliases.some(alias => celdaUpper === alias || (celdaUpper.length >= 4 && celdaUpper.includes(alias)) || (alias.length >= 4 && alias.includes(celdaUpper)))) {
       return true
     }
+
     const nombreSinCodigo = t.nombre.toUpperCase().replace(/^\d+\s*-\s*/, '').trim()
     if (celdaUpper === nombreSinCodigo || (celdaUpper.length >= 4 && celdaUpper.includes(nombreSinCodigo)) || (nombreSinCodigo.length >= 4 && nombreSinCodigo.includes(celdaUpper))) {
       return true
@@ -1546,7 +1562,7 @@ export default function BoletinJ06Page() {
           if (str.includes('%') || str.includes('PP')) return false
           return /^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(str) || /^-?\d+([,\.]\d+)?$/.test(str)
         }
-        const isPercent = (str: string) => /^-?\d+([,\.]\d+)?\s*%$/.test(str)
+        const isPercent = (str: string) => /^[+\-]?\d+([,\.]\d+)?\s*%$/.test(str)
         const parseMonto = (str: string) => {
           if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
             return parseInt(str.replace(/\./g, ''), 10)
@@ -1643,7 +1659,7 @@ export default function BoletinJ06Page() {
           if (tiendaMatch) {
             let lineaSinTienda = linea
             if (tiendaMatch.codigo) {
-              lineaSinTienda = lineaSinTienda.replace(new RegExp(`\\b${tiendaMatch.codigo}\\b`, 'g'), '')
+              lineaSinTienda = lineaSinTienda.replace(new RegExp(`(?<![0-9.,])\\b${tiendaMatch.codigo}\\b(?![0-9.,%])`, 'g'), '')
             }
             if (tiendaMatch.nombre) {
               const nombreLimpio = tiendaMatch.nombre.replace(/^\d+\s*-\s*/, '')
@@ -1683,6 +1699,11 @@ export default function BoletinJ06Page() {
               return Math.round(parseFloat(limpio))
             }
             const montos = tokensMontos.map(parseMontoToken).filter(n => !isNaN(n))
+
+            // Si no contiene métricas numéricas, ignorar la línea (ej: encabezados o lista de nombres de tienda)
+            if (montos.length === 0 && matchesPct.length === 0) {
+              continue
+            }
 
             let ventaVal: number | null = null
             let metaVal: number | null = null
