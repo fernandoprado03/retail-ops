@@ -274,6 +274,7 @@ export interface FilaVentaTienda {
   lider: string
   ventaSoles: number
   metaSoles?: number
+  ventaAPSoles?: number
   logroPorcentaje: number
   crecimientoPorcentaje: number
   observaciones?: string
@@ -618,17 +619,17 @@ const DATOS_EJEMPLO_REGISTRO_AC: FilaRegistroACTienda[] = TIENDAS_ZONA_B.map(t =
 
 // Datos de muestra Ventas Semanales (Semana 41 / Detalle KPI's oficial)
 export const DATOS_EJEMPLO_VENTA: FilaVentaTienda[] = [
-  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', ventaSoles: 88096, metaSoles: 88651, logroPorcentaje: 99.4, crecimientoPorcentaje: 4.5 },
-  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', ventaSoles: 41662, metaSoles: 36450, logroPorcentaje: 114.3, crecimientoPorcentaje: 17.0 },
-  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', ventaSoles: 36135, metaSoles: 34664, logroPorcentaje: 104.2, crecimientoPorcentaje: 7.1 },
-  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', ventaSoles: 44840, metaSoles: 49168, logroPorcentaje: 91.2, crecimientoPorcentaje: -0.2 },
-  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', ventaSoles: 54145, metaSoles: 63872, logroPorcentaje: 84.8, crecimientoPorcentaje: -13.2 },
-  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', ventaSoles: 69596, metaSoles: 72818, logroPorcentaje: 95.6, crecimientoPorcentaje: -1.0 },
-  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', ventaSoles: 57233, metaSoles: 55337, logroPorcentaje: 103.4, crecimientoPorcentaje: 0.2 },
-  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', ventaSoles: 49028, metaSoles: 56313, logroPorcentaje: 87.1, crecimientoPorcentaje: -11.9 },
-  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', ventaSoles: 30385, metaSoles: 32643, logroPorcentaje: 93.1, crecimientoPorcentaje: -6.5 },
-  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', ventaSoles: 22900, metaSoles: 27594, logroPorcentaje: 83.0, crecimientoPorcentaje: -10.4 },
-  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', ventaSoles: 28283, metaSoles: 26331, logroPorcentaje: 107.4, crecimientoPorcentaje: 7.7 },
+  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', ventaSoles: 88096, metaSoles: 88651, ventaAPSoles: 84308, logroPorcentaje: 99.4, crecimientoPorcentaje: 4.5 },
+  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', ventaSoles: 41662, metaSoles: 36450, ventaAPSoles: 35605, logroPorcentaje: 114.3, crecimientoPorcentaje: 17.0 },
+  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', ventaSoles: 36135, metaSoles: 34664, ventaAPSoles: 33729, logroPorcentaje: 104.2, crecimientoPorcentaje: 7.1 },
+  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', ventaSoles: 44840, metaSoles: 49168, ventaAPSoles: 44947, logroPorcentaje: 91.2, crecimientoPorcentaje: -0.2 },
+  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', ventaSoles: 54145, metaSoles: 63872, ventaAPSoles: 62411, logroPorcentaje: 84.8, crecimientoPorcentaje: -13.2 },
+  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', ventaSoles: 69596, metaSoles: 72818, ventaAPSoles: 70318, logroPorcentaje: 95.6, crecimientoPorcentaje: -1.0 },
+  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', ventaSoles: 57233, metaSoles: 55337, ventaAPSoles: 57103, logroPorcentaje: 103.4, crecimientoPorcentaje: 0.2 },
+  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', ventaSoles: 49028, metaSoles: 56313, ventaAPSoles: 55669, logroPorcentaje: 87.1, crecimientoPorcentaje: -11.9 },
+  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', ventaSoles: 30385, metaSoles: 32643, ventaAPSoles: 32494, logroPorcentaje: 93.1, crecimientoPorcentaje: -6.5 },
+  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', ventaSoles: 22900, metaSoles: 27594, ventaAPSoles: 25547, logroPorcentaje: 83.0, crecimientoPorcentaje: -10.4 },
+  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', ventaSoles: 28283, metaSoles: 26331, ventaAPSoles: 26268, logroPorcentaje: 107.4, crecimientoPorcentaje: 7.7 },
 ]
 
 export default function BoletinJ06Page() {
@@ -1599,6 +1600,7 @@ export default function BoletinJ06Page() {
                 ...nuevosDatos[indexDato],
                 ventaSoles: tupla.venta,
                 metaSoles: tupla.plan,
+                ventaAPSoles: tupla.ventaAP,
                 logroPorcentaje: tupla.logro,
                 crecimientoPorcentaje: tupla.crec,
               }
@@ -1755,11 +1757,11 @@ export default function BoletinJ06Page() {
   }
 
   const copiarTablaVentas = () => {
-    const encabezado = 'Tienda\tLíder\tVenta (S/)\t% Logro\t% Crecimiento'
+    const encabezado = 'Tienda\tLíder\tVenta (S/)\tPlan Venta (Meta)\t% Logro\tVenta AP (Año Ant.)\t% Crecimiento'
     const filas = datosVenta
       .map(
         t =>
-          `${t.nombre}\t${t.lider}\t${t.ventaSoles}\t${t.logroPorcentaje.toFixed(2)}%\t${t.crecimientoPorcentaje >= 0 ? '+' : ''}${t.crecimientoPorcentaje.toFixed(2)}%`
+          `${t.nombre}\t${t.lider}\t${t.ventaSoles}\t${t.metaSoles ?? ''}\t${t.logroPorcentaje.toFixed(2)}%\t${t.ventaAPSoles ?? ''}\t${t.crecimientoPorcentaje >= 0 ? '+' : ''}${t.crecimientoPorcentaje.toFixed(2)}%`
       )
       .join('\n')
     navigator.clipboard.writeText(`${encabezado}\n${filas}`)
@@ -1770,12 +1772,12 @@ export default function BoletinJ06Page() {
 
   const restablecerVentasDefault = () => {
     setDatosVenta(DATOS_EJEMPLO_VENTA)
-    toast.info('Valores de venta restablecidos a los de referencia (S40).')
+    toast.info('Valores de venta restablecidos a los de referencia (S41).')
   }
 
   const actualizarCampoVenta = (
     codigo: string,
-    campo: 'ventaSoles' | 'metaSoles' | 'logroPorcentaje' | 'crecimientoPorcentaje',
+    campo: 'ventaSoles' | 'metaSoles' | 'ventaAPSoles' | 'logroPorcentaje' | 'crecimientoPorcentaje',
     valor: number
   ) => {
     setDatosVenta(prev =>
@@ -1785,14 +1787,39 @@ export default function BoletinJ06Page() {
 
   // Estadísticas de Ventas
   const totalVentaCalculada = datosVenta.reduce((acc, t) => acc + t.ventaSoles, 0)
-  const promedioLogroVenta =
+  const totalPlanCalculado = datosVenta.reduce(
+    (acc, t) => acc + (t.metaSoles ?? Math.round((t.ventaSoles / (t.logroPorcentaje / 100)) || 0)),
+    0
+  )
+  const totalVentaAPCalculada = datosVenta.reduce(
+    (acc, t) => acc + (t.ventaAPSoles ?? (t.crecimientoPorcentaje !== -100 ? Math.round(t.ventaSoles / (1 + t.crecimientoPorcentaje / 100)) : 0)),
+    0
+  )
+
+  // LOGRO CONSOLIDADO REAL ZONA B (Ponderado: Venta Total / Plan Venta Total)
+  const logroPonderadoVenta = totalPlanCalculado > 0
+    ? ((totalVentaCalculada / totalPlanCalculado) * 100).toFixed(1)
+    : '0.0'
+
+  // CRECIMIENTO CONSOLIDADO REAL ZONA B (Ponderado: (Venta Total - Venta AP Total) / Venta AP Total)
+  const crecimientoPonderadoVenta = totalVentaAPCalculada > 0
+    ? (((totalVentaCalculada - totalVentaAPCalculada) / totalVentaAPCalculada) * 100).toFixed(1)
+    : '0.0'
+
+  // Si está activo el banner manual de BI oficial se respetan sus valores, sino el cálculo ponderado en soles
+  const logroFinalZonaB = usarTotalBannerManual ? cumplimientoBannerManual.toFixed(1) : logroPonderadoVenta
+  const crecimientoFinalZonaB = usarTotalBannerManual ? crecimientoBannerManual.toFixed(1) : crecimientoPonderadoVenta
+
+  // Promedios aritméticos simples de porcentajes (para referencia / tooltip)
+  const promedioSimpleLogroVenta =
     datosVenta.length > 0
       ? (datosVenta.reduce((acc, t) => acc + t.logroPorcentaje, 0) / datosVenta.length).toFixed(2)
       : '0.00'
-  const promedioCrecimientoVenta =
+  const promedioSimpleCrecimientoVenta =
     datosVenta.length > 0
       ? (datosVenta.reduce((acc, t) => acc + t.crecimientoPorcentaje, 0) / datosVenta.length).toFixed(2)
       : '0.00'
+
   const tiendasCumplenMetaVenta = datosVenta.filter(t => t.logroPorcentaje >= 100).length
   const tiendasFocoVenta = datosVenta.filter(t => t.crecimientoPorcentaje < 0 || t.logroPorcentaje < 90)
 
@@ -2054,25 +2081,25 @@ export default function BoletinJ06Page() {
                     <TrendingUp className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div className="text-lg font-bold text-emerald-950">
-                    {promedioLogroVenta}%
+                    {logroFinalZonaB}%
                   </div>
-                  <div className="text-[10px] text-emerald-700">Meta: ≥ 100.0%</div>
+                  <div className="text-[10px] text-emerald-700">Consolidado (Venta / Meta)</div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 space-y-1">
                   <div className="flex items-center justify-between text-xs text-amber-800 font-medium">
-                    <span>% Crecimiento Prom.</span>
+                    <span>% Crecimiento Zona B</span>
                     <TrendingDown className="w-4 h-4 text-amber-600" />
                   </div>
                   <div
                     className={`text-lg font-bold ${
-                      parseFloat(promedioCrecimientoVenta) >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                      parseFloat(crecimientoFinalZonaB) >= 0 ? 'text-emerald-700' : 'text-rose-700'
                     }`}
                   >
-                    {parseFloat(promedioCrecimientoVenta) >= 0 ? '+' : ''}
-                    {promedioCrecimientoVenta}%
+                    {parseFloat(crecimientoFinalZonaB) >= 0 ? '+' : ''}
+                    {crecimientoFinalZonaB}%
                   </div>
-                  <div className="text-[10px] text-slate-500">vs semana/año anterior</div>
+                  <div className="text-[10px] text-slate-500">vs Venta AP (S/ {totalVentaAPCalculada.toLocaleString('es-PE')})</div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
@@ -2208,6 +2235,7 @@ export default function BoletinJ06Page() {
                       <th className="py-2.5 px-3 border-r border-slate-200 text-center">
                         % Logro (Meta &gt;100%)
                       </th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-right">Venta AP (Año Ant.)</th>
                       <th className="py-2.5 px-3 border-r border-slate-200 text-center">
                         % Crecimiento
                       </th>
@@ -2295,6 +2323,25 @@ export default function BoletinJ06Page() {
                             </div>
                           </td>
 
+                          {/* Venta AP (Año Anterior) */}
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-slate-400 text-[11px]">S/</span>
+                              <input
+                                type="number"
+                                value={tienda.ventaAPSoles ?? 0}
+                                onChange={e =>
+                                  actualizarCampoVenta(
+                                    tienda.codigo,
+                                    'ventaAPSoles',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="w-24 px-1.5 py-0.5 text-right font-mono font-semibold text-slate-700 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded focus:border-emerald-500 focus:outline-none"
+                              />
+                            </div>
+                          </td>
+
                           {/* % Crecimiento */}
                           <td className="py-2.5 px-3 border-r border-slate-200 text-center">
                             <div className="flex items-center justify-center gap-1">
@@ -2342,29 +2389,40 @@ export default function BoletinJ06Page() {
                   <tfoot>
                     <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
                       <td colSpan={2} className="py-2.5 px-3 text-left">
-                        Total / Promedio Zona B:
+                        <div>
+                          <span className="text-slate-900 font-bold">Total Consolidado Zona B:</span>
+                          <div className="text-[10px] text-slate-500 font-normal">
+                            Logro = Venta / Plan | Crec = (Venta - Venta AP) / Venta AP
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-900">
+                      <td className="py-2.5 px-3 text-right font-mono text-emerald-900 font-bold">
                         S/ {totalVentaCalculada.toLocaleString('es-PE')}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-slate-700 font-bold">
-                        S/{' '}
-                        {datosVenta
-                          .reduce((acc, t) => acc + (t.metaSoles ?? Math.round((t.ventaSoles / (t.logroPorcentaje / 100)) || 0)), 0)
-                          .toLocaleString('es-PE')}
+                        S/ {totalPlanCalculado.toLocaleString('es-PE')}
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-emerald-800 bg-emerald-50">
-                        {promedioLogroVenta}%
+                        <div className="font-bold text-sm">{logroFinalZonaB}%</div>
+                        <div className="text-[9px] text-slate-500 font-normal">Prom. simple: {promedioSimpleLogroVenta}%</div>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-700 font-bold">
+                        S/ {totalVentaAPCalculada.toLocaleString('es-PE')}
                       </td>
                       <td
                         className={`py-2.5 px-3 text-center font-mono ${
-                          parseFloat(promedioCrecimientoVenta) >= 0
+                          parseFloat(crecimientoFinalZonaB) >= 0
                             ? 'text-emerald-800 bg-emerald-50'
                             : 'text-rose-800 bg-rose-50'
                         }`}
                       >
-                        {parseFloat(promedioCrecimientoVenta) >= 0 ? '+' : ''}
-                        {promedioCrecimientoVenta}%
+                        <div className="font-bold text-sm">
+                          {parseFloat(crecimientoFinalZonaB) >= 0 ? '+' : ''}
+                          {crecimientoFinalZonaB}%
+                        </div>
+                        <div className="text-[9px] text-slate-500 font-normal">
+                          Prom. simple: {parseFloat(promedioSimpleCrecimientoVenta) >= 0 ? '+' : ''}{promedioSimpleCrecimientoVenta}%
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <span className="text-[10px] text-slate-600 font-medium">
@@ -3702,7 +3760,7 @@ export default function BoletinJ06Page() {
                 <div className="p-2 rounded-lg bg-[#e8f5e9] border border-[#c8e6c9]">
                   <div className="text-[10px] text-[#2e7d32] font-semibold">Cumpl.%</div>
                   <div className="font-bold text-[#1b5e20] text-xs">
-                    {usarTotalBannerManual ? `${cumplimientoBannerManual}%` : `${promedioLogroVenta}%`}
+                    {logroFinalZonaB}%
                   </div>
                 </div>
 
@@ -3711,14 +3769,13 @@ export default function BoletinJ06Page() {
                   <div className="text-[10px] text-[#2e7d32] font-semibold">Crec.%</div>
                   <div
                     className={`font-bold text-xs ${
-                      (usarTotalBannerManual ? crecimientoBannerManual : parseFloat(promedioCrecimientoVenta)) >= 0
+                      parseFloat(crecimientoFinalZonaB) >= 0
                         ? 'text-[#1b5e20]'
                         : 'text-rose-700'
                     }`}
                   >
-                    {usarTotalBannerManual
-                      ? `${crecimientoBannerManual >= 0 ? '+' : ''}${crecimientoBannerManual}%`
-                      : `${parseFloat(promedioCrecimientoVenta) >= 0 ? '+' : ''}${promedioCrecimientoVenta}%`}
+                    {parseFloat(crecimientoFinalZonaB) >= 0 ? '+' : ''}
+                    {crecimientoFinalZonaB}%
                   </div>
                 </div>
 
