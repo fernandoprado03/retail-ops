@@ -100,9 +100,9 @@ export default async function AdminUsuarios() {
                                 📅 Malla Pro {perms.horarios_pro.editar ? '(Ver+Editar)' : '(Lectura)'}
                               </span>
                             )}
-                            {perms.apoyo.ver && (
+                            {(perms.malla_multifuncional?.ver ?? perms.apoyo?.ver) && (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                                👥 Malla Apoyo {perms.apoyo.editar ? '(Ver+Editar)' : '(Lectura)'}
+                                👥 Malla Multifuncional {(perms.malla_multifuncional?.editar ?? perms.apoyo?.editar) ? '(Ver+Editar)' : '(Lectura)'}
                               </span>
                             )}
                             {perms.kpis.ver && (
@@ -115,7 +115,7 @@ export default async function AdminUsuarios() {
                                 🎫 Incidencias {perms.incidencias.editar ? '(Ver+Editar)' : '(Lectura)'}
                               </span>
                             )}
-                            {!perms.boletin_j06.ver && !perms.horarios_pro.ver && !perms.apoyo.ver && !perms.kpis.ver && !perms.incidencias.ver && (
+                            {!perms.boletin_j06.ver && !perms.horarios_pro.ver && !(perms.malla_multifuncional?.ver ?? perms.apoyo?.ver) && !perms.kpis.ver && !perms.incidencias.ver && (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">
                                 🚫 Sin módulos asignados
                               </span>

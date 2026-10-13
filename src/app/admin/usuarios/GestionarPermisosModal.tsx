@@ -59,6 +59,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
       setPermisos({
         boletin_j06: { ver: true, editar: true },
         horarios_pro: { ver: true, editar: true },
+        malla_multifuncional: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: true, editar: false },
         incidencias: { ver: true, editar: true }
@@ -67,6 +68,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
       setPermisos({
         boletin_j06: { ver: true, editar: false },
         horarios_pro: { ver: true, editar: false },
+        malla_multifuncional: { ver: true, editar: false },
         apoyo: { ver: true, editar: false },
         kpis: { ver: true, editar: false },
         incidencias: { ver: true, editar: false }
@@ -75,6 +77,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
       setPermisos({
         boletin_j06: { ver: true, editar: true },
         horarios_pro: { ver: false, editar: false },
+        malla_multifuncional: { ver: false, editar: false },
         apoyo: { ver: false, editar: false },
         kpis: { ver: false, editar: false },
         incidencias: { ver: false, editar: false }
@@ -83,6 +86,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
       setPermisos({
         boletin_j06: { ver: false, editar: false },
         horarios_pro: { ver: true, editar: true },
+        malla_multifuncional: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: false, editar: false },
         incidencias: { ver: false, editar: false }
@@ -339,10 +343,10 @@ export default function GestionarPermisosModal({ usuario }: Props) {
                   </div>
                 </div>
 
-                {/* 3. MALLA APOYO */}
+                {/* 3. MALLA MULTIFUNCIONAL */}
                 <div
                   className={`border rounded-xl p-3.5 transition-all ${
-                    permisos.apoyo.ver
+                    (permisos.malla_multifuncional?.ver ?? permisos.apoyo?.ver)
                       ? 'border-blue-200 bg-blue-50/20'
                       : 'border-slate-200 bg-slate-50/50 opacity-60'
                   }`}
@@ -355,12 +359,12 @@ export default function GestionarPermisosModal({ usuario }: Props) {
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="font-semibold text-slate-900 text-sm">
-                            Malla de Apoyo
+                            Malla Multifuncional
                           </h4>
-                          <span className="text-[10px] text-slate-400 font-mono">/apoyo</span>
+                          <span className="text-[10px] text-slate-400 font-mono">/malla-multifuncional</span>
                         </div>
                         <p className="text-xs text-slate-500">
-                          Asignación de personal de apoyo por áreas (PGC, Non Food, etc.)
+                          Asignación y cobertura de personal multifuncional por áreas (PGC, Non Food, No Proc, Asistente)
                         </p>
                       </div>
                     </div>
@@ -369,14 +373,18 @@ export default function GestionarPermisosModal({ usuario }: Props) {
                       <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700 select-none">
                         <input
                           type="checkbox"
-                          checked={permisos.apoyo.ver}
+                          checked={permisos.malla_multifuncional?.ver ?? permisos.apoyo?.ver ?? false}
                           onChange={(e) => {
                             const val = e.target.checked
                             setPermisos((prev) => ({
                               ...prev,
+                              malla_multifuncional: {
+                                ver: val,
+                                editar: val ? (prev.malla_multifuncional?.editar ?? prev.apoyo?.editar ?? false) : false
+                              },
                               apoyo: {
                                 ver: val,
-                                editar: val ? prev.apoyo.editar : false
+                                editar: val ? (prev.malla_multifuncional?.editar ?? prev.apoyo?.editar ?? false) : false
                               }
                             }))
                           }}
@@ -387,21 +395,26 @@ export default function GestionarPermisosModal({ usuario }: Props) {
 
                       <label
                         className={`flex items-center gap-1.5 text-xs font-medium select-none ${
-                          permisos.apoyo.ver
+                          (permisos.malla_multifuncional?.ver ?? permisos.apoyo?.ver)
                             ? 'cursor-pointer text-slate-700'
                             : 'cursor-not-allowed text-slate-400'
                         }`}
                       >
                         <input
                           type="checkbox"
-                          disabled={!permisos.apoyo.ver}
-                          checked={permisos.apoyo.editar}
+                          disabled={!(permisos.malla_multifuncional?.ver ?? permisos.apoyo?.ver)}
+                          checked={permisos.malla_multifuncional?.editar ?? permisos.apoyo?.editar ?? false}
                           onChange={(e) => {
+                            const val = e.target.checked
                             setPermisos((prev) => ({
                               ...prev,
+                              malla_multifuncional: {
+                                ...(prev.malla_multifuncional || prev.apoyo),
+                                editar: val
+                              },
                               apoyo: {
-                                ...prev.apoyo,
-                                editar: e.target.checked
+                                ...(prev.malla_multifuncional || prev.apoyo),
+                                editar: val
                               }
                             }))
                           }}

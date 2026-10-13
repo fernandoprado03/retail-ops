@@ -6,7 +6,8 @@ export interface PermisosModulo {
 export interface PermisosUsuario {
   boletin_j06: PermisosModulo
   horarios_pro: PermisosModulo
-  apoyo: PermisosModulo
+  malla_multifuncional: PermisosModulo
+  apoyo: PermisosModulo // Retrocompatible
   kpis: { ver: boolean; editar?: boolean }
   incidencias: PermisosModulo
 }
@@ -14,6 +15,7 @@ export interface PermisosUsuario {
 export const PERMISOS_DEFAULT_ADMIN: PermisosUsuario = {
   boletin_j06: { ver: true, editar: true },
   horarios_pro: { ver: true, editar: true },
+  malla_multifuncional: { ver: true, editar: true },
   apoyo: { ver: true, editar: true },
   kpis: { ver: true, editar: false },
   incidencias: { ver: true, editar: true }
@@ -22,6 +24,7 @@ export const PERMISOS_DEFAULT_ADMIN: PermisosUsuario = {
 export const PERMISOS_DEFAULT_JEFE: PermisosUsuario = {
   boletin_j06: { ver: true, editar: false },
   horarios_pro: { ver: true, editar: false },
+  malla_multifuncional: { ver: true, editar: false },
   apoyo: { ver: true, editar: false },
   kpis: { ver: true, editar: false },
   incidencias: { ver: true, editar: true }
@@ -36,6 +39,10 @@ export function normalizarPermisos(permisosRaw: any, rol?: string): PermisosUsua
     return PERMISOS_DEFAULT_JEFE
   }
 
+  const multiPerm = permisosRaw.malla_multifuncional || permisosRaw.apoyo || {}
+  const multiVer = multiPerm.ver ?? true
+  const multiEditar = multiPerm.editar ?? false
+
   return {
     boletin_j06: {
       ver: permisosRaw.boletin_j06?.ver ?? true,
@@ -45,9 +52,13 @@ export function normalizarPermisos(permisosRaw: any, rol?: string): PermisosUsua
       ver: permisosRaw.horarios_pro?.ver ?? true,
       editar: permisosRaw.horarios_pro?.editar ?? false,
     },
+    malla_multifuncional: {
+      ver: multiVer,
+      editar: multiEditar,
+    },
     apoyo: {
-      ver: permisosRaw.apoyo?.ver ?? true,
-      editar: permisosRaw.apoyo?.editar ?? false,
+      ver: multiVer,
+      editar: multiEditar,
     },
     kpis: {
       ver: permisosRaw.kpis?.ver ?? true,

@@ -348,7 +348,7 @@ export default function HorariosPro() {
     newReporte[diaIndex].empleados.push({
       id: `multi-${Date.now()}`,
       nombre: 'Vacante Multifuncional',
-      rol: 'Apoyo',
+      rol: 'Multifuncional',
       inicio: 9,
       fin: 13,
       isMultifuncional: true
@@ -370,7 +370,7 @@ export default function HorariosPro() {
     const newReporte = [...reporte]
     newReporte[diaIndex].empleados = newReporte[diaIndex].empleados.filter(e => !e.isMultifuncional)
     setReporte(newReporte)
-    toast.success('Se eliminaron todos los turnos de apoyo')
+    toast.success('Se eliminaron todos los turnos multifuncionales')
   }
 
   const moveEmpleadoOrder = (diaIndex: number, empId: string, direction: 'up' | 'down') => {
@@ -674,7 +674,7 @@ export default function HorariosPro() {
       if (scoReasignados && !faltantes && !breaksMovidos) {
          toast.success('Se reasignaron SCOs excedentes a Caja para cubrir la demanda')
       } else if (breaksMovidos && !faltantes) {
-         toast.success('Se optimizaron los breaks para cubrir todo sin apoyo extra')
+         toast.success('Se optimizaron los breaks para cubrir todo sin personal multifuncional extra')
       } else {
          toast.success('Brechas cubiertas exitosamente')
       }
@@ -889,7 +889,7 @@ export default function HorariosPro() {
     }
     setSemanaCargando(true)
     try {
-      const personasStr = localStorage.getItem('apoyo_personas_area')
+      const personasStr = localStorage.getItem('multifuncional_personas_area') || localStorage.getItem('apoyo_personas_area')
       let personasObj = {}
       if (personasStr) {
         try { personasObj = JSON.parse(personasStr) } catch(e){}
@@ -933,6 +933,7 @@ export default function HorariosPro() {
         setActiveTabIndex(0)
         setCurrentSemanaId(data.id)
         if (data.data_personas) {
+          localStorage.setItem('multifuncional_personas_area', JSON.stringify(data.data_personas))
           localStorage.setItem('apoyo_personas_area', JSON.stringify(data.data_personas))
         }
         toast.success('Semana cargada exitosamente')
@@ -1070,7 +1071,7 @@ export default function HorariosPro() {
                     <Button variant="outline" size="sm" onClick={() => exportToPDF(idx, dia.fecha)} disabled={isExporting === idx} className="h-8 text-xs bg-white text-slate-900 border-none hover:bg-slate-200">
                       <Download className="w-4 h-4 mr-1" /> {isExporting === idx ? "Exportando..." : "Exportar PDF"}
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => clearMultifuncionales(idx)} className="h-8 text-xs border-none" title="Limpiar todos los apoyos agregados">
+                    <Button variant="destructive" size="sm" onClick={() => clearMultifuncionales(idx)} className="h-8 text-xs border-none" title="Limpiar todos los multifuncionales agregados">
                       <Eraser className="w-4 h-4 mr-1" /> Limpiar
                     </Button>
                     <Button variant="secondary" size="sm" onClick={() => autoFillGaps(idx)} className="h-8 text-xs bg-slate-700 hover:bg-slate-600 text-white border-none">

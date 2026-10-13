@@ -70,6 +70,7 @@ export async function actualizarPermisosUsuario(id: string, permisos: PermisosUs
   revalidatePath('/admin/usuarios')
   revalidatePath('/boletin-j06')
   revalidatePath('/horarios-pro')
+  revalidatePath('/malla-multifuncional')
   revalidatePath('/apoyo')
   revalidatePath('/kpis')
   return { success: true }
