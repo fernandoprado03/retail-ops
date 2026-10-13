@@ -1756,7 +1756,7 @@ export default function BoletinJ06Page() {
 
   const actualizarCampoVenta = (
     codigo: string,
-    campo: 'ventaSoles' | 'logroPorcentaje' | 'crecimientoPorcentaje',
+    campo: 'ventaSoles' | 'metaSoles' | 'logroPorcentaje' | 'crecimientoPorcentaje',
     valor: number
   ) => {
     setDatosVenta(prev =>
@@ -2185,7 +2185,7 @@ export default function BoletinJ06Page() {
                       <th className="py-2.5 px-3 border-r border-slate-200">Tienda</th>
                       <th className="py-2.5 px-3 border-r border-slate-200">Líder J06</th>
                       <th className="py-2.5 px-3 border-r border-slate-200 text-right">Venta (S/)</th>
-                      <th className="py-2.5 px-3 border-r border-slate-200 text-right">Meta Estimada</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-right">Plan Venta (Meta)</th>
                       <th className="py-2.5 px-3 border-r border-slate-200 text-center">
                         % Logro (Meta &gt;100%)
                       </th>
@@ -2197,7 +2197,7 @@ export default function BoletinJ06Page() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {datosVenta.map(tienda => {
-                      const metaCalc = Math.round((tienda.ventaSoles / (tienda.logroPorcentaje / 100)) || 0)
+                      const metaAMostrar = tienda.metaSoles ?? Math.round((tienda.ventaSoles / (tienda.logroPorcentaje / 100)) || 0)
                       const cumpleMeta = tienda.logroPorcentaje >= 100
                       const esCercaMeta = tienda.logroPorcentaje >= 90 && tienda.logroPorcentaje < 100
                       const esCritico = tienda.logroPorcentaje < 90 || tienda.crecimientoPorcentaje < -5
@@ -2231,9 +2231,23 @@ export default function BoletinJ06Page() {
                             </div>
                           </td>
 
-                          {/* Meta Estimada */}
-                          <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono text-slate-500">
-                            S/ {metaCalc.toLocaleString('es-PE')}
+                          {/* Plan Venta (Meta) */}
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-slate-400 text-[11px]">S/</span>
+                              <input
+                                type="number"
+                                value={metaAMostrar}
+                                onChange={e =>
+                                  actualizarCampoVenta(
+                                    tienda.codigo,
+                                    'metaSoles',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="w-24 px-1.5 py-0.5 text-right font-mono font-semibold text-slate-900 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded focus:border-emerald-500 focus:outline-none"
+                              />
+                            </div>
                           </td>
 
                           {/* % Logro */}
@@ -2314,10 +2328,10 @@ export default function BoletinJ06Page() {
                       <td className="py-2.5 px-3 text-right font-mono text-emerald-900">
                         S/ {totalVentaCalculada.toLocaleString('es-PE')}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-500">
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-700 font-bold">
                         S/{' '}
                         {datosVenta
-                          .reduce((acc, t) => acc + Math.round((t.ventaSoles / (t.logroPorcentaje / 100)) || 0), 0)
+                          .reduce((acc, t) => acc + (t.metaSoles ?? Math.round((t.ventaSoles / (t.logroPorcentaje / 100)) || 0)), 0)
                           .toLocaleString('es-PE')}
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-emerald-800 bg-emerald-50">
