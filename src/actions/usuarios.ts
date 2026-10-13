@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function toggleUsuarioActivo(id: string, nuevoEstado: boolean) {
@@ -20,8 +21,11 @@ export async function toggleUsuarioActivo(id: string, nuevoEstado: boolean) {
     return { success: false, error: 'No autorizado' }
   }
 
+  // Usar admin client si service_role key existe, de lo contrario cliente autenticado
+  const dbClient = createAdminClient() || supabase
+
   // Ejecutar el update
-  const { error } = await supabase
+  const { error } = await dbClient
     .from('perfiles')
     .update({ activo: nuevoEstado })
     .eq('id', id)
@@ -44,14 +48,17 @@ export async function agregarUsuario(formData: FormData) {
   if (adminPerfil?.rol !== 'admin') return { success: false, error: 'No autorizado' }
 
   const nombre_completo = formData.get('nombre') as string
-  const email = formData.get('email') as string
+  const email = (formData.get('email') as string)?.trim().toLowerCase()
   const area_id = formData.get('area_id') as string
 
   if (!email || !nombre_completo) return { success: false, error: 'Datos incompletos' }
 
   const id = crypto.randomUUID()
 
-  const { error } = await supabase.from('perfiles').insert({
+  // Usar admin client si service_role key existe para omitir RLS, de lo contrario cliente autenticado
+  const dbClient = createAdminClient() || supabase
+
+  const { error } = await dbClient.from('perfiles').insert({
     id,
     email,
     nombre_completo,
@@ -65,9 +72,10 @@ export async function agregarUsuario(formData: FormData) {
   }
 
   if (area_id) {
-    await supabase.from('areas').update({ jefe_responsable_id: id }).eq('id', area_id)
+    await dbClient.from('areas').update({ jefe_responsable_id: id }).eq('id', area_id)
   }
 
   revalidatePath('/admin/usuarios')
   return { success: true }
 }
+
