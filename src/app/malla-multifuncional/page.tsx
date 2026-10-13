@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, CalendarRange, Lock, Eye, Save } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Trash2, CalendarRange, Lock, Eye, Wifi } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -66,7 +66,34 @@ export default function MallaMultifuncionalPage() {
   const [semanas, setSemanas] = useState<{id: string, nombre_semana: string}[]>([])
   const [currentSemanaId, setCurrentSemanaId] = useState<string>('')
   const [cargandoSemana, setCargandoSemana] = useState(false)
-  const [guardando, setGuardando] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'error'>('synced')
+  const [activeUsersCount, setActiveUsersCount] = useState<number>(1)
+
+  // Referencias para sincronización en tiempo real sin recarga ni rebotes
+  const channelRef = useRef<any>(null)
+  const clientId = useRef<string>('')
+  if (!clientId.current && typeof window !== 'undefined') {
+    clientId.current = `client-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+  }
+  const isReceivingRemote = useRef<boolean>(false)
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const reporteRef = useRef(reporte)
+  const personasAreaRef = useRef(personasArea)
+  const currentSemanaIdRef = useRef(currentSemanaId)
+
+  useEffect(() => {
+    reporteRef.current = reporte
+  }, [reporte])
+
+  useEffect(() => {
+    personasAreaRef.current = personasArea
+  }, [personasArea])
+
+  useEffect(() => {
+    currentSemanaIdRef.current = currentSemanaId
+  }, [currentSemanaId])
 
   useEffect(() => {
     const checkPermisos = async () => {
@@ -153,28 +180,214 @@ export default function MallaMultifuncionalPage() {
     fetchSemanas()
   }, [])
 
-  // Guardar en local storage para persistencia rápida en el navegador
+  // Suscripción en tiempo real a Supabase Realtime para la semana activa
   useEffect(() => {
-    if (mounted && reporte.length > 0) {
-      localStorage.setItem('horarios_pro_reporte', JSON.stringify(reporte))
-    }
-    if (mounted) {
-      localStorage.setItem('multifuncional_personas_area', JSON.stringify(personasArea))
-      localStorage.setItem('apoyo_personas_area', JSON.stringify(personasArea))
-    }
-    if (mounted && currentSemanaId) {
-      localStorage.setItem('horarios_pro_current_semana_id', currentSemanaId)
-    }
-  }, [reporte, personasArea, currentSemanaId, mounted])
+    if (!currentSemanaId) return
 
-  const updateEmpleado = (diaIndex: number, empId: string, updates: Partial<TurnoEmpleado>) => {
-    if (!permisoEditar) return
-    const newReporte = [...reporte]
-    const emp = newReporte[diaIndex].empleados.find(e => e.id === empId)
-    if (emp) {
-      Object.assign(emp, updates)
-      setReporte(newReporte)
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
     }
+
+    const channel = supabase.channel(`malla-semana-${currentSemanaId}`, {
+      config: {
+        broadcast: { self: false }
+      }
+    })
+
+    channel
+      .on('broadcast', { event: 'sync_malla' }, ({ payload }) => {
+        if (!payload || payload.senderId === clientId.current) return
+        
+        // Recibido en vivo desde otro dispositivo (ej. celular de Álvaro o computadora de Fernando)
+        isReceivingRemote.current = true
+        if (payload.reporte) {
+          setReporte(payload.reporte)
+          try { localStorage.setItem('horarios_pro_reporte', JSON.stringify(payload.reporte)) } catch(e){}
+        }
+        if (payload.personasArea) {
+          setPersonasArea(payload.personasArea)
+          try { 
+            localStorage.setItem('multifuncional_personas_area', JSON.stringify(payload.personasArea))
+            localStorage.setItem('apoyo_personas_area', JSON.stringify(payload.personasArea))
+          } catch(e){}
+        }
+        setSyncStatus('synced')
+
+        setTimeout(() => {
+          isReceivingRemote.current = false
+        }, 80)
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'semanas_planificadas',
+          filter: `id=eq.${currentSemanaId}`
+        },
+        (payload) => {
+          const newRecord = payload.new as any
+          if (newRecord && !isReceivingRemote.current) {
+            if (newRecord.data_reporte) {
+              setReporte(newRecord.data_reporte)
+              try { localStorage.setItem('horarios_pro_reporte', JSON.stringify(newRecord.data_reporte)) } catch(e){}
+            }
+            if (newRecord.data_personas) {
+              setPersonasArea(newRecord.data_personas)
+              try {
+                localStorage.setItem('multifuncional_personas_area', JSON.stringify(newRecord.data_personas))
+                localStorage.setItem('apoyo_personas_area', JSON.stringify(newRecord.data_personas))
+              } catch(e){}
+            }
+            setSyncStatus('synced')
+          }
+        }
+      )
+      .on('presence', { event: 'sync' }, () => {
+        try {
+          const presences = channel.presenceState()
+          const count = Object.keys(presences).length
+          setActiveUsersCount(Math.max(1, count))
+        } catch (e) {}
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          try {
+            await channel.track({
+              online_at: new Date().toISOString(),
+              client_id: clientId.current
+            })
+          } catch (e) {}
+        }
+      })
+
+    channelRef.current = channel
+
+    return () => {
+      supabase.removeChannel(channel)
+      channelRef.current = null
+    }
+  }, [currentSemanaId])
+
+  // Función interna para persistir en Supabase
+  const persistToSupabase = async (rep: ReporteDia[], pers: Record<string, number>, semId: string) => {
+    if (!semId) return
+    setSyncStatus('saving')
+    try {
+      const { error } = await supabase.from('semanas_planificadas').update({
+        data_reporte: rep,
+        data_personas: pers,
+        updated_at: new Date().toISOString()
+      }).eq('id', semId)
+
+      if (error) {
+        console.error('Error auto-guardando en Supabase:', error)
+        setSyncStatus('error')
+      } else {
+        setSyncStatus('synced')
+      }
+    } catch (err) {
+      console.error('Error auto-guardando:', err)
+      setSyncStatus('error')
+    }
+  }
+
+  // Broadcast instantáneo a todos los demás dispositivos conectados a la página
+  const broadcastChange = (rep: ReporteDia[], pers: Record<string, number>) => {
+    if (!channelRef.current) return
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'sync_malla',
+      payload: {
+        senderId: clientId.current,
+        reporte: rep,
+        personasArea: pers,
+        timestamp: Date.now()
+      }
+    })
+  }
+
+  // Sincronización general: actualiza local + broadcast en milisegundos + guarda en Supabase
+  const sincronizar = (
+    newReporte: ReporteDia[], 
+    newPersonas: Record<string, number>, 
+    immediate: boolean = false
+  ) => {
+    if (isReceivingRemote.current) return
+
+    setReporte(newReporte)
+    setPersonasArea(newPersonas)
+    try {
+      localStorage.setItem('horarios_pro_reporte', JSON.stringify(newReporte))
+      localStorage.setItem('multifuncional_personas_area', JSON.stringify(newPersonas))
+      localStorage.setItem('apoyo_personas_area', JSON.stringify(newPersonas))
+    } catch (e) {}
+
+    // 1. Broadcast instantáneo por WebSocket a otros dispositivos
+    if (immediate) {
+      if (broadcastTimeoutRef.current) clearTimeout(broadcastTimeoutRef.current)
+      broadcastChange(newReporte, newPersonas)
+    } else {
+      if (broadcastTimeoutRef.current) clearTimeout(broadcastTimeoutRef.current)
+      broadcastTimeoutRef.current = setTimeout(() => {
+        broadcastChange(newReporte, newPersonas)
+      }, 50)
+    }
+
+    // 2. Guardado persistente en la base de datos Supabase
+    const targetSemId = currentSemanaIdRef.current
+    if (!targetSemId) return
+
+    if (immediate) {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      persistToSupabase(newReporte, newPersonas, targetSemId)
+    } else {
+      setSyncStatus('saving')
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = setTimeout(() => {
+        persistToSupabase(newReporte, newPersonas, targetSemId)
+      }, 350)
+    }
+  }
+
+  const flushSync = () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+      persistToSupabase(reporteRef.current, personasAreaRef.current, currentSemanaIdRef.current)
+    }
+    if (broadcastTimeoutRef.current) {
+      clearTimeout(broadcastTimeoutRef.current)
+      broadcastTimeoutRef.current = null
+      broadcastChange(reporteRef.current, personasAreaRef.current)
+    }
+  }
+
+  const updateEmpleado = (
+    diaIndex: number, 
+    empId: string, 
+    updates: Partial<TurnoEmpleado>, 
+    immediate: boolean = false
+  ) => {
+    if (!permisoEditar) return
+    const newReporte = reporte.map((dia, idx) => {
+      if (idx !== diaIndex) return dia
+      return {
+        ...dia,
+        empleados: dia.empleados.map(emp => {
+          if (emp.id !== empId) return emp
+          return { ...emp, ...updates }
+        })
+      }
+    })
+    sincronizar(newReporte, personasArea, immediate)
+  }
+
+  const handlePersonasAreaChange = (area: string, val: number) => {
+    if (!permisoEditar) return
+    const newPersonas = { ...personasArea, [area]: val }
+    sincronizar(reporte, newPersonas, true)
   }
 
   const loadSemana = async (id: string) => {
@@ -201,49 +414,39 @@ export default function MallaMultifuncionalPage() {
     }
   }
 
-  const guardarCambios = async () => {
-    if (!currentSemanaId) {
-      toast.error('No hay una semana activa seleccionada para guardar')
-      return
-    }
-    setGuardando(true)
-    try {
-      const { error } = await supabase.from('semanas_planificadas').update({
-        data_reporte: reporte,
-        data_personas: personasArea,
-        updated_at: new Date().toISOString()
-      }).eq('id', currentSemanaId)
-      
-      if (error) throw error
-      toast.success('¡Cambios guardados en la base de datos con éxito!')
-    } catch (e: any) {
-      console.error(e)
-      toast.error('Error al guardar cambios: ' + e.message)
-    } finally {
-      setGuardando(false)
-    }
-  }
-
   const addBloque = (diaIndex: number) => {
     if (!permisoEditar) return
-    const newReporte = [...reporte]
-    newReporte[diaIndex].empleados.push({
-      id: `manual-multi-${Date.now()}`,
-      nombre: '',
-      rol: 'Multifuncional',
-      inicio: 9,
-      fin: 13,
-      isMultifuncional: true,
-      area: ''
+    const newReporte = reporte.map((dia, idx) => {
+      if (idx !== diaIndex) return dia
+      return {
+        ...dia,
+        empleados: [
+          ...dia.empleados,
+          {
+            id: `manual-multi-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            nombre: '',
+            rol: 'Multifuncional',
+            inicio: 9,
+            fin: 13,
+            isMultifuncional: true,
+            area: ''
+          }
+        ]
+      }
     })
-    setReporte(newReporte)
+    sincronizar(newReporte, personasArea, true)
   }
 
   const deleteBloque = (diaIndex: number, empId: string) => {
     if (!permisoEditar) return
-    const newReporte = [...reporte]
-    newReporte[diaIndex].empleados = newReporte[diaIndex].empleados.filter(e => e.id !== empId)
-    setReporte(newReporte)
+    const newReporte = reporte.map((dia, idx) => {
+      if (idx !== diaIndex) return dia
+      return {
+        ...dia,
+        empleados: dia.empleados.filter(e => e.id !== empId)
+      }
+    })
+    sincronizar(newReporte, personasArea, true)
   }
 
   if (!mounted) return null 
@@ -379,15 +582,39 @@ export default function MallaMultifuncionalPage() {
               <option key={s.id} value={s.id}>{s.nombre_semana}</option>
             ))}
           </select>
-          {reporte.length > 0 && permisoEditar && (
-            <Button
-              onClick={guardarCambios}
-              disabled={guardando || cargandoSemana}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 shadow-sm gap-1.5"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {guardando ? 'Guardando...' : 'Guardar Cambios'}
-            </Button>
+
+          {reporte.length > 0 && (
+            <div className="flex items-center gap-2">
+              {syncStatus === 'saving' && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold shadow-xs transition-all">
+                  <div className="w-2.5 h-2.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                  <span>Guardando en la nube...</span>
+                </div>
+              )}
+              {syncStatus === 'synced' && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold shadow-xs transition-all">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span>En vivo</span>
+                    {activeUsersCount > 1 && (
+                      <span className="bg-emerald-200/80 text-emerald-900 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                        {activeUsersCount} activos
+                      </span>
+                    )}
+                    <span className="hidden sm:inline">• Guardado automático</span>
+                  </span>
+                </div>
+              )}
+              {syncStatus === 'error' && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold shadow-xs">
+                  <span className="h-2 w-2 rounded-full bg-rose-600"></span>
+                  <span>Reintentando conexión...</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -444,9 +671,10 @@ export default function MallaMultifuncionalPage() {
                                   const val = e.target.value; 
                                   if (val.length <= 5) {
                                     const frac = timeToFraction(val)
-                                    if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { inicio: frac })
+                                    if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { inicio: frac }, false)
                                   }
                                 }} 
+                                onBlur={() => flushSync()}
                                 className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50 font-bold disabled:cursor-not-allowed" 
                                 placeholder="09:00" 
                                 maxLength={5}
@@ -460,9 +688,10 @@ export default function MallaMultifuncionalPage() {
                                   const val = e.target.value; 
                                   if (val.length <= 5) {
                                     const frac = timeToFraction(val)
-                                    if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { fin: frac })
+                                    if (frac > 0 || val.replace(':','') === '0000') updateEmpleado(diaIndex, b.id, { fin: frac }, false)
                                   }
                                 }} 
+                                onBlur={() => flushSync()}
                                 className="w-10 bg-transparent border-none p-0 outline-none placeholder:text-black/50 font-bold disabled:cursor-not-allowed" 
                                 placeholder="13:30" 
                                 maxLength={5}
@@ -472,13 +701,14 @@ export default function MallaMultifuncionalPage() {
                               disabled={!permisoEditar}
                               value={b.nombre === 'Soporte Automático' ? '' : b.nombre}
                               placeholder="NOMBRE..."
-                              onChange={e => updateEmpleado(diaIndex, b.id, { nombre: e.target.value || 'Soporte Automático' })}
+                              onChange={e => updateEmpleado(diaIndex, b.id, { nombre: e.target.value || 'Soporte Automático' }, false)}
+                              onBlur={() => flushSync()}
                               className="w-full text-[11px] font-bold uppercase bg-transparent border-none p-0 outline-none placeholder:text-black/30 disabled:cursor-not-allowed"
                             />
                             <select 
                               disabled={!permisoEditar}
                               value={b.area || ''}
-                              onChange={e => updateEmpleado(diaIndex, b.id, { area: e.target.value })}
+                              onChange={e => updateEmpleado(diaIndex, b.id, { area: e.target.value }, true)}
                               className="text-[8px] font-semibold bg-white/30 border border-black/10 p-0 outline-none w-full mt-1 appearance-none rounded-none text-black cursor-pointer disabled:cursor-not-allowed"
                             >
                               <option value="">- Vacío -</option>
@@ -537,7 +767,7 @@ export default function MallaMultifuncionalPage() {
                         type="number" 
                         disabled={!permisoEditar}
                         value={personasArea[area] || ''} 
-                        onChange={e => setPersonasArea({ ...personasArea, [area]: parseInt(e.target.value) || 0 })}
+                        onChange={e => handlePersonasAreaChange(area, parseInt(e.target.value) || 0)}
                         className="w-full h-full text-[10px] font-bold text-center outline-none bg-transparent disabled:cursor-not-allowed"
                         placeholder="0"
                       />
