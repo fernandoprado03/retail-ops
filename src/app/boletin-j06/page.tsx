@@ -23,7 +23,8 @@ import {
   ClipboardPaste,
   FileText,
   Smartphone,
-  CheckCircle
+  CheckCircle,
+  Award
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
@@ -173,6 +174,17 @@ export interface FilaAppVencimientoTienda {
   lider: string
   dias: { fecha: string; porcentaje: number }[]
   totalPorcentaje: number
+}
+
+// Interfaces Calidad Auditoría (Excel Online)
+export interface FilaCalidadAuditoriaTienda {
+  codigo: string
+  nombre: string
+  lider: string
+  nota: number
+  mesEvaluado: string
+  esArrastre: boolean
+  otrosComentarios?: string
 }
 
 const NOMBRES_7_CAMPOS_DDF = [
@@ -347,13 +359,36 @@ const DATOS_EJEMPLO_VENCIMIENTO: FilaAppVencimientoTienda[] = TIENDAS_ZONA_B.map
   }
 })
 
+// Datos de muestra Calidad Auditoría (Valores del reporte Excel de Septiembre con arrastre a Octubre)
+const DATOS_EJEMPLO_CALIDAD_AUDITORIA: FilaCalidadAuditoriaTienda[] = [
+  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', nota: 100.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', nota: 87.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true, otrosComentarios: '22 de Setiembre Inventario de Perecibles' },
+  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', nota: 94.74, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', nota: 100.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', nota: 87.01, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', nota: 95.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', nota: 99.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', nota: 88.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true, otrosComentarios: '22 - 23 de septiembre Inventario de Perecibles' },
+  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', nota: 78.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', nota: 88.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', nota: 96.0, mesEvaluado: 'Septiembre (Arrastre)', esArrastre: true },
+]
+
 export default function BoletinJ06Page() {
-  const [activeTab, setActiveTab] = useState<'vencimiento' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'>('vencimiento')
+  const [activeTab, setActiveTab] = useState<
+    'vencimiento' | 'calidad_auditoria' | 'ddf' | 'disponibilidad' | 'negativos' | 'ajustes' | 'boletin_preview' | 'consolidado'
+  >('calidad_auditoria')
 
   // Estado App Vencimiento
   const [datosVencimiento, setDatosVencimiento] = useState<FilaAppVencimientoTienda[]>(DATOS_EJEMPLO_VENCIMIENTO)
   const [textoPegadoVencimiento, setTextoPegadoVencimiento] = useState<string>('')
   const [copiadoVencimiento, setCopiadoVencimiento] = useState(false)
+
+  // Estado Calidad Auditoría
+  const [datosCalidadAuditoria, setDatosCalidadAuditoria] = useState<FilaCalidadAuditoriaTienda[]>(DATOS_EJEMPLO_CALIDAD_AUDITORIA)
+  const [textoPegadoCalidad, setTextoPegadoCalidad] = useState<string>('')
+  const [copiadoCalidad, setCopiadoCalidad] = useState(false)
+  const [mesObjetivoAuditoria, setMesObjetivoAuditoria] = useState<string>('octubre')
 
   // Estado DDF
   const [datosDDF, setDatosDDF] = useState<FilaDDFTienda[]>(DATOS_EJEMPLO_DDF_SEM_41)
@@ -556,6 +591,222 @@ export default function BoletinJ06Page() {
     setTimeout(() => setCopiadoVencimiento(false), 2500)
   }
 
+  // Procesar Texto Pegado de Auditoría de Calidad (Excel Online)
+  const procesarTextoPegadoCalidad = (rawText: string, mesTarget?: string) => {
+    if (!rawText || rawText.trim().length === 0) {
+      toast.error('El portapapeles está vacío o no contiene texto.')
+      return
+    }
+
+    try {
+      const mesObjetivo = (mesTarget || mesObjetivoAuditoria || 'octubre').toLowerCase()
+      const MESES_LISTA = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+      ]
+      const targetMesIdx = MESES_LISTA.indexOf(mesObjetivo) !== -1 ? MESES_LISTA.indexOf(mesObjetivo) : 9
+
+      const rows = parseTSVWithQuotes(rawText)
+      const isTSV = rows.length > 1 && rows[0].length >= 2
+
+      if (isTSV) {
+        let headerRowIdx = -1
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          const rowText = rows[i].join(' ').toLowerCase()
+          if (rowText.includes('tienda') || rowText.includes('calidad') || rowText.includes('septiembre') || rowText.includes('setiembre')) {
+            headerRowIdx = i
+            break
+          }
+        }
+
+        const headerRow = headerRowIdx !== -1 ? rows[headerRowIdx] : []
+        const colMap: Record<string, { notaCol: number; otrosCol: number }> = {}
+
+        if (headerRow.length > 0) {
+          headerRow.forEach((h, colIdx) => {
+            const hLower = h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            MESES_LISTA.forEach(mes => {
+              const mesNorm = mes === 'septiembre' ? '(?:septiembre|setiembre)' : mes
+              const re = new RegExp(`\\b${mesNorm}\\b`, 'i')
+              if (re.test(hLower)) {
+                if (!colMap[mes]) {
+                  colMap[mes] = { notaCol: colIdx, otrosCol: -1 }
+                }
+              }
+            })
+            if (hLower.includes('otros')) {
+              const prevMes = Object.keys(colMap).reverse().find(m => colMap[m].otrosCol === -1)
+              if (prevMes) {
+                colMap[prevMes].otrosCol = colIdx
+              }
+            }
+          })
+        }
+
+        const resultado: FilaCalidadAuditoriaTienda[] = TIENDAS_ZONA_B.map(t => {
+          const storeRow = rows.find(r => r.some(c => identificarTienda(c)?.codigo === t.codigo))
+          if (!storeRow) {
+            const defaultItem = DATOS_EJEMPLO_CALIDAD_AUDITORIA.find(d => d.codigo === t.codigo)
+            return defaultItem || {
+              codigo: t.codigo,
+              nombre: t.nombre,
+              lider: t.lider,
+              nota: 100,
+              mesEvaluado: 'Sin Datos',
+              esArrastre: false,
+            }
+          }
+
+          let notaFinal: number | null = null
+          let mesFinal = ''
+          let esArrastre = false
+          let otros = ''
+
+          if (Object.keys(colMap).length > 0) {
+            for (let i = targetMesIdx; i >= 0; i--) {
+              const mes = MESES_LISTA[i]
+              const cfg = colMap[mes]
+              if (cfg && cfg.notaCol !== undefined && storeRow[cfg.notaCol]) {
+                const cellVal = storeRow[cfg.notaCol].replace('%', '').replace(',', '.').trim()
+                const val = parseFloat(cellVal)
+                if (!isNaN(val) && val > 0) {
+                  notaFinal = val
+                  mesFinal = mes.charAt(0).toUpperCase() + mes.slice(1)
+                  esArrastre = (mes !== mesObjetivo)
+                  if (cfg.otrosCol !== -1 && storeRow[cfg.otrosCol]) {
+                    otros = storeRow[cfg.otrosCol].trim()
+                  }
+                  break
+                }
+              }
+            }
+          }
+
+          if (notaFinal === null) {
+            for (let c = 1; c < storeRow.length; c++) {
+              const cellVal = storeRow[c].replace('%', '').replace(',', '.').trim()
+              const val = parseFloat(cellVal)
+              if (!isNaN(val) && val > 0 && val <= 100) {
+                notaFinal = val
+                mesFinal = 'Septiembre'
+                esArrastre = true
+                if (storeRow[c + 1] && isNaN(parseFloat(storeRow[c + 1]))) {
+                  otros = storeRow[c + 1].trim()
+                }
+                break
+              }
+            }
+          }
+
+          return {
+            codigo: t.codigo,
+            nombre: t.nombre,
+            lider: t.lider,
+            nota: notaFinal !== null ? notaFinal : 100,
+            mesEvaluado: mesFinal ? (esArrastre ? `${mesFinal} (Arrastre)` : mesFinal) : 'Sin Datos',
+            esArrastre,
+            otrosComentarios: otros,
+          }
+        })
+
+        setDatosCalidadAuditoria(resultado)
+        setTextoPegadoCalidad(rawText)
+        const arrastresCount = resultado.filter(r => r.esArrastre).length
+        toast.success(
+          `¡Calidad procesada! 11 tiendas sincronizadas (${arrastresCount} con arrastre).`
+        )
+        return
+      }
+
+      // Si no es TSV, procesar como texto plano multilínea
+      const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+      const tiendasEncontradas: { idx: number; tienda: TiendaZonaB }[] = []
+      lineas.forEach((l, idx) => {
+        const match = identificarTienda(l)
+        if (match && !tiendasEncontradas.some(item => item.tienda.codigo === match.codigo)) {
+          tiendasEncontradas.push({ idx, tienda: match })
+        }
+      })
+
+      if (tiendasEncontradas.length > 0) {
+        const resultado: FilaCalidadAuditoriaTienda[] = TIENDAS_ZONA_B.map(t => {
+          const matchIdx = tiendasEncontradas.findIndex(item => item.tienda.codigo === t.codigo)
+          if (matchIdx === -1) {
+            const def = DATOS_EJEMPLO_CALIDAD_AUDITORIA.find(d => d.codigo === t.codigo)
+            return def || {
+              codigo: t.codigo,
+              nombre: t.nombre,
+              lider: t.lider,
+              nota: 100,
+              mesEvaluado: 'Sin Datos',
+              esArrastre: false,
+            }
+          }
+
+          const currentStore = tiendasEncontradas[matchIdx]
+          const nextStoreIdx = matchIdx < tiendasEncontradas.length - 1 ? tiendasEncontradas[matchIdx + 1].idx : lineas.length
+          const chunk = lineas.slice(currentStore.idx + 1, nextStoreIdx)
+
+          let nota = 100
+          let otros = ''
+          for (const item of chunk) {
+            const clean = item.replace('%', '').replace(',', '.').trim()
+            const num = parseFloat(clean)
+            if (!isNaN(num) && num > 0 && num <= 100) {
+              nota = num
+            } else if (item.toLowerCase().includes('inventario') || item.toLowerCase().includes('perecible') || item.length > 5) {
+              otros = item
+            }
+          }
+
+          return {
+            codigo: t.codigo,
+            nombre: t.nombre,
+            lider: t.lider,
+            nota,
+            mesEvaluado: 'Septiembre (Arrastre)',
+            esArrastre: true,
+            otrosComentarios: otros,
+          }
+        })
+
+        setDatosCalidadAuditoria(resultado)
+        setTextoPegadoCalidad(rawText)
+        toast.success(`¡Calidad procesada correctamente desde texto copiado!`)
+      } else {
+        toast.error('No se reconocieron tiendas en el texto pegado.')
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Error al procesar el texto de calidad.')
+    }
+  }
+
+  // Pegar directo desde portapapeles para Calidad
+  const handlePegarCalidadPortapapeles = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto) {
+        procesarTextoPegadoCalidad(texto)
+      } else {
+        toast.warning('El portapapeles está vacío.')
+      }
+    } catch {
+      toast.info('Presiona Ctrl+V dentro del recuadro inferior para pegar el reporte de Calidad.')
+    }
+  }
+
+  // Copiar Notas de Calidad
+  const copiarNotasCalidad = () => {
+    const texto = datosCalidadAuditoria
+      .map(item => `${item.nombre}\t${item.nota.toFixed(2)}%\t${item.mesEvaluado}\t${item.otrosComentarios || ''}`)
+      .join('\n')
+    navigator.clipboard.writeText(`Local\tNota Calidad\tMes\tOtros\n${texto}`)
+    setCopiadoCalidad(true)
+    toast.success('¡Notas de Calidad copiadas al portapapeles!')
+    setTimeout(() => setCopiadoCalidad(false), 2500)
+  }
+
   // Procesar DDF
   const procesarTextoPegadoDDF = (rawText: string) => {
     if (!rawText || rawText.trim().length === 0) {
@@ -633,6 +884,15 @@ export default function BoletinJ06Page() {
   const tiendas100Venc = datosVencimiento.filter(t => t.totalPorcentaje === 100).length
   const tiendasObservadasVenc = datosVencimiento.filter(t => t.totalPorcentaje < 100).length
 
+  // Estadísticas Calidad Auditoría
+  const promedioCalidad =
+    datosCalidadAuditoria.length > 0
+      ? (datosCalidadAuditoria.reduce((acc, t) => acc + t.nota, 0) / datosCalidadAuditoria.length).toFixed(2)
+      : '0.00'
+  const tiendasCumplenCalidad = datosCalidadAuditoria.filter(t => t.nota >= 90).length
+  const tiendasDesvioCalidad = datosCalidadAuditoria.filter(t => t.nota < 90).length
+  const tiendasArrastreCalidad = datosCalidadAuditoria.filter(t => t.esArrastre).length
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 p-4 md:p-8 space-y-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -661,7 +921,13 @@ export default function BoletinJ06Page() {
               <span className="font-medium text-slate-700">Semana:</span>
               <select
                 value={semanaSeleccionada}
-                onChange={e => setSemanaSeleccionada(e.target.value)}
+                onChange={e => {
+                  const s = e.target.value
+                  setSemanaSeleccionada(s)
+                  if (s.includes('40') || s.includes('41') || s.includes('42') || s.includes('43')) {
+                    setMesObjetivoAuditoria('octubre')
+                  }
+                }}
                 className="bg-transparent font-semibold text-slate-900 border-none focus:outline-none cursor-pointer"
               >
                 <option value="Semana 40">Semana 40</option>
@@ -677,6 +943,7 @@ export default function BoletinJ06Page() {
                 setDatosDisponibilidad(DATOS_EJEMPLO_DISPONIBILIDAD)
                 setDatosDDF(DATOS_EJEMPLO_DDF_SEM_41)
                 setDatosVencimiento(DATOS_EJEMPLO_VENCIMIENTO)
+                setDatosCalidadAuditoria(DATOS_EJEMPLO_CALIDAD_AUDITORIA)
                 toast.info('Se cargaron los datos de ejemplo.')
               }}
               className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors cursor-pointer"
@@ -699,6 +966,18 @@ export default function BoletinJ06Page() {
           >
             <Smartphone className="w-4 h-4" />
             1. App Vencimiento (Pegar Web)
+          </button>
+
+          <button
+            onClick={() => setActiveTab('calidad_auditoria')}
+            className={`py-3.5 px-4 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'calidad_auditoria'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            2. Calidad Auditoría (Pegar Excel)
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
               Nuevo
             </span>
@@ -713,7 +992,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ClipboardPaste className="w-4 h-4" />
-            2. Incidencias DDF (Pegar Tabla)
+            3. Incidencias DDF (Pegar Tabla)
           </button>
 
           <button
@@ -725,7 +1004,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            3. Disponibilidad (ResumGTda)
+            4. Disponibilidad (ResumGTda)
           </button>
 
           <button
@@ -737,7 +1016,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <TrendingDown className="w-4 h-4" />
-            4. Negativos (Looker)
+            5. Negativos (Looker)
           </button>
 
           <button
@@ -749,7 +1028,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            5. Ajustes (Looker)
+            6. Ajustes (Looker)
           </button>
 
           <button
@@ -761,9 +1040,9 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Eye className="w-4 h-4" />
-            6. Vista Previa Boletín J06
+            7. Vista Previa Boletín J06
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
-              7 KPIs Conectados
+              8 KPIs Conectados
             </span>
           </button>
 
@@ -776,7 +1055,7 @@ export default function BoletinJ06Page() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            7. Datos Consolidado
+            8. Datos Consolidado
           </button>
         </div>
 
@@ -997,7 +1276,246 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 2: INCIDENCIAS DDF */}
+        {/* TAB 2: CALIDAD AUDITORÍA (PEGAR EXCEL ONLINE) */}
+        {activeTab === 'calidad_auditoria' && (
+          <div className="space-y-6">
+            {/* Panel de Ingesta */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Award className="w-5 h-5 text-emerald-600" />
+                    Auditoría de Calidad (Excel Online)
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Copia la tabla desde el archivo online de Calidad. Si la tienda aún no tiene nota en el mes evaluado (<strong>{mesObjetivoAuditoria.toUpperCase()}</strong>), el sistema aplicará automáticamente la última nota auditada (<strong>Septiembre</strong>) como arrastre.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-medium text-slate-700">
+                    <span>Mes a Evaluar:</span>
+                    <select
+                      value={mesObjetivoAuditoria}
+                      onChange={e => {
+                        const nuevoMes = e.target.value
+                        setMesObjetivoAuditoria(nuevoMes)
+                        if (textoPegadoCalidad) {
+                          procesarTextoPegadoCalidad(textoPegadoCalidad, nuevoMes)
+                        }
+                      }}
+                      className="bg-transparent font-bold text-slate-900 outline-none cursor-pointer"
+                    >
+                      <option value="septiembre">Septiembre</option>
+                      <option value="octubre">Octubre</option>
+                      <option value="noviembre">Noviembre</option>
+                      <option value="diciembre">Diciembre</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handlePegarCalidadPortapapeles}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    <ClipboardPaste className="w-4 h-4" />
+                    Pegar desde Portapapeles
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <textarea
+                  value={textoPegadoCalidad}
+                  onChange={e => {
+                    setTextoPegadoCalidad(e.target.value)
+                    procesarTextoPegadoCalidad(e.target.value)
+                  }}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text')
+                    if (pasted) {
+                      e.preventDefault()
+                      setTextoPegadoCalidad(pasted)
+                      procesarTextoPegadoCalidad(pasted)
+                    }
+                  }}
+                  placeholder="Haz clic aquí y presiona Ctrl + V (o Cmd + V) para pegar la tabla copiada del Excel Online de Calidad..."
+                  rows={3}
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none bg-slate-50/50 transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 text-[11px] text-emerald-800 flex items-start gap-2">
+                <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Lógica de Arrastre Inteligente:</strong> Para la {semanaSeleccionada} (Octubre), si la tienda no tiene evaluación aún, el sistema rescata la calificación de Septiembre y la marca con la etiqueta <span className="inline-block bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-semibold text-[10px]">Arrastre</span> en el Boletín. La meta de calidad es <strong>&gt;90%</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjetas KPI de Calidad */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Promedio Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioCalidad}%</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Meta mensual: &gt;90%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Award className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplen Meta (≥90%)</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {tiendasCumplenCalidad} <span className="text-sm font-medium text-slate-400">/ {datosCalidadAuditoria.length}</span>
+                  </p>
+                  <p className="text-xs text-emerald-700 font-semibold mt-0.5">
+                    {datosCalidadAuditoria.length > 0 ? ((tiendasCumplenCalidad / datosCalidadAuditoria.length) * 100).toFixed(1) : 0}% efectividad
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">En Desvío (&lt;90%)</p>
+                  <p className="text-2xl font-black text-rose-600 mt-1">
+                    {tiendasDesvioCalidad} <span className="text-sm font-medium text-slate-400">/ {datosCalidadAuditoria.length}</span>
+                  </p>
+                  <p className="text-xs text-rose-600 font-medium mt-0.5">Requieren plan de acción</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Con Arrastre</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">
+                    {tiendasArrastreCalidad} <span className="text-sm font-medium text-slate-400">/ {datosCalidadAuditoria.length}</span>
+                  </p>
+                  <p className="text-xs text-amber-700 font-medium mt-0.5">Provenientes de Septiembre</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <Clock className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Detallada Calidad Auditoría */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    CALIDAD AUDITORÍA - Evaluaciones de Tiendas Zona B
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Meta: &gt;90% de calificación en auditoría de perecibles / calidad.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={copiarNotasCalidad}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer"
+                  >
+                    {copiadoCalidad ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                    {copiadoCalidad ? '¡Copiado!' : 'Copiar Notas'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Local</th>
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Líder J06 / Jefe Comercial</th>
+                      <th className="py-2.5 px-3 bg-[#2e7d32] border-r border-emerald-800 min-w-[110px]">
+                        Nota Auditoría
+                      </th>
+                      <th className="py-2.5 px-3 bg-[#2e7d32] border-r border-emerald-800 min-w-[140px]">
+                        Mes de Origen
+                      </th>
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800 min-w-[200px]">
+                        Otros / Observaciones
+                      </th>
+                      <th className="py-2.5 px-4 bg-[#1b5e20] min-w-[120px]">
+                        Estado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosCalidadAuditoria.map((item, idx) => {
+                      const cumple = item.nota >= 90
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {item.lider}
+                          </td>
+                          <td className="py-2.5 px-4 text-center font-black border-r border-slate-200 whitespace-nowrap">
+                            <span
+                              className={`inline-block px-3 py-1 rounded-md text-xs font-bold border ${
+                                cumple
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                              }`}
+                            >
+                              {item.nota.toFixed(2)}%
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center border-r border-slate-200 whitespace-nowrap">
+                            {item.esArrastre ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                <Clock className="w-3 h-3" />
+                                {item.mesEvaluado}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <CheckCircle className="w-3 h-3" />
+                                {item.mesEvaluado}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 text-xs">
+                            {item.otrosComentarios || <span className="text-slate-300 italic">Sin observaciones</span>}
+                          </td>
+                          <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                            {cumple ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                🟢 Cumple (&gt;90%)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                🔴 Desvío (&lt;90%)
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: INCIDENCIAS DDF */}
         {activeTab === 'ddf' && (
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -1051,7 +1569,7 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 6: VISTA PREVIA BOLETÍN J06 */}
+        {/* TAB 7: VISTA PREVIA BOLETÍN J06 */}
         {activeTab === 'boletin_preview' && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
@@ -1063,13 +1581,14 @@ export default function BoletinJ06Page() {
                   Secciones automatizadas: <strong className="text-emerald-700">Ajustes</strong>,{' '}
                   <strong className="text-emerald-700">Negativos</strong>,{' '}
                   <strong className="text-emerald-700">Incidencias DDF</strong>,{' '}
-                  <strong className="text-emerald-700">Disponibilidad (NSG, Bodega, Quiebre)</strong> y{' '}
-                  <strong className="text-emerald-700">App Vencimiento</strong>.
+                  <strong className="text-emerald-700">Disponibilidad (NSG, Bodega, Quiebre)</strong>,{' '}
+                  <strong className="text-emerald-700">App Vencimiento</strong> y{' '}
+                  <strong className="text-emerald-700">Calidad Auditoría</strong>.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> 7 Indicadores Sincronizados
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 8 Indicadores Sincronizados
                 </span>
               </div>
             </div>
@@ -1148,7 +1667,9 @@ export default function BoletinJ06Page() {
                     </th>
 
                     {/* Calidad Objetivos */}
-                    <th className="py-1 px-2 border-r border-slate-300">&gt;90%</th>
+                    <th className="py-1 px-2 border-r border-slate-300 bg-emerald-100 text-emerald-900 font-bold">
+                      &gt;90% (Auditoría)
+                    </th>
                     <th className="py-1 px-2 bg-emerald-100 text-emerald-900 font-bold">100% (App Vencimiento)</th>
                   </tr>
 
@@ -1183,7 +1704,9 @@ export default function BoletinJ06Page() {
                       Quiebre ⭐
                     </th>
 
-                    <th className="py-2 px-2 border-r border-slate-300">Nota</th>
+                    <th className="py-2 px-2 border-r border-slate-300 bg-emerald-200 text-emerald-950 font-bold">
+                      Nota Auditoría ⭐
+                    </th>
                     <th className="py-2 px-2 bg-emerald-200 text-emerald-950 font-bold">
                       App vencimiento ⭐
                     </th>
@@ -1196,6 +1719,7 @@ export default function BoletinJ06Page() {
                     const rowDisp = datosDisponibilidad.find(d => d.codigo === tienda.codigo)
                     const rowDDF = datosDDF.find(df => df.codigo === tienda.codigo)
                     const rowVenc = datosVencimiento.find(v => v.codigo === tienda.codigo)
+                    const rowCalidad = datosCalidadAuditoria.find(c => c.codigo === tienda.codigo)
 
                     const pctAjuste = rowAjuste ? rowAjuste.cumplimientoPorcentaje : 0
                     const pctNegativo = rowNegativo ? rowNegativo.cumplimientoPorcentaje : 0
@@ -1203,6 +1727,9 @@ export default function BoletinJ06Page() {
 
                     const pctDDF = rowDDF ? rowDDF.cumplimientoPorcentaje : 0
                     const pctVenc = rowVenc ? rowVenc.totalPorcentaje : 100.0
+                    const notaAuditoria = rowCalidad ? rowCalidad.nota : 100.0
+                    const esArrastreAuditoria = rowCalidad ? rowCalidad.esArrastre : false
+                    const mesCalidad = rowCalidad ? rowCalidad.mesEvaluado : 'Octubre'
 
                     const nsgVal = rowDisp ? rowDisp.nsg : 0
                     const bodegaVal = rowDisp ? rowDisp.bodega : 0
@@ -1303,7 +1830,26 @@ export default function BoletinJ06Page() {
                           {quiebreVal.toFixed(2)}%
                         </td>
 
-                        <td className="py-2 px-2 border-r border-slate-200 text-slate-600">100.00%</td>
+                        {/* CALIDAD: NOTA AUDITORÍA (AUTOMATIZADO) */}
+                        <td
+                          className={`py-2 px-2 border-r border-slate-200 font-bold ${
+                            notaAuditoria >= 90
+                              ? 'bg-emerald-50 text-emerald-900'
+                              : 'bg-[#ffcdd2] text-[#b71c1c]'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span>{notaAuditoria.toFixed(2)}%</span>
+                            {esArrastreAuditoria && (
+                              <span
+                                title={`Arrastre: ${mesCalidad}`}
+                                className="text-[9px] font-semibold text-amber-800 bg-amber-100 px-1 rounded leading-tight mt-0.5"
+                              >
+                                Arrastre
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
                         {/* CALIDAD: APP VENCIMIENTO (AUTOMATIZADO) */}
                         <td
@@ -1324,7 +1870,7 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 7: CONSOLIDADO */}
+        {/* TAB 8: CONSOLIDADO */}
         {activeTab === 'consolidado' && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
             <div>
@@ -1339,6 +1885,10 @@ export default function BoletinJ06Page() {
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono space-y-2 overflow-x-auto">
               <div className="font-bold text-slate-800">Estado de Automatización de Columnas:</div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-slate-600">
+                <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
+                  <span>✓ Calidad Auditoría</span>
+                  <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
+                </div>
                 <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-semibold flex items-center justify-between">
                   <span>✓ App Vencimiento</span>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">100%</span>
