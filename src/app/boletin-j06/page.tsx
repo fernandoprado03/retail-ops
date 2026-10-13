@@ -600,19 +600,19 @@ const DATOS_EJEMPLO_REGISTRO_AC: FilaRegistroACTienda[] = TIENDAS_ZONA_B.map(t =
   }
 })
 
-// Datos de muestra Ventas Semanales (Semana 40 de referencia oficial)
+// Datos de muestra Ventas Semanales (Semana 41 / Detalle KPI's oficial)
 export const DATOS_EJEMPLO_VENTA: FilaVentaTienda[] = [
-  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', ventaSoles: 88692, metaSoles: 96520, logroPorcentaje: 91.89, crecimientoPorcentaje: -3.23 },
-  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', ventaSoles: 38643, metaSoles: 39448, logroPorcentaje: 97.96, crecimientoPorcentaje: -0.13 },
-  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', ventaSoles: 37596, metaSoles: 37476, logroPorcentaje: 100.32, crecimientoPorcentaje: 5.09 },
-  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', ventaSoles: 48885, metaSoles: 52655, logroPorcentaje: 92.84, crecimientoPorcentaje: -2.97 },
-  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', ventaSoles: 58551, metaSoles: 68361, logroPorcentaje: 85.65, crecimientoPorcentaje: -16.11 },
-  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', ventaSoles: 70620, metaSoles: 77434, logroPorcentaje: 91.20, crecimientoPorcentaje: -4.90 },
-  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', ventaSoles: 59562, metaSoles: 59060, logroPorcentaje: 100.85, crecimientoPorcentaje: 11.99 },
-  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', ventaSoles: 50323, metaSoles: 59350, logroPorcentaje: 84.79, crecimientoPorcentaje: -9.79 },
-  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', ventaSoles: 32569, metaSoles: 33983, logroPorcentaje: 95.84, crecimientoPorcentaje: -0.95 },
-  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', ventaSoles: 24637, metaSoles: 29994, logroPorcentaje: 82.14, crecimientoPorcentaje: -8.84 },
-  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', ventaSoles: 26755, metaSoles: 27614, logroPorcentaje: 96.89, crecimientoPorcentaje: -2.39 },
+  { codigo: '103', nombre: '103 - Mega Plaza', lider: 'Ronny Mario Colque Sanchez', ventaSoles: 88096, metaSoles: 88651, logroPorcentaje: 99.4, crecimientoPorcentaje: 4.5 },
+  { codigo: '107', nombre: '107 - Atocongo', lider: 'Edgar Wuffarden', ventaSoles: 41662, metaSoles: 36450, logroPorcentaje: 114.3, crecimientoPorcentaje: 17.0 },
+  { codigo: '110', nombre: '110 - Huaylas', lider: 'Gerson Pichi Javier', ventaSoles: 36135, metaSoles: 34664, logroPorcentaje: 104.2, crecimientoPorcentaje: 7.1 },
+  { codigo: '118', nombre: '118 - Bellavista', lider: 'Miguel Vernales Sanchez', ventaSoles: 44840, metaSoles: 49168, logroPorcentaje: 91.2, crecimientoPorcentaje: -0.2 },
+  { codigo: '155', nombre: '155 - Santa Anita', lider: 'Oneida rojas castro', ventaSoles: 54145, metaSoles: 63872, logroPorcentaje: 84.8, crecimientoPorcentaje: -13.2 },
+  { codigo: '175', nombre: '175 - Lima Sur', lider: 'Victor Mejia', ventaSoles: 69596, metaSoles: 72818, logroPorcentaje: 95.6, crecimientoPorcentaje: -1.0 },
+  { codigo: '193', nombre: '193 - Puruchuco', lider: 'Eyder Mego Quispe', ventaSoles: 57233, metaSoles: 55337, logroPorcentaje: 103.4, crecimientoPorcentaje: 0.2 },
+  { codigo: '311', nombre: '311 - Trujillo 1', lider: 'Gustavo Carassaz', ventaSoles: 49028, metaSoles: 56313, logroPorcentaje: 87.1, crecimientoPorcentaje: -11.9 },
+  { codigo: '314', nombre: '314 - Trujillo 2', lider: 'Cynthia Caycho Malca', ventaSoles: 30385, metaSoles: 32643, logroPorcentaje: 93.1, crecimientoPorcentaje: -6.5 },
+  { codigo: '335', nombre: '335 - Chimbote', lider: 'Mariela Lisseth López Dominguez', ventaSoles: 22900, metaSoles: 27594, logroPorcentaje: 83.0, crecimientoPorcentaje: -10.4 },
+  { codigo: '357', nombre: '357 - Cusco La Cultura', lider: 'Enzo Danilo Parodi Portugal', ventaSoles: 28283, metaSoles: 26331, logroPorcentaje: 107.4, crecimientoPorcentaje: 7.7 },
 ]
 
 export default function BoletinJ06Page() {
@@ -624,10 +624,10 @@ export default function BoletinJ06Page() {
   const [datosVenta, setDatosVenta] = useState<FilaVentaTienda[]>(DATOS_EJEMPLO_VENTA)
   const [textoPegadoVenta, setTextoPegadoVenta] = useState<string>('')
   const [copiadoVenta, setCopiadoVenta] = useState(false)
-  const [ventaTotalBannerManual, setVentaTotalBannerManual] = useState<number>(2294972)
+  const [ventaTotalBannerManual, setVentaTotalBannerManual] = useState<number>(522302)
   const [usarTotalBannerManual, setUsarTotalBannerManual] = useState<boolean>(true)
-  const [cumplimientoBannerManual, setCumplimientoBannerManual] = useState<number>(94.0)
-  const [crecimientoBannerManual, setCrecimientoBannerManual] = useState<number>(-0.4)
+  const [cumplimientoBannerManual, setCumplimientoBannerManual] = useState<number>(96.0)
+  const [crecimientoBannerManual, setCrecimientoBannerManual] = useState<number>(-1.2)
 
   // Estado App Vencimiento
   const [datosVencimiento, setDatosVencimiento] = useState<FilaAppVencimientoTienda[]>(DATOS_EJEMPLO_VENCIMIENTO)
@@ -1526,98 +1526,186 @@ export default function BoletinJ06Page() {
       let actualizados = 0
       const nuevosDatos = [...datosVenta]
 
-      for (const linea of lineas) {
-        // Ignorar encabezados comunes
-        if (
-          /^(tienda|local|codigo|código|venta|logro|crecimiento|semana)/i.test(linea) &&
-          !identificarTienda(linea)
-        ) {
-          continue
+      // MODO 1: DETECCIÓN DE REPORTE WEB BI (Detalle KPI's con lista de tiendas y bloques de 5 métricas secuenciales)
+      const tiendasDetectadas: { tienda: TiendaZonaB; lineIdx: number }[] = []
+      let ultimoIdxTienda = -1
+
+      for (let i = 0; i < lineas.length; i++) {
+        const l = lineas[i]
+        // Identificar tiendas en líneas individuales (ej: "103 - Mega Plaza" o "107 - Atocongo")
+        const match = identificarTienda(l)
+        if (match && /^(103|107|110|118|155|175|193|311|314|335|357)/.test(l)) {
+          tiendasDetectadas.push({ tienda: match, lineIdx: i })
+          ultimoIdxTienda = Math.max(ultimoIdxTienda, i)
+        }
+      }
+
+      if (tiendasDetectadas.length >= 8 && ultimoIdxTienda > 0) {
+        // Funciones auxiliares de detección numérica para formato BI
+        const isAmount = (str: string) => {
+          if (str.includes('%') || str.includes('PP')) return false
+          return /^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(str) || /^-?\d+([,\.]\d+)?$/.test(str)
+        }
+        const isPercent = (str: string) => /^-?\d+([,\.]\d+)?\s*%$/.test(str)
+        const parseMonto = (str: string) => {
+          if (/^\d{1,3}(\.\d{3})+$/.test(str)) {
+            return parseInt(str.replace(/\./g, ''), 10)
+          }
+          const limpio = str.replace(/\./g, '').replace(',', '.')
+          return Math.round(parseFloat(limpio))
+        }
+        const parsePct = (str: string) => {
+          const limpio = str.replace('%', '').trim().replace(',', '.')
+          return parseFloat(parseFloat(limpio).toFixed(2))
         }
 
-        const partes = linea.includes('\t')
-          ? linea.split('\t').map(p => p.trim())
-          : linea.includes(';')
-          ? linea.split(';').map(p => p.trim())
-          : linea.split(/\s{2,}/).map(p => p.trim())
-
-        let tiendaMatch: TiendaZonaB | undefined = undefined
-        for (let i = 0; i < partes.length; i++) {
-          const match = identificarTienda(partes[i])
-          if (match) {
-            tiendaMatch = match
-            break
+        // Buscar tuplas de 5 métricas iniciales por tienda: [Venta, Plan Venta, Logro, Venta AP, Crec Venta]
+        const tuplas: { venta: number; plan: number; logro: number; ventaAP: number; crec: number }[] = []
+        for (let i = ultimoIdxTienda + 1; i < lineas.length - 4; i++) {
+          const [l0, l1, l2, l3, l4] = [lineas[i], lineas[i+1], lineas[i+2], lineas[i+3], lineas[i+4]]
+          if (isAmount(l0) && isAmount(l1) && isPercent(l2) && isAmount(l3) && isPercent(l4)) {
+            tuplas.push({
+              venta: parseMonto(l0),
+              plan: parseMonto(l1),
+              logro: parsePct(l2),
+              ventaAP: parseMonto(l3),
+              crec: parsePct(l4),
+            })
           }
         }
-        if (!tiendaMatch) {
-          tiendaMatch = identificarTienda(linea)
-        }
 
-        if (tiendaMatch) {
-          const limpiarNumero = (valStr: string): number | null => {
-            const limpio = valStr
-              .replace(/S\/\.?/gi, '')
-              .replace(/\$/g, '')
-              .replace(/%/g, '')
-              .replace(/,/g, '')
-              .trim()
-            const num = parseFloat(limpio)
-            return isNaN(num) ? null : num
+        if (tuplas.length >= tiendasDetectadas.length) {
+          tiendasDetectadas.forEach((item, idx) => {
+            const tupla = tuplas[idx]
+            const indexDato = nuevosDatos.findIndex(t => t.codigo === item.tienda.codigo)
+            if (indexDato !== -1 && tupla) {
+              nuevosDatos[indexDato] = {
+                ...nuevosDatos[indexDato],
+                ventaSoles: tupla.venta,
+                metaSoles: tupla.plan,
+                logroPorcentaje: tupla.logro,
+                crecimientoPorcentaje: tupla.crec,
+              }
+              actualizados++
+            }
+          })
+
+          // Si viene la fila "Total", sincronizar los totales del banner
+          const totalLineIdx = lineas.findIndex(l => /^total$/i.test(l))
+          if (totalLineIdx !== -1 && totalLineIdx + 5 < lineas.length) {
+            const vTot = parseMonto(lineas[totalLineIdx + 1])
+            const lTot = parsePct(lineas[totalLineIdx + 3])
+            const cTot = parsePct(lineas[totalLineIdx + 5])
+            if (!isNaN(vTot)) {
+              setVentaTotalBannerManual(vTot)
+              setUsarTotalBannerManual(true)
+            }
+            if (!isNaN(lTot)) setCumplimientoBannerManual(lTot)
+            if (!isNaN(cTot)) setCrecimientoBannerManual(cTot)
+          } else if (tuplas.length > tiendasDetectadas.length) {
+            const tuplaTotal = tuplas[tiendasDetectadas.length]
+            setVentaTotalBannerManual(tuplaTotal.venta)
+            setUsarTotalBannerManual(true)
+            setCumplimientoBannerManual(tuplaTotal.logro)
+            setCrecimientoBannerManual(tuplaTotal.crec)
+          }
+        }
+      }
+
+      // MODO 2: FALLBACK TABULAR LÍNEA POR LÍNEA (Excel / Google Sheets / TSV)
+      if (actualizados === 0) {
+        for (const linea of lineas) {
+          if (
+            /^(tienda|local|codigo|código|venta|logro|crecimiento|semana)/i.test(linea) &&
+            !identificarTienda(linea)
+          ) {
+            continue
           }
 
-          let ventaVal: number | null = null
-          let logroVal: number | null = null
-          let crecVal: number | null = null
+          const partes = linea.includes('\t')
+            ? linea.split('\t').map(p => p.trim())
+            : linea.includes(';')
+            ? linea.split(';').map(p => p.trim())
+            : linea.split(/\s{2,}/).map(p => p.trim())
 
-          if (partes.length >= 3) {
-            const colsNumericas = partes
-              .map(limpiarNumero)
-              .filter((v): v is number => v !== null)
+          let tiendaMatch: TiendaZonaB | undefined = undefined
+          for (let i = 0; i < partes.length; i++) {
+            const match = identificarTienda(partes[i])
+            if (match) {
+              tiendaMatch = match
+              break
+            }
+          }
+          if (!tiendaMatch) {
+            tiendaMatch = identificarTienda(linea)
+          }
 
-            if (colsNumericas.length >= 3) {
-              ventaVal = colsNumericas[0]
-              logroVal = colsNumericas[1]
-              crecVal = colsNumericas[2]
-            } else if (colsNumericas.length === 2) {
-              if (colsNumericas[0] > 1000) {
+          if (tiendaMatch) {
+            const limpiarNumero = (valStr: string): number | null => {
+              const limpio = valStr
+                .replace(/S\/\.?/gi, '')
+                .replace(/\$/g, '')
+                .replace(/%/g, '')
+                .replace(/,/g, '')
+                .trim()
+              const num = parseFloat(limpio)
+              return isNaN(num) ? null : num
+            }
+
+            let ventaVal: number | null = null
+            let logroVal: number | null = null
+            let crecVal: number | null = null
+
+            if (partes.length >= 3) {
+              const colsNumericas = partes
+                .map(limpiarNumero)
+                .filter((v): v is number => v !== null)
+
+              if (colsNumericas.length >= 3) {
                 ventaVal = colsNumericas[0]
                 logroVal = colsNumericas[1]
-              } else {
-                logroVal = colsNumericas[0]
-                crecVal = colsNumericas[1]
+                crecVal = colsNumericas[2]
+              } else if (colsNumericas.length === 2) {
+                if (colsNumericas[0] > 1000) {
+                  ventaVal = colsNumericas[0]
+                  logroVal = colsNumericas[1]
+                } else {
+                  logroVal = colsNumericas[0]
+                  crecVal = colsNumericas[1]
+                }
               }
             }
-          }
 
-          if (ventaVal === null || logroVal === null || crecVal === null) {
-            const matchVenta = linea.match(/(?:S\/\s*)?([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{4,7}(?:\.[0-9]+)?)/)
-            if (matchVenta && ventaVal === null) {
-              ventaVal = parseFloat(matchVenta[1].replace(/,/g, ''))
-            }
+            if (ventaVal === null || logroVal === null || crecVal === null) {
+              const matchVenta = linea.match(/(?:S\/\s*)?([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?|[0-9]{4,7}(?:\.[0-9]+)?)/)
+              if (matchVenta && ventaVal === null) {
+                ventaVal = parseFloat(matchVenta[1].replace(/,/g, ''))
+              }
 
-            const matchesPct = Array.from(linea.matchAll(/([+\-]?\d+(?:\.\d+)?)\s*%/g))
-            if (matchesPct.length >= 2) {
-              if (logroVal === null) logroVal = parseFloat(matchesPct[0][1])
-              if (crecVal === null) crecVal = parseFloat(matchesPct[1][1])
-            } else if (matchesPct.length === 1) {
-              const val = parseFloat(matchesPct[0][1])
-              if (val < 0) {
-                if (crecVal === null) crecVal = val
-              } else {
-                if (logroVal === null) logroVal = val
+              const matchesPct = Array.from(linea.matchAll(/([+\-]?\d+(?:\.\d+)?)\s*%/g))
+              if (matchesPct.length >= 2) {
+                if (logroVal === null) logroVal = parseFloat(matchesPct[0][1])
+                if (crecVal === null) crecVal = parseFloat(matchesPct[1][1])
+              } else if (matchesPct.length === 1) {
+                const val = parseFloat(matchesPct[0][1])
+                if (val < 0) {
+                  if (crecVal === null) crecVal = val
+                } else {
+                  if (logroVal === null) logroVal = val
+                }
               }
             }
-          }
 
-          const idx = nuevosDatos.findIndex(t => t.codigo === tiendaMatch!.codigo)
-          if (idx !== -1) {
-            nuevosDatos[idx] = {
-              ...nuevosDatos[idx],
-              ventaSoles: ventaVal !== null ? Math.round(ventaVal) : nuevosDatos[idx].ventaSoles,
-              logroPorcentaje: logroVal !== null ? parseFloat(logroVal.toFixed(2)) : nuevosDatos[idx].logroPorcentaje,
-              crecimientoPorcentaje: crecVal !== null ? parseFloat(crecVal.toFixed(2)) : nuevosDatos[idx].crecimientoPorcentaje,
+            const idx = nuevosDatos.findIndex(t => t.codigo === tiendaMatch!.codigo)
+            if (idx !== -1) {
+              nuevosDatos[idx] = {
+                ...nuevosDatos[idx],
+                ventaSoles: ventaVal !== null ? Math.round(ventaVal) : nuevosDatos[idx].ventaSoles,
+                logroPorcentaje: logroVal !== null ? parseFloat(logroVal.toFixed(2)) : nuevosDatos[idx].logroPorcentaje,
+                crecimientoPorcentaje: crecVal !== null ? parseFloat(crecVal.toFixed(2)) : nuevosDatos[idx].crecimientoPorcentaje,
+              }
+              actualizados++
             }
-            actualizados++
           }
         }
       }
