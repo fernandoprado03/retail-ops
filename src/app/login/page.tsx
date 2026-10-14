@@ -12,6 +12,20 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const errorParam = searchParams.get('error')
 
+  const getErrorMessage = (err: string | null) => {
+    if (!err) return null
+    if (err === 'server_error') {
+      return 'Google rechazó la conexión institucional (server_error). En cuentas corporativas (@tottus.com.pe), esto ocurre cuando la aplicación en Google Cloud Console está en modo "Prueba" y el correo no ha sido registrado como "Usuario de prueba", o cuando Google Workspace bloquea aplicaciones externas no aprobadas.'
+    }
+    if (err === 'access_denied') {
+      return 'Acceso denegado por Google. Se canceló la autorización o tu cuenta no tiene permisos para usar esta aplicación.'
+    }
+    if (err === 'true') {
+      return 'La sesión de Google no pudo completarse. Asegúrate de seleccionar tu cuenta corporativa autorizada.'
+    }
+    return err
+  }
+
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     const supabase = createClient()
@@ -19,6 +33,7 @@ function LoginForm() {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        scopes: 'openid email profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
         queryParams: {
           access_type: 'offline',
           prompt: 'select_account',
@@ -51,9 +66,7 @@ function LoginForm() {
             <div className="flex-1">
               <strong className="block font-semibold">No se pudo iniciar sesión</strong>
               <p className="mt-0.5 text-red-600 leading-relaxed">
-                {errorParam === 'true' 
-                  ? 'La sesión de Google no pudo completarse. Asegúrate de seleccionar tu cuenta corporativa autorizada.' 
-                  : errorParam}
+                {getErrorMessage(errorParam)}
               </p>
             </div>
           </div>
