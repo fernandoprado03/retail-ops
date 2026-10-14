@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet, CalendarDays } from 'lucide-react'
+import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet, CalendarDays, AlertTriangle } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
@@ -59,24 +59,6 @@ export function Navbar() {
         </div>
 
         <ul className="flex justify-around items-center h-16 md:flex-col md:items-start md:justify-start md:h-auto md:space-y-2 md:px-3 md:flex-1 overflow-x-auto gap-1">
-          {canSeeKpis && (
-            <li className="shrink-0 md:w-full">
-              <Link href="/kpis" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/kpis' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <BarChart3 className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/kpis' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
-              </Link>
-            </li>
-          )}
-
-          {canSeeHorarios && (
-            <li className="shrink-0 md:w-full">
-              <Link href="/horarios-pro" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/horarios-pro' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
-                <CalendarRange className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/horarios-pro' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
-                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
-              </Link>
-            </li>
-          )}
-
           {canSeeMultifuncional && (
             <li className="shrink-0 md:w-full">
               <Link href="/malla-multifuncional" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/malla-multifuncional' || pathname === '/apoyo' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
@@ -95,11 +77,38 @@ export function Navbar() {
             </li>
           )}
 
+          {canSeeHorarios && (
+            <li className="shrink-0 md:w-full">
+              <Link href="/horarios-pro" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/horarios-pro' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <CalendarRange className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/horarios-pro' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Malla Pro</span>
+              </Link>
+            </li>
+          )}
+
           {canSeeBoletin && (
             <li className="shrink-0 md:w-full">
               <Link href="/boletin-j06" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/boletin-j06' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
                 <FileSpreadsheet className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/boletin-j06' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
                 <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Boletín</span>
+              </Link>
+            </li>
+          )}
+
+          {canSeeKpis && (
+            <li className="shrink-0 md:w-full">
+              <Link href="/kpis" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/kpis' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <BarChart3 className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/kpis' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>KPIs</span>
+              </Link>
+            </li>
+          )}
+
+          {isAdmin && (
+            <li className="shrink-0 md:w-full">
+              <Link href="/" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <AlertTriangle className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Incidencias</span>
               </Link>
             </li>
           )}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { obtenerRutaInicioUsuario } from '@/types/permisos'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       // Sincronizar / vincular perfil precreado por correo si existe
+      let perfilFinal: { rol?: string; permisos?: any } | null = null
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user?.email) {
@@ -40,6 +42,7 @@ export async function GET(request: Request) {
             .maybeSingle()
 
           if (perfilExistente) {
+            perfilFinal = perfilExistente
             // Si el perfil existía pero con un ID temporal (UUID generado antes de loguearse)
             if (perfilExistente.id !== user.id) {
               const idAntiguo = perfilExistente.id
@@ -78,7 +81,13 @@ export async function GET(request: Request) {
         console.error('Error sincronizando perfil en auth callback:', linkErr)
       }
 
-      return NextResponse.redirect(`${redirectBase}${next}`)
+      let destino = searchParams.get('next')
+      if (!destino || destino === '/') {
+        // Redirigir de entrada al módulo con permiso (ej. Malla Multifuncional para jefes, / para admin)
+        destino = obtenerRutaInicioUsuario(perfilFinal?.rol, perfilFinal?.permisos)
+      }
+
+      return NextResponse.redirect(`${redirectBase}${destino}`)
     } else {
       console.error('exchangeCodeForSession error:', error)
       return NextResponse.redirect(`${redirectBase}/login?error=${encodeURIComponent(error.message)}`)

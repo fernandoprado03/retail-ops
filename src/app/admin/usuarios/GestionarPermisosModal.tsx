@@ -64,7 +64,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         horario_comercial: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: true, editar: false },
-        incidencias: { ver: true, editar: true }
+        incidencias: { ver: false, editar: false }
       })
     } else if (tipo === 'lectura') {
       setPermisos({
@@ -74,7 +74,7 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         horario_comercial: { ver: true, editar: false },
         apoyo: { ver: true, editar: false },
         kpis: { ver: true, editar: false },
-        incidencias: { ver: true, editar: false }
+        incidencias: { ver: false, editar: false }
       })
     } else if (tipo === 'solo_boletin') {
       setPermisos({

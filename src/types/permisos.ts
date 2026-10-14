@@ -30,7 +30,7 @@ export const PERMISOS_DEFAULT_JEFE: PermisosUsuario = {
   horario_comercial: { ver: true, editar: true },
   apoyo: { ver: true, editar: false },
   kpis: { ver: true, editar: false },
-  incidencias: { ver: true, editar: true }
+  incidencias: { ver: false, editar: false }
 }
 
 export function normalizarPermisos(permisosRaw: any, rol?: string): PermisosUsuario {
@@ -76,8 +76,31 @@ export function normalizarPermisos(permisosRaw: any, rol?: string): PermisosUsua
       editar: false,
     },
     incidencias: {
-      ver: permisosRaw.incidencias?.ver ?? true,
-      editar: permisosRaw.incidencias?.editar ?? false,
+      ver: permisosRaw.incidencias?.ver ?? (rol === 'admin'),
+      editar: permisosRaw.incidencias?.editar ?? (rol === 'admin'),
     },
   }
+}
+
+export function obtenerRutaInicioUsuario(rol?: string, permisosRaw?: any): string {
+  if (rol === 'admin') {
+    return '/'
+  }
+  const perms = normalizarPermisos(permisosRaw, rol)
+  if (perms.malla_multifuncional?.ver ?? perms.apoyo?.ver) {
+    return '/malla-multifuncional'
+  }
+  if (perms.horario_comercial?.ver) {
+    return '/horario-comercial'
+  }
+  if (perms.boletin_j06?.ver) {
+    return '/boletin-j06'
+  }
+  if (perms.horarios_pro?.ver) {
+    return '/horarios-pro'
+  }
+  if (perms.kpis?.ver) {
+    return '/kpis'
+  }
+  return '/malla-multifuncional'
 }

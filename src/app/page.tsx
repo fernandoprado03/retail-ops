@@ -29,26 +29,33 @@ function formatTime(dateString: string) {
 }
 
 import { createClient } from '@/utils/supabase/server'
+import { redirect } from 'next/navigation'
+import { obtenerRutaInicioUsuario } from '@/types/permisos'
 
 export default async function Pendientes() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
+  if (!user) redirect('/login')
+
   const { data: perfilActual } = await supabase
     .from('perfiles')
-    .select('rol')
-    .eq('id', user?.id)
+    .select('rol, permisos')
+    .eq('id', user.id)
     .single()
+
+  const isAdmin = perfilActual?.rol === 'admin'
+
+  // Si no es Administrador, redirigir automáticamente de entrada al módulo asignado (ej. Malla Multifuncional)
+  if (!isAdmin) {
+    const rutaInicio = obtenerRutaInicioUsuario(perfilActual?.rol, perfilActual?.permisos)
+    redirect(rutaInicio)
+  }
 
   let query = supabase
     .from('observaciones')
     .select('*, areas!inner(nombre_area, jefe_responsable_id)')
     .order('fecha_reporte', { ascending: false })
-
-  // Si es un jefe de área, solo ve las de su área asignada
-  if (perfilActual?.rol === 'jefe_area' && user) {
-    query = query.eq('areas.jefe_responsable_id', user.id)
-  }
 
   const { data: incidencias } = await query
 
