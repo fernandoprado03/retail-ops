@@ -5,7 +5,8 @@ import {
   ObjetivoJerarquia,
   CruceSkuAnalisis,
   normalizarCodigoTienda,
-  TIENDAS_ZONA_B_INFO
+  TIENDAS_ZONA_B_INFO,
+  matchJerarquia
 } from '@/types/merma'
 
 export interface ResultadoParseoMerma {
@@ -400,8 +401,12 @@ export function parsearArchivoObjetivos(
 
     const colLocalDesc = encontrarHeader(headers, [/local.*desc/i, /local_desc/i, /desclocal/i, /desc.*local/i, /nombre.*local/i, /tienda.*desc/i])
     const colTienda = colLocalDesc || encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /sucursal/i, /cod.*tienda/i])
-    const colJerarquia = encontrarHeader(headers, [/jerarqu[ií]a/i, /secci[oó]n/i, /rubro/i, /departamento/i, /categor[ií]a/i, /divisi[oó]n/i, /área/i, /area/i])
-    const colRatio = encontrarHeader(headers, [/ratio/i, /meta/i, /objetivo/i, /%/i, /target/i, /presupuesto/i])
+    const colJerarquia = encontrarHeader(headers, [/ht.*zonas/i, /jerarqu[ií]a/i, /divisi[oó]n/i, /division/i, /secci[oó]n/i, /rubro/i, /departamento/i, /categor[ií]a/i, /área/i, /area/i])
+    
+    // Prioridad estricta para MC (Merma Conocida) según indicación del usuario (ignorar MD y MT)
+    const colRatioMC = encontrarHeader(headers, [/ppto.*mc/i, /ppto_mc/i, /%.*mc/i, /merma.*conocida/i, /\bmc\b/i])
+    const colRatioGenerico = encontrarHeader(headers, [/ratio/i, /meta/i, /objetivo/i, /target/i, /presupuesto/i, /%/i])
+    const colRatio = colRatioMC || colRatioGenerico
 
     const objetivos: ObjetivoJerarquia[] = []
     const tiendasSet = new Set<string>()
@@ -417,7 +422,7 @@ export function parsearArchivoObjetivos(
       const rawJerarquia = colJerarquia ? String(row[colJerarquia]).trim().toUpperCase() : 'GENERAL'
       jerarquiasSet.add(rawJerarquia)
 
-      const metaRatioVal = colRatio ? limpiarNumero(row[colRatio]) : 4.84
+      const metaRatioVal = colRatio ? limpiarNumero(row[colRatio]) : 0.98
 
       const tiendaInfo = codTienda !== 'TODAS' ? TIENDAS_ZONA_B_INFO.find(t => t.codigo === codTienda) : undefined
       const nombreTienda = codTienda === 'TODAS' ? 'Toda la Zona B' : (tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : `Tienda ${codTienda}`)
@@ -548,11 +553,28 @@ export function generarCruceMermaVentas(
     const descripcionFinal = mermaData.desc || ventaData?.desc || `Producto SKU ${mermaData.sku}`
 
     // Buscar objetivo específico para esta tienda y jerarquía
-    const objEspecifico = objetivos.find(o => 
-      (o.tienda === mermaData.tienda || o.tienda === 'TODAS') &&
-      o.jerarquia.toUpperCase() === seccionFinal.toUpperCase()
+    // 1. Objetivo específico para la tienda y jerarquía
+    const objTiendaJerarquia = objetivos.find(o => 
+      o.tienda === mermaData.tienda && matchJerarquia(o.jerarquia, seccionFinal)
     )
-    const metaRatio = objEspecifico ? objEspecifico.metaRatio : 4.84
+    // 2. Objetivo global (TODAS) para la jerarquía
+    const objGlobalJerarquia = objetivos.find(o => 
+      (o.tienda === 'TODAS' || !o.tienda) && matchJerarquia(o.jerarquia, seccionFinal)
+    )
+    // 3. Objetivo total de la tienda
+    const objTiendaTotal = objetivos.find(o => 
+      o.tienda === mermaData.tienda && (o.jerarquia.toUpperCase().includes('TOTAL') || o.jerarquia === 'GENERAL')
+    )
+    // 4. Meta de la tienda en TIENDAS_ZONA_B_INFO
+    const tiendaInfo = TIENDAS_ZONA_B_INFO.find(t => t.codigo === mermaData.tienda)
+    const metaTiendaDirecta = tiendaInfo?.metaMC
+
+    const metaRatio = objTiendaJerarquia?.metaRatio ??
+                      objGlobalJerarquia?.metaRatio ??
+                      objTiendaTotal?.metaRatio ??
+                      metaTiendaDirecta ??
+                      0.98
+
     const dentroDeRatio = ventaSoles > 0 ? ratio <= metaRatio : false
     const desvioPuntos = ratio - metaRatio
 

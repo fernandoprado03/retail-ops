@@ -76,6 +76,7 @@ export default function MermaAdminClient() {
   // Formulario Carga Objetivos
   const [parseoObjetivos, setParseoObjetivos] = useState<ResultadoParseoObjetivos | null>(null)
   const [archivoObjetivosNombre, setArchivoObjetivosNombre] = useState('')
+  const [filtroTiendaObjetivos, setFiltroTiendaObjetivos] = useState<string>('todas')
 
   const [copiado, setCopiado] = useState(false)
 
@@ -696,18 +697,56 @@ export default function MermaAdminClient() {
 
             {/* Listado de objetivos vigentes guardados */}
             {db?.objetivos && db.objetivos.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Objetivos actualmente configurados ({db.objetivos.length}):
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                  {db.objetivos.map((obj, idx) => (
-                    <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
-                      <div className="font-bold text-slate-900 truncate">{obj.jerarquia}</div>
-                      <div className="text-[11px] text-slate-500">{obj.tienda === 'TODAS' ? 'Zona B (General)' : `T-${obj.tienda}`}</div>
-                      <div className="text-sm font-black text-indigo-700 mt-1">{obj.metaRatio}%</div>
+              <div className="space-y-3 pt-3 border-t border-slate-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-emerald-600" />
+                      Metas Oficiales de Merma Conocida (MC) - Octubre ({db.objetivos.length} activas)
                     </div>
-                  ))}
+                    <p className="text-[11px] text-slate-500">
+                      Objetivo regional Zona B: <strong>{db.metaZonaB}%</strong> | Totales por tienda y metas por jerarquía (J01-J99)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Ver tienda:</span>
+                    <select
+                      value={filtroTiendaObjetivos}
+                      onChange={(e) => setFiltroTiendaObjetivos(e.target.value)}
+                      className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white font-medium text-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    >
+                      <option value="todas">Todas ({db.objetivos.length} metas)</option>
+                      <option value="TODAS">Zona B - Totales Regionales</option>
+                      {TIENDAS_ZONA_B_INFO.map(t => {
+                        const count = db.objetivos.filter(o => o.tienda === t.codigo).length
+                        return (
+                          <option key={t.codigo} value={t.codigo}>
+                            {t.codigo} - {t.nombre.split(' - ')[1]} ({count} metas)
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+                  {db.objetivos
+                    .filter(obj => {
+                      if (filtroTiendaObjetivos === 'todas') return true
+                      return obj.tienda === filtroTiendaObjetivos
+                    })
+                    .map((obj, idx) => (
+                      <div key={idx} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs hover:border-emerald-300 hover:bg-emerald-50/20 transition-colors">
+                        <div className="font-bold text-slate-900 truncate" title={obj.jerarquia}>{obj.jerarquia}</div>
+                        <div className="text-[11px] text-slate-500 truncate">
+                          {obj.tienda === 'TODAS' ? 'Zona B (General)' : (obj.nombreTienda || `Tienda ${obj.tienda}`)}
+                        </div>
+                        <div className="text-sm font-black text-emerald-700 mt-1 flex items-baseline justify-between">
+                          <span>{obj.metaRatio.toFixed(2)}%</span>
+                          <span className="text-[10px] font-semibold text-slate-400">Ppto_MC</span>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

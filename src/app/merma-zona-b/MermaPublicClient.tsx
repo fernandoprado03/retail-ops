@@ -32,7 +32,7 @@ import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { BaseDatosMermaZonaB, CruceSkuAnalisis, TIENDAS_ZONA_B_INFO } from '@/types/merma'
+import { BaseDatosMermaZonaB, CruceSkuAnalisis, TIENDAS_ZONA_B_INFO, matchJerarquia } from '@/types/merma'
 import { cargarBaseDatosMerma } from '@/utils/mermaStorage'
 import { generarCruceMermaVentas } from '@/utils/mermaParser'
 import * as XLSX from 'xlsx'
@@ -118,7 +118,7 @@ export default function MermaPublicClient() {
     const totalUnidadesMerma = itemsFiltrados.reduce((acc, i) => acc + (i.unidadesMerma || 0), 0)
     const totalVenta = itemsFiltrados.reduce((acc, i) => acc + i.ventaSoles, 0)
     const ratioGlobal = totalVenta > 0 ? (totalMerma / totalVenta) * 100 : 0
-    const metaGlobal = db?.metaZonaB || 4.84
+    const metaGlobal = db?.metaZonaB || 0.98
     const cumpleMetaGlobal = totalVenta > 0 ? ratioGlobal <= metaGlobal : true
 
     // Ranking por Tienda
@@ -157,8 +157,9 @@ export default function MermaPublicClient() {
       const tieneVenta = val.venta > 0
       const ratio = tieneVenta ? (val.merma / val.venta) * 100 : 0
       // Buscar objetivo específico de tienda si existe
-      const objTienda = db?.objetivos.find(o => o.tienda === codigo)
-      const meta = objTienda ? objTienda.metaRatio : metaGlobal
+      const objTienda = db?.objetivos.find(o => o.tienda === codigo && (o.jerarquia.toUpperCase().includes('TOTAL') || o.jerarquia === 'GENERAL'))
+      const tiendaInfo = TIENDAS_ZONA_B_INFO.find(t => t.codigo === codigo)
+      const meta = objTienda ? objTienda.metaRatio : (tiendaInfo?.metaMC ?? metaGlobal)
       const cumple = tieneVenta ? (ratio <= meta) : null
       const desvio = tieneVenta ? (ratio - meta) : 0
       const mermaPresupuestada = (val.venta * meta) / 100
@@ -197,8 +198,14 @@ export default function MermaPublicClient() {
     const rankingJerarquias = Object.entries(seccionMap).map(([jerarquia, val]) => {
       const tieneVenta = val.venta > 0
       const ratio = tieneVenta ? (val.merma / val.venta) * 100 : 0
-      const objJerarquia = db?.objetivos.find(o => o.jerarquia.toUpperCase() === jerarquia.toUpperCase())
-      const meta = objJerarquia ? objJerarquia.metaRatio : metaGlobal
+      
+      // Si hay filtro de tienda activo, buscar objetivo específico de esa tienda para esta jerarquía
+      const objJerarquiaTienda = tiendaFiltro !== 'todas'
+        ? db?.objetivos.find(o => o.tienda === tiendaFiltro && matchJerarquia(o.jerarquia, jerarquia))
+        : undefined
+      const objJerarquiaGlobal = db?.objetivos.find(o => (o.tienda === 'TODAS' || !o.tienda) && matchJerarquia(o.jerarquia, jerarquia))
+      const meta = objJerarquiaTienda?.metaRatio ?? objJerarquiaGlobal?.metaRatio ?? metaGlobal
+      
       const cumple = tieneVenta ? (ratio <= meta) : null
       const desvio = tieneVenta ? (ratio - meta) : 0
       const impactoSoles = val.merma - (val.venta * meta) / 100

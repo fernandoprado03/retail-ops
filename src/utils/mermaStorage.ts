@@ -5,7 +5,8 @@ import {
   CargaVentaLote,
   ItemMerma,
   ItemVenta,
-  ObjetivoJerarquia
+  ObjetivoJerarquia,
+  OBJETIVOS_OCTUBRE_OFICIALES
 } from '@/types/merma'
 
 const MERMA_RECORD_NAME = 'MERMA_ZONA_B_REGISTRO'
@@ -13,10 +14,10 @@ const LOCAL_STORAGE_KEY = 'merma_zona_b_cache_v2'
 
 export const ESTADO_INICIAL_MERMA: BaseDatosMermaZonaB = {
   version: 2,
-  metaZonaB: 4.84, // Estándar Zona B
+  metaZonaB: 0.98, // Estándar Zona B Oficial Mes 10 (Octubre)
   lotes: [],
   lotesVentas: [],
-  objetivos: [],
+  objetivos: OBJETIVOS_OCTUBRE_OFICIALES,
   itemsConsolidados: [],
   ventasConsolidadas: [],
   ultimaActualizacion: new Date().toISOString()
@@ -31,7 +32,25 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
   const autoSanarBase = (base: BaseDatosMermaZonaB): BaseDatosMermaZonaB => {
     base.lotes = base.lotes || []
     base.lotesVentas = base.lotesVentas || []
-    base.objetivos = base.objetivos || []
+    
+    // Si la meta está en el placeholder viejo de 4.84 o vacía, actualizar a la oficial de 0.98%
+    if (!base.metaZonaB || base.metaZonaB === 4.84) {
+      base.metaZonaB = 0.98
+    }
+
+    // Asegurar objetivos oficiales de octubre precargados
+    if (!base.objetivos || base.objetivos.length === 0) {
+      base.objetivos = [...OBJETIVOS_OCTUBRE_OFICIALES]
+    } else {
+      const existentesMap = new Set(base.objetivos.map(o => `${o.tienda}_${o.jerarquia.toUpperCase()}`))
+      OBJETIVOS_OCTUBRE_OFICIALES.forEach(oficial => {
+        const key = `${oficial.tienda}_${oficial.jerarquia.toUpperCase()}`
+        if (!existentesMap.has(key)) {
+          base.objetivos.push(oficial)
+        }
+      })
+    }
+
     base.itemsConsolidados = (base.itemsConsolidados || []).map(item => {
       let merma = item.mermaSoles || 0
       const unid = item.unidades || 0
