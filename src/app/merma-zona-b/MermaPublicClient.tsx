@@ -26,14 +26,15 @@ import {
   AlertOctagon,
   Target,
   ShoppingCart,
-  ListFilter
+  ListFilter,
+  X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { BaseDatosMermaZonaB, CruceSkuAnalisis, TIENDAS_ZONA_B_INFO, matchJerarquia } from '@/types/merma'
-import { cargarBaseDatosMerma } from '@/utils/mermaStorage'
+import { cargarBaseDatosMerma, guardarVentasPorTienda } from '@/utils/mermaStorage'
 import { generarCruceMermaVentas } from '@/utils/mermaParser'
 import * as XLSX from 'xlsx'
 
@@ -48,6 +49,57 @@ export default function MermaPublicClient() {
   const [busqueda, setBusqueda] = useState('')
   const [soloFueraDeRatio, setSoloFueraDeRatio] = useState(false)
   const [copiadoWsp, setCopiadoWsp] = useState(false)
+
+  // Modal para registrar ventas por tienda
+  const [modalVentasAbierto, setModalVentasAbierto] = useState(false)
+  const [ventasEditadas, setVentasEditadas] = useState<Record<string, string>>({})
+  const [guardandoVentas, setGuardandoVentas] = useState(false)
+
+  const handleAbrirModalVentas = () => {
+    const inicial: Record<string, string> = {}
+    TIENDAS_ZONA_B_INFO.forEach(t => {
+      const v = db?.ventasPorTienda?.[t.codigo] || 0
+      inicial[t.codigo] = v > 0 ? String(v) : ''
+    })
+    setVentasEditadas(inicial)
+    setModalVentasAbierto(true)
+  }
+
+  const handleAutoEstimarVentas = () => {
+    const estimadas: Record<string, string> = {}
+    metricas.rankingTiendas.forEach(t => {
+      if (t.merma > 0 && t.meta > 0) {
+        const ventaEstimada = Math.round(t.merma / (t.meta / 100))
+        estimadas[t.codigo] = String(ventaEstimada)
+      } else if (db?.ventasPorTienda?.[t.codigo]) {
+        estimadas[t.codigo] = String(db.ventasPorTienda[t.codigo])
+      }
+    })
+    setVentasEditadas(estimadas)
+    toast.info('Ventas estimadas calculadas en base a la meta de MC oficial de cada tienda')
+  }
+
+  const handleGuardarVentas = async () => {
+    setGuardandoVentas(true)
+    try {
+      const mapaNumeros: Record<string, number> = {}
+      Object.entries(ventasEditadas).forEach(([cod, strVal]) => {
+        const num = parseFloat(String(strVal).replace(/,/g, '').trim())
+        if (!isNaN(num) && num > 0) {
+          mapaNumeros[cod] = num
+        }
+      })
+
+      const baseActualizada = await guardarVentasPorTienda(mapaNumeros)
+      setDb(baseActualizada)
+      setModalVentasAbierto(false)
+      toast.success('Ventas por tienda guardadas y ratios calculados exitosamente')
+    } catch (e: any) {
+      toast.error('Error al guardar ventas: ' + (e?.message || 'Error'))
+    } finally {
+      setGuardandoVentas(false)
+    }
+  }
 
   // Cargar datos
   const refrescar = async () => {
@@ -114,24 +166,28 @@ export default function MermaPublicClient() {
 
   // Métricas Consolidadas
   const metricas = useMemo(() => {
-    const totalMerma = itemsFiltrados.reduce((acc, i) => acc + i.mermaSoles, 0)
-    const totalUnidadesMerma = itemsFiltrados.reduce((acc, i) => acc + (i.unidadesMerma || 0), 0)
-    const totalVenta = itemsFiltrados.reduce((acc, i) => acc + i.ventaSoles, 0)
+    const totalMerma = itemsFiltrados.reduce((acc, i) => acc + Math.abs(i.mermaSoles || 0), 0)
+    const totalUnidadesMerma = itemsFiltrados.reduce((acc, i) => acc + Math.abs(i.unidadesMerma || 0), 0)
+    
+    // Total ventas (combinando SKUs y ventas por tienda registradas)
+    const totalVentaFromSkus = itemsFiltrados.reduce((acc, i) => acc + Math.abs(i.ventaSoles || 0), 0)
+    const totalVentaFromTiendas = Object.values(db?.ventasPorTienda || {}).reduce((acc, v) => acc + (v || 0), 0)
+    const totalVenta = totalVentaFromSkus > 0 ? totalVentaFromSkus : totalVentaFromTiendas
+
     const ratioGlobal = totalVenta > 0 ? (totalMerma / totalVenta) * 100 : 0
     const metaGlobal = db?.metaZonaB || 0.98
     const cumpleMetaGlobal = totalVenta > 0 ? ratioGlobal <= metaGlobal : true
 
-    // Ranking por Tienda
-    const tiendaMap: Record<string, { merma: number; unidades: number; venta: number; count: number; nombre: string; lider: string }> = {}
+    // Ranking por Tienda (sin líderes, nombre oficial de tienda)
+    const tiendaMap: Record<string, { merma: number; unidades: number; venta: number; count: number; nombre: string }> = {}
 
     TIENDAS_ZONA_B_INFO.forEach(t => {
       tiendaMap[t.codigo] = {
         merma: 0,
         unidades: 0,
-        venta: 0,
+        venta: db?.ventasPorTienda?.[t.codigo] || 0,
         count: 0,
-        nombre: t.nombre.split(' - ')[1] || t.nombre,
-        lider: t.lider
+        nombre: t.nombre
       }
     })
 
@@ -141,15 +197,16 @@ export default function MermaPublicClient() {
         tiendaMap[cod] = {
           merma: 0,
           unidades: 0,
-          venta: 0,
+          venta: db?.ventasPorTienda?.[cod] || 0,
           count: 0,
-          nombre: i.nombreTienda || `Tienda ${cod}`,
-          lider: 'Líder Zona B'
+          nombre: i.nombreTienda || `Tienda ${cod}`
         }
       }
-      tiendaMap[cod].merma += i.mermaSoles
-      tiendaMap[cod].unidades += i.unidadesMerma || 0
-      tiendaMap[cod].venta += i.ventaSoles
+      tiendaMap[cod].merma += Math.abs(i.mermaSoles || 0)
+      tiendaMap[cod].unidades += Math.abs(i.unidadesMerma || 0)
+      if (i.ventaSoles && i.ventaSoles > 0) {
+        tiendaMap[cod].venta = (tiendaMap[cod].venta || 0) + Math.abs(i.ventaSoles)
+      }
       tiendaMap[cod].count += 1
     })
 
@@ -168,7 +225,6 @@ export default function MermaPublicClient() {
       return {
         codigo,
         nombre: val.nombre,
-        lider: val.lider,
         merma: val.merma,
         unidades: val.unidades,
         venta: val.venta,
@@ -177,7 +233,8 @@ export default function MermaPublicClient() {
         meta,
         cumple,
         desvio,
-        impactoSoles: impactoSoles > 0 ? impactoSoles : 0
+        impactoSoles: impactoSoles > 0 ? impactoSoles : 0,
+        ahorroSoles: impactoSoles < 0 ? Math.abs(impactoSoles) : 0
       }
     }).sort((a, b) => {
       if (a.ratio !== b.ratio && a.ratio > 0 && b.ratio > 0) return a.ratio - b.ratio
@@ -189,9 +246,9 @@ export default function MermaPublicClient() {
     itemsFiltrados.forEach(i => {
       const sec = i.seccion || 'GENERAL'
       if (!seccionMap[sec]) seccionMap[sec] = { merma: 0, unidades: 0, venta: 0, count: 0 }
-      seccionMap[sec].merma += i.mermaSoles
-      seccionMap[sec].unidades += i.unidadesMerma || 0
-      seccionMap[sec].venta += i.ventaSoles
+      seccionMap[sec].merma += Math.abs(i.mermaSoles || 0)
+      seccionMap[sec].unidades += Math.abs(i.unidadesMerma || 0)
+      seccionMap[sec].venta += Math.abs(i.ventaSoles || 0)
       seccionMap[sec].count += 1
     })
 
@@ -221,6 +278,7 @@ export default function MermaPublicClient() {
         cumple,
         desvio,
         impactoSoles: impactoSoles > 0 ? impactoSoles : 0,
+        ahorroSoles: impactoSoles < 0 ? Math.abs(impactoSoles) : 0,
         count: val.count
       }
     }).sort((a, b) => b.merma - a.merma)
@@ -236,7 +294,7 @@ export default function MermaPublicClient() {
       rankingJerarquias,
       totalSkusCriticos: productosMermaMayorQueVenta.length
     }
-  }, [itemsFiltrados, db, productosMermaMayorQueVenta])
+  }, [itemsFiltrados, db, productosMermaMayorQueVenta, tiendaFiltro])
 
   // Secciones únicas
   const listaSecciones = useMemo(() => {
@@ -575,77 +633,221 @@ export default function MermaPublicClient() {
         {vistaActiva === 'tiendas' && (
           <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50 border-b border-slate-100 py-3.5 px-5">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
-                <span>Evaluación de Cumplimiento de Ratio por Tienda (Zona B)</span>
-                <span className="text-xs text-slate-500 font-normal">Objetivo Presupuestado: <strong>{metricas.metaGlobal}%</strong></span>
-              </CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Store className="w-4 h-4 text-emerald-600" />
+                    Evaluación de Cumplimiento de Ratio MC por Tienda (Zona B)
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Meta Presupuestada Zona B: <strong className="text-slate-800">{metricas.metaGlobal}%</strong> • Costo extendido vs ventas registradas
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleAbrirModalVentas}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 font-semibold flex items-center gap-1.5 shadow-xs"
+                  >
+                    <DollarSign className="w-3.5 h-3.5" />
+                    Registrar / Ajustar Ventas de Tiendas
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b">
+                  <thead className="bg-slate-100 text-slate-700 font-bold border-b text-[11px] uppercase tracking-wider">
                     <tr>
                       <th className="p-3 w-10 text-center">#</th>
-                      <th className="p-3">Tienda / Local (Local Desc)</th>
-                      <th className="p-3">Líder</th>
+                      <th className="p-3">Tienda (Zona B)</th>
                       <th className="p-3 text-right">Unid. Mermadas</th>
                       <th className="p-3 text-right">Merma S/ (Costo Ext.)</th>
                       <th className="p-3 text-right">Venta S/</th>
-                      <th className="p-3 text-right">Ratio Real %</th>
-                      <th className="p-3 text-right">Meta %</th>
-                      <th className="p-3 text-right">Desvío</th>
+                      <th className="p-3 text-right">Ratio Real MC %</th>
+                      <th className="p-3 text-right">Meta Presup. %</th>
+                      <th className="p-3 text-right">Desvío %</th>
+                      <th className="p-3 text-right">Impacto / Desvío S/</th>
                       <th className="p-3 text-center">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {metricas.rankingTiendas.map((t, idx) => (
-                      <tr key={t.codigo} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                        <td className="p-3">
-                          <div className="font-bold text-slate-900">{t.nombre}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">T-{t.codigo}</div>
-                        </td>
-                        <td className="p-3 text-slate-600">{t.lider}</td>
-                        <td className="p-3 text-right font-mono font-medium text-slate-700">
-                          {t.unidades > 0 ? t.unidades.toLocaleString('es-PE') : '-'}
-                        </td>
-                        <td className="p-3 text-right font-bold text-red-600">
-                          {t.merma > 0 ? `S/ ${t.merma.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
-                        </td>
-                        <td className="p-3 text-right text-slate-600 font-mono">
-                          {t.venta > 0 ? `S/ ${t.venta.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
-                        </td>
-                        <td className="p-3 text-right font-bold">
-                          {t.ratio > 0 ? (
-                            <span className={t.ratio <= t.meta ? 'text-emerald-600' : 'text-rose-600'}>
-                              {t.ratio.toFixed(2)}%
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td className="p-3 text-right font-medium text-slate-500">{t.meta.toFixed(2)}%</td>
-                        <td className="p-3 text-right font-semibold">
-                          {t.ratio > 0 ? (
-                            t.desvio <= 0 ? (
-                              <span className="text-emerald-600">{t.desvio.toFixed(2)}%</span>
+                    {metricas.rankingTiendas.map((t, idx) => {
+                      const unidPos = Math.abs(t.unidades)
+                      const mermaPos = Math.abs(t.merma)
+                      const unidFormat = unidPos > 0 ? Math.round(unidPos).toLocaleString('es-PE') : '0'
+                      const mermaFormat = mermaPos > 0 ? `S/ ${mermaPos.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'S/ 0.00'
+                      const ventaFormat = t.venta > 0 ? `S/ ${t.venta.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'S/ 0.00'
+
+                      return (
+                        <tr key={t.codigo} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">{t.nombre}</span>
+                              <Badge variant="outline" className="text-[10px] font-mono text-slate-600 bg-slate-50 border-slate-300 px-1.5 py-0">
+                                T-{t.codigo}
+                              </Badge>
+                            </div>
+                          </td>
+                          <td className="p-3 text-right font-mono font-medium text-slate-700">
+                            {unidFormat}
+                          </td>
+                          <td className="p-3 text-right font-black text-red-600 font-mono">
+                            {mermaFormat}
+                          </td>
+                          <td className="p-3 text-right font-mono text-slate-700 font-medium">
+                            {t.venta > 0 ? (
+                              <span className="text-emerald-700 font-bold">{ventaFormat}</span>
                             ) : (
-                              <span className="text-rose-600 font-bold">+{t.desvio.toFixed(2)}%</span>
-                            )
-                          ) : '-'}
-                        </td>
-                        <td className="p-3 text-center">
-                          {t.merma === 0 ? (
-                            <Badge variant="outline" className="text-[10px] text-slate-400">Sin Carga</Badge>
-                          ) : !t.tieneVenta ? (
-                            <Badge variant="outline" className="text-[10px] text-amber-700 bg-amber-50 border-amber-200">Merma Registrada</Badge>
-                          ) : t.cumple ? (
-                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ En Ratio</Badge>
-                          ) : (
-                            <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold">⚠️ Fuera de Ratio</Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              <button
+                                onClick={handleAbrirModalVentas}
+                                className="text-amber-600 hover:text-amber-800 text-[11px] underline font-medium"
+                              >
+                                + Ingresar venta
+                              </button>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-bold">
+                            {t.tieneVenta ? (
+                              <span className={`px-2 py-0.5 rounded text-xs font-black ${
+                                t.cumple ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}>
+                                {t.ratio.toFixed(2)}%
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">Sin Venta</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-semibold text-slate-600 font-mono">
+                            {t.meta.toFixed(2)}%
+                          </td>
+                          <td className="p-3 text-right font-mono font-bold">
+                            {t.tieneVenta ? (
+                              t.desvio <= 0 ? (
+                                <span className="text-emerald-600">
+                                  {t.desvio.toFixed(2)}%
+                                </span>
+                              ) : (
+                                <span className="text-rose-600 font-black">
+                                  +{t.desvio.toFixed(2)}%
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-mono font-semibold">
+                            {t.tieneVenta ? (
+                              t.impactoSoles > 0 ? (
+                                <span className="text-rose-600 font-bold" title="Exceso sobre el presupuesto de merma">
+                                  +S/ {Math.round(t.impactoSoles).toLocaleString('es-PE')}
+                                </span>
+                              ) : t.ahorroSoles > 0 ? (
+                                <span className="text-emerald-600 font-bold" title="Ahorro respecto al presupuesto">
+                                  -S/ {Math.round(t.ahorroSoles).toLocaleString('es-PE')}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">S/ 0</span>
+                              )
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            {mermaPos === 0 ? (
+                              <Badge variant="outline" className="text-[10px] text-slate-400">Sin Merma</Badge>
+                            ) : !t.tieneVenta ? (
+                              <Badge variant="outline" className="text-[10px] text-amber-700 bg-amber-50 border-amber-300 font-semibold">
+                                Merma Registrada
+                              </Badge>
+                            ) : t.cumple ? (
+                              <Badge className="bg-emerald-600 text-white text-[10px] font-bold shadow-xs">
+                                ✓ En Meta
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-rose-600 text-white text-[10px] font-bold shadow-xs">
+                                ⚠️ Fuera de Ratio
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
+                  <tfoot className="bg-slate-900 text-white font-bold border-t-2 border-slate-700">
+                    <tr>
+                      <td className="p-3 text-center text-slate-400">∑</td>
+                      <td className="p-3">
+                        <div className="font-bold text-white text-sm">TOTAL ZONA B (11 Tiendas)</div>
+                        <div className="text-[10px] text-emerald-400 font-normal">Consolidado general Zona B</div>
+                      </td>
+                      <td className="p-3 text-right font-mono text-slate-200">
+                        {Math.round(metricas.totalUnidadesMerma).toLocaleString('es-PE')}
+                      </td>
+                      <td className="p-3 text-right font-mono text-red-400 font-black text-sm">
+                        S/ {metricas.totalMerma.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="p-3 text-right font-mono text-emerald-400 font-black text-sm">
+                        S/ {metricas.totalVenta.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="p-3 text-right font-mono font-black text-sm">
+                        {metricas.totalVenta > 0 ? (
+                          <span className={metricas.cumpleMetaGlobal ? 'text-emerald-400' : 'text-rose-400'}>
+                            {metricas.ratioGlobal.toFixed(2)}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Sin Venta</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-mono text-slate-300">
+                        {metricas.metaGlobal.toFixed(2)}%
+                      </td>
+                      <td className="p-3 text-right font-mono font-bold">
+                        {metricas.totalVenta > 0 ? (
+                          metricas.ratioGlobal <= metricas.metaGlobal ? (
+                            <span className="text-emerald-400">
+                              {(metricas.ratioGlobal - metricas.metaGlobal).toFixed(2)}%
+                            </span>
+                          ) : (
+                            <span className="text-rose-400">
+                              +{(metricas.ratioGlobal - metricas.metaGlobal).toFixed(2)}%
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-mono font-bold">
+                        {metricas.totalVenta > 0 ? (
+                          (() => {
+                            const mermaPpto = (metricas.totalVenta * metricas.metaGlobal) / 100
+                            const diff = metricas.totalMerma - mermaPpto
+                            return diff > 0 ? (
+                              <span className="text-rose-400">+S/ {Math.round(diff).toLocaleString('es-PE')}</span>
+                            ) : (
+                              <span className="text-emerald-400">-S/ {Math.round(Math.abs(diff)).toLocaleString('es-PE')}</span>
+                            )
+                          })()
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {metricas.totalVenta > 0 ? (
+                          metricas.cumpleMetaGlobal ? (
+                            <Badge className="bg-emerald-500 text-white text-[10px] font-bold">✓ En Meta</Badge>
+                          ) : (
+                            <Badge className="bg-rose-500 text-white text-[10px] font-bold">⚠️ Fuera de Ratio</Badge>
+                          )
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-700">Sin Venta</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </CardContent>
@@ -680,10 +882,10 @@ export default function MermaPublicClient() {
                       <tr key={j.jerarquia} className="hover:bg-slate-50">
                         <td className="p-3 font-bold text-slate-900">{j.jerarquia}</td>
                         <td className="p-3 text-right font-mono text-slate-700">
-                          {j.unidades > 0 ? j.unidades.toLocaleString('es-PE') : '-'}
+                          {Math.abs(j.unidades) > 0 ? Math.round(Math.abs(j.unidades)).toLocaleString('es-PE') : '0'}
                         </td>
-                        <td className="p-3 text-right font-bold text-red-600">
-                          S/ {j.merma.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <td className="p-3 text-right font-bold text-red-600 font-mono">
+                          S/ {Math.abs(j.merma).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="p-3 text-right text-slate-600 font-mono">
                           {j.venta > 0 ? `S/ ${j.venta.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
@@ -770,13 +972,13 @@ export default function MermaPublicClient() {
                           </td>
                           <td className="p-3 text-slate-500">{p.seccion}</td>
                           <td className="p-3 text-right font-mono text-slate-700">
-                            {p.unidadesMerma > 0 ? p.unidadesMerma.toLocaleString('es-PE') : '-'}
+                            {Math.abs(p.unidadesMerma) > 0 ? Math.round(Math.abs(p.unidadesMerma)).toLocaleString('es-PE') : '0'}
                           </td>
                           <td className="p-3 text-right font-mono text-slate-600">
-                            {p.costoUnitario && p.costoUnitario > 0 ? `S/ ${p.costoUnitario.toFixed(2)}` : '-'}
+                            {p.costoUnitario && p.costoUnitario > 0 ? `S/ ${Math.abs(p.costoUnitario).toFixed(2)}` : '-'}
                           </td>
-                          <td className="p-3 text-right font-bold text-red-600">
-                            S/ {p.mermaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <td className="p-3 text-right font-bold text-red-600 font-mono">
+                            S/ {Math.abs(p.mermaSoles).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td className="p-3 text-right text-slate-600 font-mono">
                             S/ {p.ventaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
@@ -833,15 +1035,15 @@ export default function MermaPublicClient() {
                         </td>
                         <td className="p-3 text-slate-500">{item.seccion}</td>
                         <td className="p-3 text-right text-slate-700 font-mono">
-                          {item.unidadesMerma > 0 ? item.unidadesMerma.toLocaleString('es-PE') : '-'}
+                          {Math.abs(item.unidadesMerma) > 0 ? Math.round(Math.abs(item.unidadesMerma)).toLocaleString('es-PE') : '0'}
                         </td>
                         <td className="p-3 text-right text-slate-600 font-mono">
-                          {item.costoUnitario && item.costoUnitario > 0 ? `S/ ${item.costoUnitario.toFixed(2)}` : '-'}
+                          {item.costoUnitario && item.costoUnitario > 0 ? `S/ ${Math.abs(item.costoUnitario).toFixed(2)}` : '-'}
                         </td>
-                        <td className="p-3 text-right font-bold text-red-600">
-                          {item.mermaSoles > 0 ? `S/ ${item.mermaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                        <td className="p-3 text-right font-bold text-red-600 font-mono">
+                          {Math.abs(item.mermaSoles) > 0 ? `S/ ${Math.abs(item.mermaSoles).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'S/ 0.00'}
                         </td>
-                        <td className="p-3 text-right text-slate-600 font-mono">
+                        <td className="p-3 text-right text-slate-700 font-mono">
                           {item.ventaSoles > 0 ? `S/ ${item.ventaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
                         </td>
                         <td className="p-3 text-right font-semibold">
@@ -863,6 +1065,150 @@ export default function MermaPublicClient() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* MODAL PARA REGISTRAR / AJUSTAR VENTAS POR TIENDA */}
+        {modalVentasAbierto && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      Registrar / Ajustar Ventas del Mes por Tienda
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Zona B (11 Tiendas) • Calcula instantáneamente los ratios reales y desvíos
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setModalVentasAbierto(false)}
+                  className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Toolbar */}
+              <div className="bg-slate-50 border-b border-slate-200 p-3.5 px-5 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs text-slate-600">
+                  Ingresa las <strong>Ventas Netas (S/)</strong> de cada tienda para este período:
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAutoEstimarVentas}
+                    className="text-xs h-7 bg-white hover:bg-slate-100 border-slate-300 text-slate-700 font-medium flex items-center gap-1"
+                    title="Calcula la venta presupuestada que alcanzaría exactamente la meta de MC oficial"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    Auto-estimar desde Meta MC
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setVentasEditadas({})}
+                    className="text-xs h-7 text-slate-500 hover:text-rose-600"
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Body - Grid de Tiendas */}
+              <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {TIENDAS_ZONA_B_INFO.map(t => {
+                    const valTienda = metricas.rankingTiendas.find(rt => rt.codigo === t.codigo)
+                    const mermaTienda = valTienda?.merma || 0
+                    const strVal = ventasEditadas[t.codigo] || ''
+                    const numVal = parseFloat(strVal.replace(/,/g, '')) || 0
+                    const ratioPrev = numVal > 0 ? (mermaTienda / numVal) * 100 : null
+
+                    return (
+                      <div
+                        key={t.codigo}
+                        className="bg-white p-3 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors shadow-2xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-slate-900 text-xs">{t.nombre}</div>
+                            <div className="text-[10px] text-slate-500">
+                              Meta MC: <strong className="text-slate-700">{t.metaMC}%</strong> • Merma: <span className="text-red-600 font-semibold font-mono">S/ {Math.round(mermaTienda).toLocaleString('es-PE')}</span>
+                            </div>
+                          </div>
+                          {ratioPrev !== null && (
+                            <Badge className={`text-[10px] font-bold ${
+                              ratioPrev <= t.metaMC ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              Ratio: {ratioPrev.toFixed(2)}%
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                            S/
+                          </span>
+                          <input
+                            type="number"
+                            step="any"
+                            value={strVal}
+                            onChange={(e) => setVentasEditadas({
+                              ...ventasEditadas,
+                              [t.codigo]: e.target.value
+                            })}
+                            placeholder="0.00"
+                            className="w-full text-xs font-mono font-semibold pl-7 pr-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-hidden"
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-slate-50 border-t border-slate-200 p-4 px-5 flex items-center justify-end gap-2.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModalVentasAbierto(false)}
+                  disabled={guardandoVentas}
+                  className="text-xs h-9"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleGuardarVentas}
+                  disabled={guardandoVentas}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-bold px-4 flex items-center gap-1.5 shadow-sm"
+                >
+                  {guardandoVentas ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Guardar Ventas y Calcular Ratios
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

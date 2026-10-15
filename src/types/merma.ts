@@ -82,6 +82,7 @@ export interface BaseDatosMermaZonaB {
   objetivos: ObjetivoJerarquia[]
   itemsConsolidados: ItemMerma[]
   ventasConsolidadas: ItemVenta[]
+  ventasPorTienda?: Record<string, number> // Ventas totales por código de tienda (ej: '103': 4500000)
   ultimaActualizacion: string
 }
 
@@ -132,18 +133,17 @@ export function normalizarCodigoTienda(raw: any): string {
 
   // 2. Coincidencia por texto / descripción del local (local desc)
   const lower = str.toLowerCase()
-  if (lower.includes('mega') || lower.includes('plaza')) return '103'
-  if (lower.includes('atocongo')) return '107'
-  if (lower.includes('huaylas')) return '110'
-  if (lower.includes('bellavista centro') || (lower.includes('bella') && lower.includes('centro'))) return '193'
-  if (lower.includes('bellavista') || lower.includes('bella')) return '118'
-  if (lower.includes('santa anita') || lower.includes('anita')) return '155'
-  if (lower.includes('lima sur') || lower.includes('san juan') || lower.includes('miraflores') || lower.includes('sjm')) return '175'
   if (lower.includes('puruchuco')) return '193'
-  if (lower.includes('trujillo 1') || lower.includes('trujillo1') || lower.includes('chorrillos')) return '311'
-  if (lower.includes('trujillo 2') || lower.includes('trujillo2') || lower.includes('isidro')) return '314'
-  if (lower.includes('chimbote') || lower.includes('fontana')) return '335'
-  if (lower.includes('cuzco') || lower.includes('cusco') || lower.includes('cultura') || lower.includes('santa maría') || lower.includes('santa maria')) return '357'
+  if (lower.includes('santa anita') || lower.includes('anita')) return '155'
+  if (lower.includes('bellavista') || lower.includes('bella vista')) return '118'
+  if (lower.includes('huaylas')) return '110'
+  if (lower.includes('atocongo')) return '107'
+  if (lower.includes('lima sur') || lower.includes('limasur') || lower.includes('san juan') || lower.includes('sjm')) return '175'
+  if (lower.includes('chimbote')) return '335'
+  if (lower.includes('cuzco') || lower.includes('cusco') || lower.includes('cultura')) return '357'
+  if (lower.includes('trujillo 2') || lower.includes('trujillo2') || lower.includes('trujillo ii')) return '314'
+  if (lower.includes('trujillo 1') || lower.includes('trujillo1') || lower.includes('trujillo i') || lower.includes('trujillo')) return '311'
+  if (lower.includes('megaplaza') || lower.includes('mega plaza') || lower.includes('independencia') || lower.includes('mega')) return '103'
 
   return str
 }

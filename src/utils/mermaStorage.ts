@@ -6,7 +6,9 @@ import {
   ItemMerma,
   ItemVenta,
   ObjetivoJerarquia,
-  OBJETIVOS_OCTUBRE_OFICIALES
+  OBJETIVOS_OCTUBRE_OFICIALES,
+  normalizarCodigoTienda,
+  TIENDAS_ZONA_B_INFO
 } from '@/types/merma'
 
 const MERMA_RECORD_NAME = 'MERMA_ZONA_B_REGISTRO'
@@ -20,6 +22,7 @@ export const ESTADO_INICIAL_MERMA: BaseDatosMermaZonaB = {
   objetivos: OBJETIVOS_OCTUBRE_OFICIALES,
   itemsConsolidados: [],
   ventasConsolidadas: [],
+  ventasPorTienda: {},
   ultimaActualizacion: new Date().toISOString()
 }
 
@@ -30,8 +33,13 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
   const supabase = createClient()
   
   const autoSanarBase = (base: BaseDatosMermaZonaB): BaseDatosMermaZonaB => {
-    base.lotes = base.lotes || []
+    base.lotes = (base.lotes || []).map(lote => ({
+      ...lote,
+      totalMermaSoles: Math.abs(lote.totalMermaSoles || 0),
+      totalVentaSoles: Math.abs(lote.totalVentaSoles || 0)
+    }))
     base.lotesVentas = base.lotesVentas || []
+    base.ventasPorTienda = base.ventasPorTienda || {}
     
     // Si la meta está en el placeholder viejo de 4.84 o vacía, actualizar a la oficial de 0.98%
     if (!base.metaZonaB || base.metaZonaB === 4.84) {
@@ -52,18 +60,32 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
     }
 
     base.itemsConsolidados = (base.itemsConsolidados || []).map(item => {
-      let merma = item.mermaSoles || 0
-      const unid = item.unidades || 0
-      const costoUnit = item.costoSoles || 0
+      let merma = Math.abs(item.mermaSoles || 0)
+      const unid = Math.abs(item.unidades || 0)
+      const costoUnit = Math.abs(item.costoSoles || 0)
       if (merma === 0 && unid > 0 && costoUnit > 0) {
         merma = unid * costoUnit
       }
+      const venta = Math.abs(item.ventaSoles || 0)
+      const codTienda = normalizarCodigoTienda(item.nombreTienda || item.tienda || '103')
+      const infoT = TIENDAS_ZONA_B_INFO.find(t => t.codigo === codTienda)
+      const nombreTienda = infoT ? infoT.nombre.split(' - ')[1] : (item.nombreTienda || `Tienda ${codTienda}`)
+
       return {
         ...item,
-        mermaSoles: merma
+        tienda: codTienda,
+        nombreTienda,
+        mermaSoles: merma,
+        unidades: unid,
+        costoSoles: costoUnit > 0 ? costoUnit : undefined,
+        ventaSoles: venta > 0 ? venta : undefined
       }
     })
-    base.ventasConsolidadas = base.ventasConsolidadas || []
+    base.ventasConsolidadas = (base.ventasConsolidadas || []).map(v => ({
+      ...v,
+      ventaSoles: Math.abs(v.ventaSoles || 0),
+      unidades: Math.abs(v.unidades || 0)
+    }))
     return base
   }
 
@@ -207,6 +229,28 @@ export async function guardarObjetivosJerarquia(
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
     objetivos: nuevosObjetivos,
+    ultimaActualizacion: new Date().toISOString()
+  }
+
+  await persistirBaseDatos(supabase, baseActualizada)
+  return baseActualizada
+}
+
+/**
+ * Guarda o actualiza las ventas por tienda directamente
+ */
+export async function guardarVentasPorTienda(
+  ventasPorTienda: Record<string, number>
+): Promise<BaseDatosMermaZonaB> {
+  const supabase = createClient()
+  const baseActual = await cargarBaseDatosMerma()
+
+  const baseActualizada: BaseDatosMermaZonaB = {
+    ...baseActual,
+    ventasPorTienda: {
+      ...(baseActual.ventasPorTienda || {}),
+      ...ventasPorTienda
+    },
     ultimaActualizacion: new Date().toISOString()
   }
 

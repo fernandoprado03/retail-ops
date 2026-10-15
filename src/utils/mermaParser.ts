@@ -73,7 +73,7 @@ function formatearFechaExcel(val: any): string {
 
 function encontrarHeader(headers: string[], regexes: RegExp[]): string | undefined {
   for (const regex of regexes) {
-    const found = headers.find(h => regex.test(h))
+    const found = headers.find(h => regex.test(String(h || '').trim()))
     if (found) return found
   }
   return undefined
@@ -132,13 +132,29 @@ export function parsearArchivoMerma(
     const colUnidadesMerma = encontrarHeader(headers, [/unidades.*merma/i, /cant.*merma/i, /unid.*merma/i, /unidades/i, /cantidad/i, /cant/i, /piezas/i])
     const colMermaDirecta = encontrarHeader(headers, [/merma.*s/i, /merma.*sol/i, /monto.*merma/i, /merma.*total/i, /^merma$/i, /valoriz/i, /merma.*real/i, /importe/i])
 
-    const colVenta = encontrarHeader(headers, [/venta.*s/i, /venta.*sol/i, /venta.*neta/i, /venta.*total/i, /^venta$/i])
+    // Detección amplia de columna de venta
+    const colVenta = encontrarHeader(headers, [
+      /venta.*neta/i,
+      /vta.*neta/i,
+      /venta.*total/i,
+      /vta.*total/i,
+      /valor.*venta/i,
+      /imp.*venta/i,
+      /monto.*venta/i,
+      /precio.*venta/i,
+      /venta.*extend/i,
+      /ventas/i,
+      /venta/i,
+      /\bvta\b/i,
+      /\bvtas\b/i
+    ])
 
     const columnasMapeadas: Record<string, string> = {
       tienda: colLocalDesc || colTienda || '(No detectada)',
       costoExtendido: colCostoExtendido || '(No detectada)',
       costoUnitario: colCostoUnitario || '(Opcional)',
       unidadesMerma: colUnidadesMerma || '(Opcional)',
+      ventas: colVenta || '(Opcional)',
       sku: colSku || '(Opcional)',
       descripcion: colDescripcion || '(Opcional)',
       seccion: colSeccion || '(Opcional)',
@@ -166,11 +182,11 @@ export function parsearArchivoMerma(
         nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : `Tienda ${codTienda}`
       }
 
-      // Cálculo de Merma S/:
-      const costoExtVal = colCostoExtendido ? limpiarNumero(row[colCostoExtendido]) : 0
-      const unidadesVal = colUnidadesMerma ? limpiarNumero(row[colUnidadesMerma]) : 0
-      const costoUnitVal = colCostoUnitario ? limpiarNumero(row[colCostoUnitario]) : 0
-      const mermaDirectaVal = colMermaDirecta ? limpiarNumero(row[colMermaDirecta]) : 0
+      // Cálculo de Merma S/ y Unidades (siempre magnitud positiva):
+      const costoExtVal = colCostoExtendido ? Math.abs(limpiarNumero(row[colCostoExtendido])) : 0
+      const unidadesVal = colUnidadesMerma ? Math.abs(limpiarNumero(row[colUnidadesMerma])) : 0
+      const costoUnitVal = colCostoUnitario ? Math.abs(limpiarNumero(row[colCostoUnitario])) : 0
+      const mermaDirectaVal = colMermaDirecta ? Math.abs(limpiarNumero(row[colMermaDirecta])) : 0
 
       // Prioridad 1: Costo extendido
       let mermaVal = costoExtVal
@@ -183,7 +199,7 @@ export function parsearArchivoMerma(
         mermaVal = mermaDirectaVal
       }
 
-      const ventaVal = colVenta ? limpiarNumero(row[colVenta]) : 0
+      const ventaVal = colVenta ? Math.abs(limpiarNumero(row[colVenta])) : 0
       const skuVal = colSku ? String(row[colSku]).trim() : `SKU-${idx}`
       if (skuVal) skusSet.add(skuVal)
 
@@ -486,6 +502,8 @@ export function generarCruceMermaVentas(
   const mermasMap = new Map<string, {
     mermaSoles: number
     unidades: number
+    ventaSoles: number
+    unidadesVenta: number
     tienda: string
     nombreTienda: string
     sku: string
@@ -502,10 +520,12 @@ export function generarCruceMermaVentas(
     const tiendaInfo = TIENDAS_ZONA_B_INFO.find(t => t.codigo === codTienda)
     const nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : (m.nombreTienda || `Tienda ${codTienda}`)
     
-    // Auto-cálculo si mermaSoles viene en 0 pero hay unidades y costo unitario
-    let mermaMonto = m.mermaSoles || 0
-    const unid = m.unidades || 0
-    const costoUnit = m.costoSoles || 0
+    // Auto-cálculo de merma y venta con magnitud absoluta positiva
+    let mermaMonto = Math.abs(m.mermaSoles || 0)
+    const unid = Math.abs(m.unidades || 0)
+    const costoUnit = Math.abs(m.costoSoles || 0)
+    const ventaMonto = Math.abs(m.ventaSoles || 0)
+
     if (mermaMonto === 0 && unid > 0 && costoUnit > 0) {
       mermaMonto = unid * costoUnit
     }
@@ -514,6 +534,8 @@ export function generarCruceMermaVentas(
     const existing = mermasMap.get(key) || {
       mermaSoles: 0,
       unidades: 0,
+      ventaSoles: 0,
+      unidadesVenta: 0,
       tienda: codTienda,
       nombreTienda,
       sku: m.sku || 'SIN_SKU',
@@ -523,6 +545,7 @@ export function generarCruceMermaVentas(
 
     const totalUnidades = existing.unidades + unid
     const totalMerma = existing.mermaSoles + mermaMonto
+    const totalVenta = existing.ventaSoles + ventaMonto
     const costoUnitarioFinal = totalUnidades > 0 && totalMerma > 0
       ? totalMerma / totalUnidades
       : (costoUnit > 0 ? costoUnit : existing.costoUnitario)
@@ -531,6 +554,7 @@ export function generarCruceMermaVentas(
       ...existing,
       mermaSoles: totalMerma,
       unidades: totalUnidades,
+      ventaSoles: totalVenta,
       costoUnitario: costoUnitarioFinal,
       desc: m.descripcion || existing.desc,
       seccion: m.seccion || existing.seccion,
@@ -545,9 +569,9 @@ export function generarCruceMermaVentas(
 
   mermasMap.forEach((mermaData, key) => {
     const ventaData = ventasMap.get(key)
-    const ventaSoles = ventaData?.ventaSoles || 0
-    const unidadesVenta = ventaData?.unidades || 0
-    const ratio = ventaSoles > 0 ? (mermaData.mermaSoles / ventaSoles) * 100 : (mermaData.mermaSoles > 0 ? 100 : 0)
+    const ventaSoles = (ventaData && ventaData.ventaSoles > 0) ? ventaData.ventaSoles : (mermaData.ventaSoles || 0)
+    const unidadesVenta = (ventaData && ventaData.unidades > 0) ? ventaData.unidades : (mermaData.unidadesVenta || 0)
+    const ratio = ventaSoles > 0 ? (mermaData.mermaSoles / ventaSoles) * 100 : 0
 
     const seccionFinal = mermaData.seccion || ventaData?.seccion || 'GENERAL'
     const descripcionFinal = mermaData.desc || ventaData?.desc || `Producto SKU ${mermaData.sku}`
