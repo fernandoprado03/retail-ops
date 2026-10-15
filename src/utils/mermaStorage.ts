@@ -81,11 +81,32 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
         ventaSoles: venta > 0 ? venta : undefined
       }
     })
-    base.ventasConsolidadas = (base.ventasConsolidadas || []).map(v => ({
-      ...v,
-      ventaSoles: Math.abs(v.ventaSoles || 0),
-      unidades: Math.abs(v.unidades || 0)
-    }))
+
+    // Recuperar ventas por tienda de la copia ligera si existe
+    if (typeof window !== 'undefined') {
+      try {
+        const vCached = localStorage.getItem('merma_zona_b_ventas_tiendas')
+        if (vCached) {
+          const vObj = JSON.parse(vCached)
+          base.ventasPorTienda = { ...vObj, ...(base.ventasPorTienda || {}) }
+        }
+      } catch (e) {}
+    }
+
+    base.ventasConsolidadas = (base.ventasConsolidadas || []).map(v => {
+      const codTienda = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
+      const ventaSoles = Math.abs(v.ventaSoles || 0)
+      if (ventaSoles > 0) {
+        base.ventasPorTienda![codTienda] = (base.ventasPorTienda![codTienda] || 0) + ventaSoles
+      }
+      return {
+        ...v,
+        tienda: codTienda,
+        ventaSoles,
+        unidades: Math.abs(v.unidades || 0)
+      }
+    })
+
     return base
   }
 
@@ -106,6 +127,9 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
         } catch (storageErr) {
           console.warn('LocalStorage lleno, manteniendo datos en memoria', storageErr)
         }
+        try {
+          localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(baseRemota.ventasPorTienda || {}))
+        } catch (e) {}
       }
       return baseRemota
     }
@@ -206,11 +230,37 @@ export async function guardarLoteVentas(
     ventasFinales = [...nuevoLote.items, ...ventasOtrosLotes]
   }
 
+  // 1. Calcular de inmediato las ventas totales consolidadas por tienda
+  const ventasPorTiendaActualizadas: Record<string, number> = { ...(baseActual.ventasPorTienda || {}) }
+  ventasFinales.forEach(v => {
+    const cod = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
+    ventasPorTiendaActualizadas[cod] = (ventasPorTiendaActualizadas[cod] || 0) + Math.abs(v.ventaSoles || 0)
+  })
+
+  // 2. Compactar ventasConsolidadas para evitar sobrepasar límites de almacenamiento
+  const ventasCompactas: ItemVenta[] = ventasFinales.map(v => ({
+    tienda: normalizarCodigoTienda(v.tienda || v.nombreTienda || '103'),
+    sku: String(v.sku).trim(),
+    descripcion: v.descripcion,
+    seccion: v.seccion || 'GENERAL',
+    ventaSoles: Math.abs(v.ventaSoles || 0),
+    unidades: Math.abs(v.unidades || 0),
+    fecha: v.fecha
+  }))
+
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
     lotesVentas: nuevosLotesVenta,
-    ventasConsolidadas: ventasFinales,
+    ventasConsolidadas: ventasCompactas,
+    ventasPorTienda: ventasPorTiendaActualizadas,
     ultimaActualizacion: new Date().toISOString()
+  }
+
+  // Guardar copia ligera de ventas por tienda
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(ventasPorTiendaActualizadas))
+    } catch (e) {}
   }
 
   await persistirBaseDatos(supabase, baseActualizada)
@@ -353,7 +403,18 @@ async function persistirBaseDatos(supabase: any, base: BaseDatosMermaZonaB) {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(base))
     } catch (e) {
-      console.warn('LocalStorage limit reached', e)
+      console.warn('LocalStorage limit reached, storing essential base', e)
+      try {
+        const baseEsencial: BaseDatosMermaZonaB = {
+          ...base,
+          ventasConsolidadas: (base.ventasConsolidadas || []).slice(0, 5000),
+          itemsConsolidados: (base.itemsConsolidados || []).slice(0, 8000)
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseEsencial))
+      } catch (e2) {}
     }
+    try {
+      localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(base.ventasPorTienda || {}))
+    } catch (e) {}
   }
 }

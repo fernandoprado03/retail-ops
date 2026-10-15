@@ -33,7 +33,7 @@ import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { BaseDatosMermaZonaB, CruceSkuAnalisis, TIENDAS_ZONA_B_INFO, matchJerarquia } from '@/types/merma'
+import { BaseDatosMermaZonaB, CruceSkuAnalisis, TIENDAS_ZONA_B_INFO, matchJerarquia, normalizarCodigoTienda } from '@/types/merma'
 import { cargarBaseDatosMerma, guardarVentasPorTienda } from '@/utils/mermaStorage'
 import { generarCruceMermaVentas } from '@/utils/mermaParser'
 import * as XLSX from 'xlsx'
@@ -169,14 +169,29 @@ export default function MermaPublicClient() {
     const totalMerma = itemsFiltrados.reduce((acc, i) => acc + Math.abs(i.mermaSoles || 0), 0)
     const totalUnidadesMerma = itemsFiltrados.reduce((acc, i) => acc + Math.abs(i.unidadesMerma || 0), 0)
     
-    // Total ventas (combinando SKUs y ventas por tienda registradas)
-    const totalVentaFromSkus = itemsFiltrados.reduce((acc, i) => acc + Math.abs(i.ventaSoles || 0), 0)
-    const totalVentaFromTiendas = Object.values(db?.ventasPorTienda || {}).reduce((acc, v) => acc + (v || 0), 0)
-    const totalVenta = totalVentaFromSkus > 0 ? totalVentaFromSkus : totalVentaFromTiendas
+    // Consolidar ventas por tienda desde todas las fuentes disponibles:
+    // 1. db.ventasConsolidadas (las 19,000 filas cargadas en /merma)
+    const ventasConsolidadasPorTienda: Record<string, number> = {}
 
-    const ratioGlobal = totalVenta > 0 ? (totalMerma / totalVenta) * 100 : 0
-    const metaGlobal = db?.metaZonaB || 0.98
-    const cumpleMetaGlobal = totalVenta > 0 ? ratioGlobal <= metaGlobal : true
+    ;(db?.ventasConsolidadas || []).forEach(v => {
+      const cod = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
+      ventasConsolidadasPorTienda[cod] = (ventasConsolidadasPorTienda[cod] || 0) + Math.abs(v.ventaSoles || 0)
+    })
+
+    // 2. db.lotesVentas si contienen items
+    ;(db?.lotesVentas || []).forEach(lote => {
+      (lote.items || []).forEach(it => {
+        const cod = normalizarCodigoTienda(it.tienda || it.nombreTienda || '103')
+        ventasConsolidadasPorTienda[cod] = (ventasConsolidadasPorTienda[cod] || 0) + Math.abs(it.ventaSoles || 0)
+      })
+    })
+
+    // 3. db.ventasPorTienda (ajustes o ventas directas por tienda)
+    Object.entries(db?.ventasPorTienda || {}).forEach(([cod, monto]) => {
+      if (monto && monto > 0) {
+        ventasConsolidadasPorTienda[cod] = monto
+      }
+    })
 
     // Ranking por Tienda (sin líderes, nombre oficial de tienda)
     const tiendaMap: Record<string, { merma: number; unidades: number; venta: number; count: number; nombre: string }> = {}
@@ -185,7 +200,7 @@ export default function MermaPublicClient() {
       tiendaMap[t.codigo] = {
         merma: 0,
         unidades: 0,
-        venta: db?.ventasPorTienda?.[t.codigo] || 0,
+        venta: ventasConsolidadasPorTienda[t.codigo] || 0,
         count: 0,
         nombre: t.nombre
       }
@@ -197,18 +212,23 @@ export default function MermaPublicClient() {
         tiendaMap[cod] = {
           merma: 0,
           unidades: 0,
-          venta: db?.ventasPorTienda?.[cod] || 0,
+          venta: ventasConsolidadasPorTienda[cod] || 0,
           count: 0,
           nombre: i.nombreTienda || `Tienda ${cod}`
         }
       }
       tiendaMap[cod].merma += Math.abs(i.mermaSoles || 0)
       tiendaMap[cod].unidades += Math.abs(i.unidadesMerma || 0)
-      if (i.ventaSoles && i.ventaSoles > 0) {
-        tiendaMap[cod].venta = (tiendaMap[cod].venta || 0) + Math.abs(i.ventaSoles)
+      if (tiendaMap[cod].venta === 0 && i.ventaSoles && i.ventaSoles > 0) {
+        tiendaMap[cod].venta += Math.abs(i.ventaSoles)
       }
       tiendaMap[cod].count += 1
     })
+
+    const totalVenta = Object.values(tiendaMap).reduce((acc, t) => acc + (t.venta || 0), 0)
+    const ratioGlobal = totalVenta > 0 ? (totalMerma / totalVenta) * 100 : 0
+    const metaGlobal = db?.metaZonaB || 0.98
+    const cumpleMetaGlobal = totalVenta > 0 ? ratioGlobal <= metaGlobal : true
 
     const rankingTiendas = Object.entries(tiendaMap).map(([codigo, val]) => {
       const tieneVenta = val.venta > 0

@@ -473,6 +473,13 @@ export function parsearArchivoObjetivos(
   }
 }
 
+function normalizarSku(sku: any): string {
+  if (!sku) return 'SIN_SKU'
+  const str = String(sku).trim()
+  const sinCeros = str.replace(/^0+/, '')
+  return sinCeros || str
+}
+
 /**
  * Cruce inteligente de Merma y Ventas por SKU, Tienda y Jerarquía
  */
@@ -486,7 +493,8 @@ export function generarCruceMermaVentas(
 
   ventas.forEach(v => {
     const codTienda = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
-    const key = `${codTienda}_${v.sku}`
+    const skuNorm = normalizarSku(v.sku)
+    const key = `${codTienda}_${skuNorm}`
     const existing = ventasMap.get(key) || { ventaSoles: 0, unidades: 0 }
     ventasMap.set(key, {
       ventaSoles: existing.ventaSoles + v.ventaSoles,
@@ -530,7 +538,8 @@ export function generarCruceMermaVentas(
       mermaMonto = unid * costoUnit
     }
 
-    const key = `${codTienda}_${m.sku || 'SIN_SKU'}`
+    const skuNorm = normalizarSku(m.sku)
+    const key = `${codTienda}_${skuNorm}`
     const existing = mermasMap.get(key) || {
       mermaSoles: 0,
       unidades: 0,
@@ -538,7 +547,7 @@ export function generarCruceMermaVentas(
       unidadesVenta: 0,
       tienda: codTienda,
       nombreTienda,
-      sku: m.sku || 'SIN_SKU',
+      sku: skuNorm,
       costoUnitario: costoUnit > 0 ? costoUnit : undefined,
       fecha: m.fecha
     }
