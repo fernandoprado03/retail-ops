@@ -326,5 +326,35 @@ export const OBJETIVOS_OCTUBRE_OFICIALES: ObjetivoJerarquia[] = [
   { id: 'oct-335-j11', tienda: '335', nombreTienda: 'Chimbote', jerarquia: 'J11 - ELECTROHOGAR', metaRatio: 0.11 },
   { id: 'oct-335-j12', tienda: '335', nombreTienda: 'Chimbote', jerarquia: 'J12 - INSTITUCIONALES', metaRatio: 0.00 },
   { id: 'oct-335-j99', tienda: '335', nombreTienda: 'Chimbote', jerarquia: 'J99 - ADMINISTRATIVA', metaRatio: 0.00 },
+
+  // LOCAL 155 - SANTA ANITA por Jerarquía (MC)
+  { id: 'oct-155-j01', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J01 - PGC COMESTIBLE', metaRatio: 0.68 },
+  { id: 'oct-155-j02', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J02 - PGC NO COMESTIBLE', metaRatio: 0.41 },
+  { id: 'oct-155-j03', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J03 - CARNES Y PESCADOS', metaRatio: 3.82 },
+  { id: 'oct-155-j04', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J04 - FRUTAS Y VERDURAS', metaRatio: 9.47 },
+  { id: 'oct-155-j05', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J05 - FLC', metaRatio: 1.22 },
+  { id: 'oct-155-j06', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J06 - PANADERIA Y PASTELERIA', metaRatio: 4.73 },
+  { id: 'oct-155-j07', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J07 - PLATOS PREPARADOS', metaRatio: 3.28 },
+  { id: 'oct-155-j08', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J08 - VESTUARIO', metaRatio: 0.09 },
+  { id: 'oct-155-j09', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J09 - HOGAR', metaRatio: 0.48 },
+  { id: 'oct-155-j10', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J10 - BAZAR', metaRatio: 1.33 },
+  { id: 'oct-155-j11', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J11 - ELECTROHOGAR', metaRatio: 0.08 },
+  { id: 'oct-155-j12', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J12 - INSTITUCIONALES', metaRatio: 0.00 },
+  { id: 'oct-155-j99', tienda: '155', nombreTienda: 'Santa Anita', jerarquia: 'J99 - ADMINISTRATIVA', metaRatio: 0.00 },
+
+  // LOCAL 357 - CUZCO LA CULTURA por Jerarquía (MC)
+  { id: 'oct-357-j01', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J01 - PGC COMESTIBLE', metaRatio: 0.69 },
+  { id: 'oct-357-j02', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J02 - PGC NO COMESTIBLE', metaRatio: 0.45 },
+  { id: 'oct-357-j03', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J03 - CARNES Y PESCADOS', metaRatio: 3.20 },
+  { id: 'oct-357-j04', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J04 - FRUTAS Y VERDURAS', metaRatio: 10.27 },
+  { id: 'oct-357-j05', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J05 - FLC', metaRatio: 1.74 },
+  { id: 'oct-357-j06', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J06 - PANADERIA Y PASTELERIA', metaRatio: 7.56 },
+  { id: 'oct-357-j07', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J07 - PLATOS PREPARADOS', metaRatio: 2.60 },
+  { id: 'oct-357-j08', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J08 - VESTUARIO', metaRatio: 0.10 },
+  { id: 'oct-357-j09', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J09 - HOGAR', metaRatio: 0.61 },
+  { id: 'oct-357-j10', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J10 - BAZAR', metaRatio: 1.40 },
+  { id: 'oct-357-j11', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J11 - ELECTROHOGAR', metaRatio: 0.13 },
+  { id: 'oct-357-j12', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J12 - INSTITUCIONALES', metaRatio: 0.00 },
+  { id: 'oct-357-j99', tienda: '357', nombreTienda: 'Cuzco La cultura', jerarquia: 'J99 - ADMINISTRATIVA', metaRatio: 0.00 },
 ]
 
