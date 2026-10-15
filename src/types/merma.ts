@@ -1,21 +1,50 @@
 export interface ItemMerma {
   id?: string
+  fecha?: string // YYYY-MM-DD o texto de fecha
   tienda: string // ej: "103", "107", "110", etc.
   nombreTienda?: string // ej: "Mega Plaza"
-  seccion?: string // ej: "PGC", "Perecibles", "Carnes", "Fiambres", etc.
-  categoria?: string
+  sku?: string // Código de producto
+  descripcion?: string // Nombre / Descripción de producto
+  seccion?: string // Jerarquía 1 (ej. PGC, Perecibles, Carnes, etc.)
+  departamento?: string // Jerarquía 2
+  categoria?: string // Jerarquía 3
+  subcategoria?: string // Jerarquía 4
   motivo?: string // ej: "Vencimiento", "Merma Operativa", "Rotura", "Desconocida"
-  sku?: string
-  descripcion?: string
   mermaSoles: number
   ventaSoles?: number
   costoSoles?: number
   porcentajeMerma?: number
   unidades?: number
-  fecha?: string
   semana?: string // ej: "Semana 40", "Semana 41", "Semana 42", "Semana 43", etc.
   mes?: string // ej: "Octubre 2024"
   loteId?: string
+}
+
+export interface ItemVenta {
+  id?: string
+  fecha?: string
+  tienda: string
+  nombreTienda?: string
+  sku: string
+  descripcion?: string
+  seccion?: string
+  departamento?: string
+  categoria?: string
+  subcategoria?: string
+  ventaSoles: number
+  unidades?: number
+  semana?: string
+  mes?: string
+  loteId?: string
+}
+
+export interface ObjetivoJerarquia {
+  id: string
+  tienda: string // 'TODAS' o código de tienda específico (ej. '103')
+  nombreTienda?: string
+  jerarquia: string // Nombre de sección, departamento o categoría (ej. 'CARNES', 'PGC', 'ZONA B')
+  metaRatio: number // Ratio objetivo en % (ej. 4.84, 3.20)
+  comentario?: string
 }
 
 export interface CargaMermaLote {
@@ -32,13 +61,48 @@ export interface CargaMermaLote {
   items: ItemMerma[]
 }
 
+export interface CargaVentaLote {
+  id: string
+  nombreLote: string // ej. "Ventas Octubre 2024 (Día por Día)"
+  tipo: 'mes' | 'semana' | 'diario'
+  periodo: string
+  fechaCarga: string
+  totalRegistros: number
+  totalVentaSoles: number
+  totalUnidades?: number
+  items: ItemVenta[]
+}
+
 export interface BaseDatosMermaZonaB {
   id?: string
   version: number
-  metaZonaB: number // Por defecto 4.84% (según el estándar del boletín J06)
+  metaZonaB: number // Por defecto 4.84%
   lotes: CargaMermaLote[]
+  lotesVentas: CargaVentaLote[]
+  objetivos: ObjetivoJerarquia[]
   itemsConsolidados: ItemMerma[]
+  ventasConsolidadas: ItemVenta[]
   ultimaActualizacion: string
+}
+
+export interface CruceSkuAnalisis {
+  sku: string
+  descripcion: string
+  tienda: string
+  nombreTienda: string
+  seccion: string
+  departamento?: string
+  categoria?: string
+  mermaSoles: number
+  ventaSoles: number
+  unidadesMerma: number
+  unidadesVenta: number
+  ratioMermaVenta: number // (mermaSoles / ventaSoles) * 100
+  mermaMayorQueVenta: boolean // mermaSoles > ventaSoles
+  diferenciaSoles: number // mermaSoles - ventaSoles
+  metaRatio?: number
+  dentroDeRatio?: boolean // ratioMermaVenta <= metaRatio
+  desvioPuntos?: number // ratioMermaVenta - metaRatio
 }
 
 export const TIENDAS_ZONA_B_INFO: { codigo: string; nombre: string; lider: string }[] = [

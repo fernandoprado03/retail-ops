@@ -21,24 +21,31 @@ import {
   RefreshCw,
   PieChart,
   DollarSign,
-  PackageMinus
+  PackageMinus,
+  AlertOctagon,
+  Target,
+  ShoppingCart,
+  ListFilter
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { BaseDatosMermaZonaB, ItemMerma, TIENDAS_ZONA_B_INFO } from '@/types/merma'
+import { BaseDatosMermaZonaB, CruceSkuAnalisis, TIENDAS_ZONA_B_INFO } from '@/types/merma'
 import { cargarBaseDatosMerma } from '@/utils/mermaStorage'
+import { generarCruceMermaVentas } from '@/utils/mermaParser'
 import * as XLSX from 'xlsx'
 
 export default function MermaPublicClient() {
   const [db, setDb] = useState<BaseDatosMermaZonaB | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [periodoSeleccionado, setPeriodoSeleccionado] = useState<string>('todos')
+  const [vistaActiva, setVistaActiva] = useState<'tiendas' | 'jerarquias' | 'merma_mayor_venta' | 'todos_skus'>('tiendas')
+
+  // Filtros
   const [tiendaFiltro, setTiendaFiltro] = useState<string>('todas')
   const [seccionFiltro, setSeccionFiltro] = useState<string>('todas')
   const [busqueda, setBusqueda] = useState('')
-  const [copiado, setCopiado] = useState(false)
+  const [soloFueraDeRatio, setSoloFueraDeRatio] = useState(false)
   const [copiadoWsp, setCopiadoWsp] = useState(false)
 
   // Cargar datos
@@ -58,59 +65,65 @@ export default function MermaPublicClient() {
     refrescar()
   }, [])
 
-  // Filtrado de items
+  // Cruce de SKU analítico
+  const itemsCruzados = useMemo(() => {
+    if (!db) return []
+    return generarCruceMermaVentas(
+      db.itemsConsolidados || [],
+      db.ventasConsolidadas || [],
+      db.objetivos || []
+    )
+  }, [db])
+
+  // Lista filtrada según selectores
   const itemsFiltrados = useMemo(() => {
-    if (!db || !db.itemsConsolidados) return []
-    let list = db.itemsConsolidados
+    let list = itemsCruzados
 
-    // Filtro por período / lote
-    if (periodoSeleccionado !== 'todos') {
-      const lote = db.lotes.find(l => l.id === periodoSeleccionado)
-      if (lote) {
-        list = lote.items
-      }
-    }
-
-    // Filtro por tienda
     if (tiendaFiltro !== 'todas') {
       list = list.filter(i => i.tienda === tiendaFiltro)
     }
 
-    // Filtro por sección
     if (seccionFiltro !== 'todas') {
-      list = list.filter(i => (i.seccion || 'General').toLowerCase() === seccionFiltro.toLowerCase())
+      list = list.filter(i => i.seccion.toLowerCase() === seccionFiltro.toLowerCase())
     }
 
-    // Filtro por búsqueda
+    if (soloFueraDeRatio) {
+      list = list.filter(i => i.dentroDeRatio === false)
+    }
+
     if (busqueda.trim()) {
       const q = busqueda.toLowerCase()
-      list = list.filter(i => 
-        (i.nombreTienda && i.nombreTienda.toLowerCase().includes(q)) ||
-        (i.tienda && i.tienda.includes(q)) ||
-        (i.seccion && i.seccion.toLowerCase().includes(q)) ||
-        (i.motivo && i.motivo.toLowerCase().includes(q)) ||
-        (i.descripcion && i.descripcion.toLowerCase().includes(q)) ||
-        (i.sku && i.sku.toLowerCase().includes(q))
+      list = list.filter(i =>
+        i.sku.toLowerCase().includes(q) ||
+        i.descripcion.toLowerCase().includes(q) ||
+        i.tienda.includes(q) ||
+        i.nombreTienda.toLowerCase().includes(q) ||
+        i.seccion.toLowerCase().includes(q) ||
+        (i.departamento && i.departamento.toLowerCase().includes(q))
       )
     }
 
     return list
-  }, [db, periodoSeleccionado, tiendaFiltro, seccionFiltro, busqueda])
+  }, [itemsCruzados, tiendaFiltro, seccionFiltro, soloFueraDeRatio, busqueda])
 
-  // Métricas agregadas
+  // Productos donde MERMA > VENTA
+  const productosMermaMayorQueVenta = useMemo(() => {
+    return itemsFiltrados.filter(i => i.mermaMayorQueVenta && i.mermaSoles > 0)
+  }, [itemsFiltrados])
+
+  // Métricas Consolidadas
   const metricas = useMemo(() => {
     const totalMerma = itemsFiltrados.reduce((acc, i) => acc + i.mermaSoles, 0)
-    const totalVenta = itemsFiltrados.reduce((acc, i) => acc + (i.ventaSoles || 0), 0)
-    const ratioMerma = totalVenta > 0 ? (totalMerma / totalVenta) * 100 : 0
-    const meta = db?.metaZonaB || 4.84
-    const cumpleMeta = ratioMerma <= meta
+    const totalVenta = itemsFiltrados.reduce((acc, i) => acc + i.ventaSoles, 0)
+    const ratioGlobal = totalVenta > 0 ? (totalMerma / totalVenta) * 100 : 0
+    const metaGlobal = db?.metaZonaB || 4.84
+    const cumpleMetaGlobal = ratioGlobal <= metaGlobal
 
-    // Agrupación por Tienda
-    const porTiendaMap: Record<string, { merma: number; venta: number; count: number; nombre: string; lider: string }> = {}
+    // Ranking por Tienda
+    const tiendaMap: Record<string, { merma: number; venta: number; count: number; nombre: string; lider: string }> = {}
 
-    // Inicializar las 11 tiendas oficiales de Zona B
     TIENDAS_ZONA_B_INFO.forEach(t => {
-      porTiendaMap[t.codigo] = {
+      tiendaMap[t.codigo] = {
         merma: 0,
         venta: 0,
         count: 0,
@@ -119,11 +132,10 @@ export default function MermaPublicClient() {
       }
     })
 
-    // Sumar valores
     itemsFiltrados.forEach(i => {
       const cod = i.tienda || '103'
-      if (!porTiendaMap[cod]) {
-        porTiendaMap[cod] = {
+      if (!tiendaMap[cod]) {
+        tiendaMap[cod] = {
           merma: 0,
           venta: 0,
           count: 0,
@@ -131,125 +143,143 @@ export default function MermaPublicClient() {
           lider: 'Líder Zona B'
         }
       }
-      porTiendaMap[cod].merma += i.mermaSoles
-      porTiendaMap[cod].venta += (i.ventaSoles || 0)
-      porTiendaMap[cod].count += 1
+      tiendaMap[cod].merma += i.mermaSoles
+      tiendaMap[cod].venta += i.ventaSoles
+      tiendaMap[cod].count += 1
     })
 
-    const rankingTiendas = Object.entries(porTiendaMap)
-      .map(([codigo, val]) => {
-        const ratio = val.venta > 0 ? (val.merma / val.venta) * 100 : 0
-        return {
-          codigo,
-          nombre: val.nombre,
-          lider: val.lider,
-          merma: val.merma,
-          venta: val.venta,
-          count: val.count,
-          ratio,
-          cumple: ratio > 0 ? ratio <= meta : null
-        }
-      })
-      .sort((a, b) => {
-        // Ordenar por ratio o por merma descendente si no hay ventas
-        if (a.ratio !== b.ratio && a.ratio > 0 && b.ratio > 0) return a.ratio - b.ratio
-        return b.merma - a.merma
-      })
+    const rankingTiendas = Object.entries(tiendaMap).map(([codigo, val]) => {
+      const ratio = val.venta > 0 ? (val.merma / val.venta) * 100 : 0
+      // Buscar objetivo específico de tienda si existe
+      const objTienda = db?.objetivos.find(o => o.tienda === codigo)
+      const meta = objTienda ? objTienda.metaRatio : metaGlobal
+      const cumple = ratio > 0 ? ratio <= meta : null
+      const desvio = ratio > 0 ? ratio - meta : 0
+      const mermaPresupuestada = (val.venta * meta) / 100
+      const impactoSoles = val.merma - mermaPresupuestada
 
-    // Tiendas destacadas
-    const tiendasConDatos = rankingTiendas.filter(t => t.merma > 0)
-    const mejorTienda = tiendasConDatos.length > 0 ? tiendasConDatos[0] : null
-    const mayorDesvio = tiendasConDatos.length > 0 ? tiendasConDatos[tiendasConDatos.length - 1] : null
+      return {
+        codigo,
+        nombre: val.nombre,
+        lider: val.lider,
+        merma: val.merma,
+        venta: val.venta,
+        ratio,
+        meta,
+        cumple,
+        desvio,
+        impactoSoles: impactoSoles > 0 ? impactoSoles : 0
+      }
+    }).sort((a, b) => {
+      if (a.ratio !== b.ratio && a.ratio > 0 && b.ratio > 0) return a.ratio - b.ratio
+      return b.merma - a.merma
+    })
 
-    // Agrupación por Sección
-    const porSeccionMap: Record<string, number> = {}
+    // Ranking por Jerarquía / Sección
+    const seccionMap: Record<string, { merma: number; venta: number; count: number }> = {}
     itemsFiltrados.forEach(i => {
-      const sec = i.seccion || 'General'
-      porSeccionMap[sec] = (porSeccionMap[sec] || 0) + i.mermaSoles
+      const sec = i.seccion || 'GENERAL'
+      if (!seccionMap[sec]) seccionMap[sec] = { merma: 0, venta: 0, count: 0 }
+      seccionMap[sec].merma += i.mermaSoles
+      seccionMap[sec].venta += i.ventaSoles
+      seccionMap[sec].count += 1
     })
-    const rankingSecciones = Object.entries(porSeccionMap)
-      .map(([nombre, merma]) => ({ nombre, merma }))
-      .sort((a, b) => b.merma - a.merma)
+
+    const rankingJerarquias = Object.entries(seccionMap).map(([jerarquia, val]) => {
+      const ratio = val.venta > 0 ? (val.merma / val.venta) * 100 : 0
+      const objJerarquia = db?.objetivos.find(o => o.jerarquia.toUpperCase() === jerarquia.toUpperCase())
+      const meta = objJerarquia ? objJerarquia.metaRatio : metaGlobal
+      const cumple = ratio > 0 ? ratio <= meta : null
+      const desvio = ratio > 0 ? ratio - meta : 0
+      const impactoSoles = val.merma - (val.venta * meta) / 100
+
+      return {
+        jerarquia,
+        merma: val.merma,
+        venta: val.venta,
+        ratio,
+        meta,
+        cumple,
+        desvio,
+        impactoSoles: impactoSoles > 0 ? impactoSoles : 0,
+        count: val.count
+      }
+    }).sort((a, b) => b.merma - a.merma)
 
     return {
       totalMerma,
       totalVenta,
-      ratioMerma,
-      meta,
-      cumpleMeta,
+      ratioGlobal,
+      metaGlobal,
+      cumpleMetaGlobal,
       rankingTiendas,
-      rankingSecciones,
-      mejorTienda,
-      mayorDesvio,
-      totalRegistros: itemsFiltrados.length
+      rankingJerarquias,
+      totalSkusCriticos: productosMermaMayorQueVenta.length
     }
-  }, [itemsFiltrados, db])
+  }, [itemsFiltrados, db, productosMermaMayorQueVenta])
 
-  // Secciones únicas para el filtro
+  // Secciones únicas
   const listaSecciones = useMemo(() => {
-    if (!db?.itemsConsolidados) return []
     const set = new Set<string>()
-    db.itemsConsolidados.forEach(i => {
+    itemsCruzados.forEach(i => {
       if (i.seccion) set.add(i.seccion)
     })
     return Array.from(set).sort()
-  }, [db])
+  }, [itemsCruzados])
 
-  // Copiar resumen ejecutivo para WhatsApp
-  const handleCopiarWsp = () => {
-    const periodoTexto = periodoSeleccionado === 'todos' 
-      ? 'Acumulado Histórico (Octubre + Semanas)' 
-      : (db?.lotes.find(l => l.id === periodoSeleccionado)?.nombreLote || 'Período')
-
-    let txt = `📊 *REPORTE DE MERMA - ZONA B*\n`
-    txt += `📅 *Período:* ${periodoTexto}\n`
-    txt += `🎯 *Meta Zona B:* ${metricas.meta}%\n`
-    txt += `💰 *Merma Total:* S/ ${metricas.totalMerma.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`
-    if (metricas.totalVenta > 0) {
-      txt += `📈 *% Merma Real:* ${metricas.ratioMerma.toFixed(2)}% ${metricas.cumpleMeta ? '✅ (En Meta)' : '⚠️ (Desvío)'}\n`
-    }
-    txt += `\n📍 *Ranking por Tienda (Merma S/):*\n`
-    metricas.rankingTiendas.filter(t => t.merma > 0).forEach((t, idx) => {
-      const ratioTxt = t.ratio > 0 ? ` [${t.ratio.toFixed(2)}%]` : ''
-      txt += `${idx + 1}. T-${t.codigo} ${t.nombre}: S/ ${t.merma.toLocaleString('es-PE', { maximumFractionDigits: 0 })}${ratioTxt}\n`
-    })
-
-    navigator.clipboard.writeText(txt)
-    setCopiadoWsp(true)
-    toast.success('¡Resumen para WhatsApp copiado al portapapeles!')
-    setTimeout(() => setCopiadoWsp(false), 2500)
-  }
-
-  // Descargar a Excel
+  // Exportar reporte consolidado a Excel
   const handleExportarExcel = () => {
     if (itemsFiltrados.length === 0) {
-      toast.error('No hay registros para exportar')
+      toast.error('No hay datos para exportar')
       return
     }
 
     const data = itemsFiltrados.map(i => ({
       'Tienda': i.tienda,
-      'Nombre Local': i.nombreTienda,
-      'Sección': i.seccion || 'General',
-      'Motivo': i.motivo || 'General',
-      'SKU': i.sku || '',
-      'Descripción': i.descripcion || '',
+      'Nombre Tienda': i.nombreTienda,
+      'SKU': i.sku,
+      'Descripción': i.descripcion,
+      'Sección / Jerarquía': i.seccion,
+      'Departamento': i.departamento || '',
       'Merma (S/)': i.mermaSoles,
-      'Venta (S/)': i.ventaSoles || '',
-      '% Merma': i.porcentajeMerma ? `${i.porcentajeMerma.toFixed(2)}%` : '',
-      'Período / Semana': i.semana || i.mes || ''
+      'Ventas (S/)': i.ventaSoles,
+      '% Ratio Merma': i.ratioMermaVenta ? `${i.ratioMermaVenta.toFixed(2)}%` : '',
+      'Meta Ratio %': i.metaRatio ? `${i.metaRatio.toFixed(2)}%` : '',
+      'Cumple Objetivo': i.dentroDeRatio ? 'EN META' : 'DESVÍO',
+      'Merma > Venta': i.mermaMayorQueVenta ? 'SÍ (CRÍTICO)' : 'NO'
     }))
 
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Merma Zona B')
-    XLSX.writeFile(wb, `Reporte_Merma_Zona_B_${new Date().toISOString().slice(0, 10)}.xlsx`)
-    toast.success('Archivo Excel descargado')
+    XLSX.utils.book_append_sheet(wb, ws, 'Analisis SKU Merma Venta')
+    XLSX.writeFile(wb, `Analisis_Merma_Venta_ZonaB_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    toast.success('Excel descargado con éxito')
+  }
+
+  // Copiar resumen WhatsApp
+  const handleCopiarWsp = () => {
+    let txt = `📊 *REPORTE EJECUTIVO DE MERMA Y VENTAS - ZONA B*\n`
+    txt += `🎯 *Meta Presupuesto:* ${metricas.metaGlobal}%\n`
+    txt += `💰 *Merma Total:* S/ ${metricas.totalMerma.toLocaleString('es-PE', { maximumFractionDigits: 0 })}\n`
+    if (metricas.totalVenta > 0) {
+      txt += `🛒 *Venta Total:* S/ ${metricas.totalVenta.toLocaleString('es-PE', { maximumFractionDigits: 0 })}\n`
+      txt += `📈 *% Ratio Global:* ${metricas.ratioGlobal.toFixed(2)}% ${metricas.cumpleMetaGlobal ? '✅ (En Meta)' : '⚠️ (Desvío)'}\n`
+    }
+    txt += `🚨 *SKUs con Merma > Venta:* ${metricas.totalSkusCriticos} productos\n\n`
+    txt += `📍 *Top Tiendas por Merma:*\n`
+    metricas.rankingTiendas.filter(t => t.merma > 0).slice(0, 5).forEach((t, i) => {
+      txt += `${i + 1}. T-${t.codigo} ${t.nombre}: S/ ${t.merma.toLocaleString('es-PE', { maximumFractionDigits: 0 })} [${t.ratio.toFixed(2)}%]\n`
+    })
+
+    navigator.clipboard.writeText(txt)
+    setCopiadoWsp(true)
+    toast.success('Resumen ejecutivo copiado para WhatsApp')
+    setTimeout(() => setCopiadoWsp(false), 2500)
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
-      {/* Barra de Encabezado Institucional */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+      {/* Header Corporativo */}
       <header className="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -259,14 +289,14 @@ export default function MermaPublicClient() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-                  Reporte Ejecutivo de Merma
+                  Reporte de Merma y Ventas
                 </h1>
                 <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] font-semibold px-2 py-0.5">
                   ZONA B (11 Tiendas)
                 </Badge>
               </div>
               <p className="text-xs text-slate-400">
-                Seguimiento consolidado mensual y acumulado semanal de tiendas Zona B
+                Análisis cruzado por SKU, día a día y evaluación de ratios por jerarquía
               </p>
             </div>
           </div>
@@ -307,33 +337,9 @@ export default function MermaPublicClient() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-        {/* Banner de Estado General */}
-        <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-950 text-white p-5 rounded-2xl shadow-sm border border-emerald-800/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-700/50">
-              <Sparkles className="w-3 h-3" />
-              Consolidado Oficial Zona B
-            </div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-              Control de Merma Operativa
-            </h2>
-            <p className="text-xs text-slate-300 max-w-xl">
-              Datos actualizados en línea. El objetivo presupuestado para la Zona B es de un ratio no mayor a <strong>{metricas.meta}%</strong>.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/10 shrink-0">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Meta Corporativa</div>
-              <div className="text-xl font-black text-emerald-300">{metricas.meta}%</div>
-              <div className="text-[10px] text-slate-400">Ratio sobre venta</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tarjetas de Resumen KPI */}
+        {/* Banner de Resumen de KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <Card className="border-slate-200/80 shadow-xs bg-white">
+          <Card className="border-slate-200 shadow-xs bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Merma Total S/</span>
@@ -344,292 +350,434 @@ export default function MermaPublicClient() {
               <div className="text-xl sm:text-2xl font-black text-red-600 mt-1">
                 S/ {metricas.totalMerma.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div className="text-[10px] text-slate-500 mt-1">
-                {metricas.totalRegistros.toLocaleString()} registros procesados
-              </div>
+              <div className="text-[10px] text-slate-500 mt-1">Consolidado en soles</div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/80 shadow-xs bg-white">
+          <Card className="border-slate-200 shadow-xs bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">% Merma Zona B</span>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${metricas.cumpleMeta ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                  {metricas.cumpleMeta ? (
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Ventas Totales S/</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <ShoppingCart className="w-4 h-4 text-emerald-600" />
+                </div>
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
+                S/ {metricas.totalVenta.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">Base cruzada con SKU</div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200 shadow-xs bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">% Merma Global</span>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${metricas.cumpleMetaGlobal ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                  {metricas.cumpleMetaGlobal ? (
                     <TrendingDown className="w-4 h-4 text-emerald-600" />
                   ) : (
                     <AlertTriangle className="w-4 h-4 text-amber-600" />
                   )}
                 </div>
               </div>
-              <div className={`text-xl sm:text-2xl font-black mt-1 ${metricas.cumpleMeta ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {metricas.ratioMerma > 0 ? `${metricas.ratioMerma.toFixed(2)}%` : 'Sin Venta'}
+              <div className={`text-xl sm:text-2xl font-black mt-1 ${metricas.cumpleMetaGlobal ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {metricas.ratioGlobal > 0 ? `${metricas.ratioGlobal.toFixed(2)}%` : 'Sin Venta'}
               </div>
-              <div className="text-[10px] mt-1 font-medium">
-                {metricas.ratioMerma > 0 ? (
-                  metricas.cumpleMeta ? (
-                    <span className="text-emerald-600 font-semibold">✓ En Objetivo (≤ {metricas.meta}%)</span>
-                  ) : (
-                    <span className="text-amber-600 font-semibold">⚠️ Desvío (+{(metricas.ratioMerma - metricas.meta).toFixed(2)}%)</span>
-                  )
+              <div className="text-[10px] mt-1 font-semibold">
+                {metricas.cumpleMetaGlobal ? (
+                  <span className="text-emerald-600">✓ En Meta (Obj: {metricas.metaGlobal}%)</span>
                 ) : (
-                  <span className="text-slate-400">Meta: {metricas.meta}%</span>
+                  <span className="text-amber-600">⚠️ Desvío (+{(metricas.ratioGlobal - metricas.metaGlobal).toFixed(2)}%)</span>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/80 shadow-xs bg-white">
+          <Card className="border-red-200 shadow-xs bg-red-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Mejor Control</span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <Store className="w-4 h-4 text-emerald-600" />
+                <span className="text-[11px] font-bold text-red-700 uppercase tracking-wider">Merma &gt; Venta</span>
+                <div className="w-7 h-7 rounded-lg bg-red-100 flex items-center justify-center">
+                  <AlertOctagon className="w-4 h-4 text-red-600" />
                 </div>
               </div>
-              <div className="text-base sm:text-lg font-bold text-slate-900 mt-1 truncate">
-                {metricas.mejorTienda ? `T-${metricas.mejorTienda.codigo} ${metricas.mejorTienda.nombre}` : 'Sin datos'}
+              <div className="text-xl sm:text-2xl font-black text-red-700 mt-1">
+                {metricas.totalSkusCriticos} SKUs
               </div>
-              <div className="text-[10px] text-emerald-700 font-semibold mt-1">
-                {metricas.mejorTienda ? `S/ ${metricas.mejorTienda.merma.toLocaleString('es-PE', { maximumFractionDigits: 0 })}` : '-'}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200/80 shadow-xs bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Mayor Volumen</span>
-                <div className="w-7 h-7 rounded-lg bg-rose-50 flex items-center justify-center">
-                  <PackageMinus className="w-4 h-4 text-rose-600" />
-                </div>
-              </div>
-              <div className="text-base sm:text-lg font-bold text-slate-900 mt-1 truncate">
-                {metricas.mayorDesvio ? `T-${metricas.mayorDesvio.codigo} ${metricas.mayorDesvio.nombre}` : 'Sin datos'}
-              </div>
-              <div className="text-[10px] text-rose-600 font-semibold mt-1">
-                {metricas.mayorDesvio ? `S/ ${metricas.mayorDesvio.merma.toLocaleString('es-PE', { maximumFractionDigits: 0 })}` : '-'}
+              <div className="text-[10px] text-red-600 font-medium mt-1">
+                Mercadería con pérdida mayor a venta
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Pestañas de Análisis */}
+        <div className="flex border-b border-slate-200 bg-white rounded-xl p-1 shadow-xs gap-1">
+          <button
+            onClick={() => setVistaActiva('tiendas')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              vistaActiva === 'tiendas'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Store className="w-4 h-4" />
+            1. Ranking y Metas por Tienda
+          </button>
+
+          <button
+            onClick={() => setVistaActiva('jerarquias')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              vistaActiva === 'jerarquias'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            2. Ratios por Jerarquía / Sección
+          </button>
+
+          <button
+            onClick={() => setVistaActiva('merma_mayor_venta')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              vistaActiva === 'merma_mayor_venta'
+                ? 'bg-red-600 text-white shadow-xs'
+                : 'text-red-700 bg-red-50/50 hover:bg-red-100/50 border border-red-200'
+            }`}
+          >
+            <AlertOctagon className="w-4 h-4" />
+            3. Alerta: Merma &gt; Venta ({productosMermaMayorQueVenta.length})
+          </button>
+
+          <button
+            onClick={() => setVistaActiva('todos_skus')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              vistaActiva === 'todos_skus'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <ListFilter className="w-4 h-4" />
+            4. Detalle Completo de SKUs ({itemsFiltrados.length})
+          </button>
+        </div>
+
         {/* Filtros Interactivos */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
-            {/* Selector de Período / Lote */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-              <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-              <select
-                value={periodoSeleccionado}
-                onChange={(e) => setPeriodoSeleccionado(e.target.value)}
-                className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-emerald-600"
-              >
-                <option value="todos">📅 Acumulado Total (Todos)</option>
-                {db?.lotes.map((lote) => (
-                  <option key={lote.id} value={lote.id}>
-                    {lote.nombreLote} ({lote.tipo === 'mes' ? 'Mes' : 'Semana'})
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            {/* Tienda */}
+            <select
+              value={tiendaFiltro}
+              onChange={(e) => setTiendaFiltro(e.target.value)}
+              className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800"
+            >
+              <option value="todas">🏢 Todas las Tiendas (11)</option>
+              {TIENDAS_ZONA_B_INFO.map(t => (
+                <option key={t.codigo} value={t.codigo}>
+                  {t.codigo} - {t.nombre.split(' - ')[1]}
+                </option>
+              ))}
+            </select>
 
-            {/* Selector de Tienda */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-              <Store className="w-4 h-4 text-slate-400 shrink-0" />
-              <select
-                value={tiendaFiltro}
-                onChange={(e) => setTiendaFiltro(e.target.value)}
-                className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-emerald-600"
-              >
-                <option value="todas">🏢 Todas las Tiendas (11)</option>
-                {TIENDAS_ZONA_B_INFO.map((t) => (
-                  <option key={t.codigo} value={t.codigo}>
-                    {t.codigo} - {t.nombre.split(' - ')[1]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Selector de Sección si hay disponibles */}
+            {/* Sección */}
             {listaSecciones.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                <Layers className="w-4 h-4 text-slate-400 shrink-0" />
-                <select
-                  value={seccionFiltro}
-                  onChange={(e) => setSeccionFiltro(e.target.value)}
-                  className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-emerald-600"
-                >
-                  <option value="todas">📦 Todas las Secciones</option>
-                  {listaSecciones.map((sec) => (
-                    <option key={sec} value={sec}>
-                      {sec}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={seccionFiltro}
+                onChange={(e) => setSeccionFiltro(e.target.value)}
+                className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800"
+              >
+                <option value="todas">📦 Todas las Secciones</option>
+                {listaSecciones.map(sec => (
+                  <option key={sec} value={sec}>{sec}</option>
+                ))}
+              </select>
             )}
+
+            {/* Toggle Fuera de Ratio */}
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={soloFueraDeRatio}
+                onChange={(e) => setSoloFueraDeRatio(e.target.checked)}
+                className="w-3.5 h-3.5 text-red-600 rounded"
+              />
+              <span>Mostrar solo fuera de ratio</span>
+            </label>
           </div>
 
-          {/* Barra de búsqueda */}
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-60">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar tienda, motivo..."
-              className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:outline-emerald-600"
+              placeholder="Buscar por SKU o descripción..."
+              className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white"
             />
           </div>
         </div>
 
-        {/* Tabla Comparativa de las 11 Tiendas Zona B */}
-        <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
-          <CardHeader className="bg-slate-50/70 border-b border-slate-100 py-3.5 px-5">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Store className="w-4 h-4 text-emerald-600" />
-                Desempeño y Comparativa por Tienda (Zona B)
+        {/* VISTA 1: RANKING Y METAS POR TIENDA */}
+        {vistaActiva === 'tiendas' && (
+          <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 py-3.5 px-5">
+              <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                <span>Evaluación de Cumplimiento de Ratio por Tienda (Zona B)</span>
+                <span className="text-xs text-slate-500 font-normal">Objetivo Presupuestado: <strong>{metricas.metaGlobal}%</strong></span>
               </CardTitle>
-              <span className="text-xs text-slate-500 font-medium">
-                Meta establecida: <strong>{metricas.meta}%</strong>
-              </span>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-100/80 text-slate-600 font-semibold border-b border-slate-200">
-                  <tr>
-                    <th className="p-3 w-12 text-center">#</th>
-                    <th className="p-3">Tienda / Local</th>
-                    <th className="p-3">Líder Responsable</th>
-                    <th className="p-3 text-right">Merma S/</th>
-                    <th className="p-3 text-right">Venta S/</th>
-                    <th className="p-3 text-right">% Merma</th>
-                    <th className="p-3 text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {metricas.rankingTiendas.map((t, idx) => (
-                    <tr key={t.codigo} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                      <td className="p-3">
-                        <div className="font-bold text-slate-900">{t.nombre}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">Código {t.codigo}</div>
-                      </td>
-                      <td className="p-3 text-slate-600 font-medium">
-                        {t.lider}
-                      </td>
-                      <td className="p-3 text-right font-bold text-red-600">
-                        {t.merma > 0 
-                          ? `S/ ${t.merma.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                          : <span className="text-slate-300 font-normal">S/ 0.00</span>}
-                      </td>
-                      <td className="p-3 text-right text-slate-600">
-                        {t.venta > 0 
-                          ? `S/ ${t.venta.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                          : <span className="text-slate-300 font-normal">-</span>}
-                      </td>
-                      <td className="p-3 text-right font-semibold">
-                        {t.ratio > 0 ? (
-                          <span className={t.ratio <= metricas.meta ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>
-                            {t.ratio.toFixed(2)}%
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">-</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {t.merma === 0 ? (
-                          <Badge variant="outline" className="bg-slate-50 text-slate-400 text-[10px]">
-                            Sin carga
-                          </Badge>
-                        ) : t.cumple ? (
-                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-semibold">
-                            ✓ En Objetivo
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-rose-100 text-rose-800 border-rose-200 text-[10px] font-semibold">
-                            Alerta Desvío
-                          </Badge>
-                        )}
-                      </td>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b">
+                    <tr>
+                      <th className="p-3 w-10 text-center">#</th>
+                      <th className="p-3">Tienda / Local</th>
+                      <th className="p-3">Líder</th>
+                      <th className="p-3 text-right">Merma S/</th>
+                      <th className="p-3 text-right">Venta S/</th>
+                      <th className="p-3 text-right">Ratio Real %</th>
+                      <th className="p-3 text-right">Meta %</th>
+                      <th className="p-3 text-right">Desvío</th>
+                      <th className="p-3 text-center">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {metricas.rankingTiendas.map((t, idx) => (
+                      <tr key={t.codigo} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{t.nombre}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">T-{t.codigo}</div>
+                        </td>
+                        <td className="p-3 text-slate-600">{t.lider}</td>
+                        <td className="p-3 text-right font-bold text-red-600">
+                          {t.merma > 0 ? `S/ ${t.merma.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="p-3 text-right text-slate-600">
+                          {t.venta > 0 ? `S/ ${t.venta.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="p-3 text-right font-bold">
+                          {t.ratio > 0 ? (
+                            <span className={t.ratio <= t.meta ? 'text-emerald-600' : 'text-rose-600'}>
+                              {t.ratio.toFixed(2)}%
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="p-3 text-right font-medium text-slate-500">{t.meta.toFixed(2)}%</td>
+                        <td className="p-3 text-right font-semibold">
+                          {t.ratio > 0 ? (
+                            t.desvio <= 0 ? (
+                              <span className="text-emerald-600">{t.desvio.toFixed(2)}%</span>
+                            ) : (
+                              <span className="text-rose-600 font-bold">+{t.desvio.toFixed(2)}%</span>
+                            )
+                          ) : '-'}
+                        </td>
+                        <td className="p-3 text-center">
+                          {t.merma === 0 ? (
+                            <Badge variant="outline" className="text-[10px] text-slate-400">Sin Carga</Badge>
+                          ) : t.cumple ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ En Ratio</Badge>
+                          ) : (
+                            <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold">⚠️ Fuera de Ratio</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Sección de desglose por área / rubro */}
-        {metricas.rankingSecciones.length > 1 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="border-slate-200 shadow-sm bg-white">
-              <CardHeader className="bg-slate-50/70 border-b border-slate-100 py-3.5 px-5">
-                <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <PieChart className="w-4 h-4 text-emerald-600" />
-                  Merma por Sección / Rubro
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 space-y-2.5">
-                {metricas.rankingSecciones.slice(0, 7).map((sec) => {
-                  const pct = metricas.totalMerma > 0 ? (sec.merma / metricas.totalMerma) * 100 : 0
-                  return (
-                    <div key={sec.nombre} className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="font-medium text-slate-800">{sec.nombre}</span>
-                        <span className="font-bold text-red-600">
-                          S/ {sec.merma.toLocaleString('es-PE', { maximumFractionDigits: 0 })} ({pct.toFixed(1)}%)
-                        </span>
-                      </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-600 rounded-full transition-all"
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
-              </CardContent>
-            </Card>
+        {/* VISTA 2: RATIOS POR JERARQUÍA / SECCIÓN */}
+        {vistaActiva === 'jerarquias' && (
+          <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 py-3.5 px-5">
+              <CardTitle className="text-sm font-bold text-slate-900">
+                Cumplimiento de Ratios por Jerarquía / Sección
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b">
+                    <tr>
+                      <th className="p-3">Jerarquía / Sección</th>
+                      <th className="p-3 text-right">Merma S/</th>
+                      <th className="p-3 text-right">Venta S/</th>
+                      <th className="p-3 text-right">Ratio Real %</th>
+                      <th className="p-3 text-right">Meta %</th>
+                      <th className="p-3 text-right">Desvío %</th>
+                      <th className="p-3 text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {metricas.rankingJerarquias.map((j) => (
+                      <tr key={j.jerarquia} className="hover:bg-slate-50">
+                        <td className="p-3 font-bold text-slate-900">{j.jerarquia}</td>
+                        <td className="p-3 text-right font-bold text-red-600">
+                          S/ {j.merma.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-3 text-right text-slate-600">
+                          {j.venta > 0 ? `S/ ${j.venta.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="p-3 text-right font-bold">
+                          {j.ratio > 0 ? `${j.ratio.toFixed(2)}%` : '-'}
+                        </td>
+                        <td className="p-3 text-right font-medium text-slate-500">{j.meta.toFixed(2)}%</td>
+                        <td className="p-3 text-right font-semibold">
+                          {j.ratio > 0 ? (
+                            j.desvio <= 0 ? (
+                              <span className="text-emerald-600">{j.desvio.toFixed(2)}%</span>
+                            ) : (
+                              <span className="text-rose-600 font-bold">+{j.desvio.toFixed(2)}%</span>
+                            )
+                          ) : '-'}
+                        </td>
+                        <td className="p-3 text-center">
+                          {j.cumple === null ? (
+                            <Badge variant="outline" className="text-[10px] text-slate-400">Sin datos</Badge>
+                          ) : j.cumple ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ En Ratio</Badge>
+                          ) : (
+                            <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold">⚠️ Fuera de Ratio</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            <Card className="border-slate-200 shadow-sm bg-white">
-              <CardHeader className="bg-slate-50/70 border-b border-slate-100 py-3.5 px-5">
-                <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Info className="w-4 h-4 text-blue-600" />
-                  Detalle del Histórico de Cargas
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Este reporte agrupa la base inicial de Octubre y se va sumando semanalmente desde la consola administrativa principal de Retail Ops.
+        {/* VISTA 3: ALERTA CRÍTICA MERMA > VENTA */}
+        {vistaActiva === 'merma_mayor_venta' && (
+          <Card className="border-red-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-red-50 border-b border-red-100 py-3.5 px-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold text-red-900 flex items-center gap-2">
+                    <AlertOctagon className="w-4 h-4 text-red-600" />
+                    Mercadería Crítica: SKUs donde Merma &gt; Venta ({productosMermaMayorQueVenta.length})
+                  </CardTitle>
+                  <p className="text-xs text-red-700 mt-0.5">
+                    Productos cuya pérdida por merma supera el 100% del total vendido.
                   </p>
-                  <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 text-xs space-y-1.5">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Total Períodos:</span>
-                      <span className="font-bold text-slate-800">{db?.lotes.length || 0} lote(s)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Última Actualización:</span>
-                      <span className="font-medium text-slate-700">
-                        {db?.ultimaActualizacion ? new Date(db.ultimaActualizacion).toLocaleString('es-PE') : 'Sin registros'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Acceso:</span>
-                      <span className="font-semibold text-emerald-700">Público y libre</span>
-                    </div>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {productosMermaMayorQueVenta.length === 0 ? (
+                <div className="text-center py-12 px-4 text-slate-400">
+                  <Check className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-sm font-bold text-slate-700">¡Excelente! Ningún producto merma más de lo que vende.</p>
+                  <p className="text-xs text-slate-400 mt-1">Todos los SKUs analizados tienen una merma inferior a sus ventas.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-100 text-slate-600 font-semibold border-b">
+                      <tr>
+                        <th className="p-3">SKU</th>
+                        <th className="p-3">Descripción</th>
+                        <th className="p-3">Tienda</th>
+                        <th className="p-3">Sección</th>
+                        <th className="p-3 text-right">Merma S/</th>
+                        <th className="p-3 text-right">Venta S/</th>
+                        <th className="p-3 text-right">Exceso Pérdida S/</th>
+                        <th className="p-3 text-right">% Ratio</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {productosMermaMayorQueVenta.slice(0, 50).map((p, idx) => (
+                        <tr key={idx} className="hover:bg-red-50/40">
+                          <td className="p-3 font-mono font-bold text-slate-800">{p.sku}</td>
+                          <td className="p-3 font-medium text-slate-900 max-w-[220px] truncate">{p.descripcion}</td>
+                          <td className="p-3 text-slate-600">{p.nombreTienda}</td>
+                          <td className="p-3 text-slate-500">{p.seccion}</td>
+                          <td className="p-3 text-right font-bold text-red-600">
+                            S/ {p.mermaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3 text-right text-slate-600">
+                            S/ {p.ventaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3 text-right font-black text-rose-700">
+                            S/ {p.diferenciaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3 text-right font-black text-rose-700">
+                            {p.ratioMermaVenta.toFixed(0)}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* VISTA 4: DETALLE COMPLETO DE SKUS */}
+        {vistaActiva === 'todos_skus' && (
+          <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50 border-b border-slate-100 py-3.5 px-5">
+              <CardTitle className="text-sm font-bold text-slate-900">
+                Detalle Consolidado de SKUs ({itemsFiltrados.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b">
+                    <tr>
+                      <th className="p-3">SKU</th>
+                      <th className="p-3">Descripción</th>
+                      <th className="p-3">Tienda</th>
+                      <th className="p-3">Sección / Jerarquía</th>
+                      <th className="p-3 text-right">Merma S/</th>
+                      <th className="p-3 text-right">Venta S/</th>
+                      <th className="p-3 text-right">Ratio %</th>
+                      <th className="p-3 text-center">Cumple Ratio</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {itemsFiltrados.slice(0, 100).map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-3 font-mono font-bold text-slate-800">{item.sku}</td>
+                        <td className="p-3 font-medium text-slate-900 max-w-[220px] truncate">{item.descripcion}</td>
+                        <td className="p-3 text-slate-600">{item.nombreTienda}</td>
+                        <td className="p-3 text-slate-500">{item.seccion}</td>
+                        <td className="p-3 text-right font-bold text-red-600">
+                          S/ {item.mermaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-3 text-right text-slate-600">
+                          {item.ventaSoles > 0 ? `S/ ${item.ventaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '-'}
+                        </td>
+                        <td className="p-3 text-right font-semibold">
+                          {item.ratioMermaVenta > 0 ? `${item.ratioMermaVenta.toFixed(2)}%` : '-'}
+                        </td>
+                        <td className="p-3 text-center">
+                          {item.ventaSoles === 0 ? (
+                            <Badge variant="outline" className="text-[10px] text-slate-400">Sin Venta</Badge>
+                          ) : item.dentroDeRatio ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ En Ratio</Badge>
+                          ) : (
+                            <Badge className="bg-rose-100 text-rose-800 text-[10px] font-bold">⚠️ Desvío</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </main>
     </div>
