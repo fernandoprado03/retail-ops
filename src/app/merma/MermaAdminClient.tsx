@@ -474,23 +474,27 @@ export default function MermaAdminClient() {
                     <thead className="bg-slate-100 text-slate-600 font-semibold border-b">
                       <tr>
                         <th className="p-2">Fecha</th>
-                        <th className="p-2">Tienda</th>
+                        <th className="p-2">Local (Local Desc)</th>
                         <th className="p-2">SKU</th>
                         <th className="p-2">Descripción</th>
-                        <th className="p-2">Sección / Jerarquía</th>
-                        <th className="p-2 text-right">Merma S/</th>
+                        <th className="p-2 text-right">Unid. Mermadas</th>
+                        <th className="p-2 text-right">Costo Unitario</th>
+                        <th className="p-2 text-right">Costo Extendido (Merma S/)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {parseoMerma.muestraPreview.map((item, idx) => (
                         <tr key={idx} className="hover:bg-slate-50">
                           <td className="p-2 text-slate-500 font-mono">{item.fecha || '-'}</td>
-                          <td className="p-2 font-medium">{item.tienda} - {item.nombreTienda}</td>
+                          <td className="p-2 font-medium">{item.nombreTienda || `Tienda ${item.tienda}`}</td>
                           <td className="p-2 font-mono font-bold text-slate-700">{item.sku}</td>
-                          <td className="p-2 text-slate-600 max-w-[200px] truncate">{item.descripcion || '-'}</td>
-                          <td className="p-2 text-slate-500">{item.seccion}</td>
-                          <td className="p-2 text-right font-bold text-red-600">
-                            S/ {item.mermaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                          <td className="p-2 text-slate-600 max-w-[180px] truncate">{item.descripcion || '-'}</td>
+                          <td className="p-2 text-right text-slate-600 font-mono">{item.unidades !== undefined ? item.unidades.toLocaleString() : '-'}</td>
+                          <td className="p-2 text-right text-slate-600 font-mono">
+                            {item.costoSoles ? `S/ ${item.costoSoles.toFixed(2)}` : '-'}
+                          </td>
+                          <td className="p-2 text-right font-black text-red-600">
+                            S/ {item.mermaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                         </tr>
                       ))}

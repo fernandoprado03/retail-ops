@@ -60,7 +60,6 @@ function limpiarNumero(val: any): number {
 function formatearFechaExcel(val: any): string {
   if (!val) return ''
   if (typeof val === 'number') {
-    // Serial number de Excel
     try {
       const date = new Date(Math.round((val - (25567 + 2)) * 86400 * 1000))
       return date.toISOString().slice(0, 10)
@@ -81,6 +80,7 @@ function encontrarHeader(headers: string[], regexes: RegExp[]): string | undefin
 
 /**
  * Parsea el archivo de Merma Día por Día
+ * Soporta columna 'local desc', 'costo extendido' y 'unidades mermadas * costo unitario'
  */
 export function parsearArchivoMerma(
   arrayBuffer: ArrayBuffer,
@@ -110,30 +110,41 @@ export function parsearArchivoMerma(
 
     const headers = Object.keys(filasJson[0])
 
-    const colTienda = encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /unidad/i, /sucursal/i, /cod.*tienda/i])
+    // 1. Detección de tienda / local desc
+    const colLocalDesc = encontrarHeader(headers, [/local.*desc/i, /local_desc/i, /desclocal/i, /desc.*local/i, /nombre.*local/i, /tienda.*desc/i])
+    const colTienda = colLocalDesc || encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /unidad/i, /sucursal/i, /cod.*tienda/i])
+
+    // 2. Detección de datos de producto
     const colFecha = encontrarHeader(headers, [/fecha/i, /date/i, /d[ií]a/i])
-    const colSku = encontrarHeader(headers, [/sku/i, /material/i, /art[ií]culo/i, /c[oó]digo.*prod/i, /^c[oó]digo$/i])
+    const colSku = encontrarHeader(headers, [/sku/i, /material/i, /art[ií]culo/i, /c[oó]digo.*prod/i, /^c[oó]digo$/i, /^cod$/i])
     const colDescripcion = encontrarHeader(headers, [/descripci[oó]n/i, /producto/i, /nombre.*prod/i, /detalle/i, /denominaci[oó]n/i])
+    
+    // Jerarquías
     const colSeccion = encontrarHeader(headers, [/secci[oó]n/i, /divisi[oó]n/i, /negocio/i, /gerencia/i])
     const colDepto = encontrarHeader(headers, [/departamento/i, /depto/i, /categor[ií]a/i, /rubro/i])
     const colCat = encontrarHeader(headers, [/subcategor[ií]a/i, /subrubro/i, /clase/i, /l[ií]nea/i])
     const colMotivo = encontrarHeader(headers, [/motivo/i, /causa/i, /tipo.*merma/i, /concepto/i, /raz[oó]n/i])
-    const colMerma = encontrarHeader(headers, [/merma.*s/i, /merma.*sol/i, /monto.*merma/i, /merma.*total/i, /^merma$/i, /valoriz/i, /merma.*real/i, /importe/i])
+
+    // 3. Detección de costo extendido, unidades mermadas y costo unitario
+    const colCostoExtendido = encontrarHeader(headers, [/costo.*extend/i, /costo.*ext/i, /c.*extendido/i, /costo.*total/i, /^ext$/i, /extendido/i])
+    const colCostoUnitario = encontrarHeader(headers, [/costo.*unit/i, /costo_unit/i, /costo.*prom/i, /^cu$/i, /costo$/i])
+    const colUnidadesMerma = encontrarHeader(headers, [/unidades.*merma/i, /cant.*merma/i, /unid.*merma/i, /unidades/i, /cantidad/i, /cant/i, /piezas/i])
+    const colMermaDirecta = encontrarHeader(headers, [/merma.*s/i, /merma.*sol/i, /monto.*merma/i, /merma.*total/i, /^merma$/i, /valoriz/i, /merma.*real/i, /importe/i])
+
     const colVenta = encontrarHeader(headers, [/venta.*s/i, /venta.*sol/i, /venta.*neta/i, /venta.*total/i, /^venta$/i])
-    const colUnidades = encontrarHeader(headers, [/unidades/i, /cantidad/i, /cant/i, /cant.*merma/i, /piezas/i])
 
     const columnasMapeadas: Record<string, string> = {
-      tienda: colTienda || '(No detectada)',
-      fecha: colFecha || '(Opcional)',
+      tienda: colLocalDesc || colTienda || '(No detectada)',
+      costoExtendido: colCostoExtendido || '(No detectada)',
+      costoUnitario: colCostoUnitario || '(Opcional)',
+      unidadesMerma: colUnidadesMerma || '(Opcional)',
       sku: colSku || '(Opcional)',
       descripcion: colDescripcion || '(Opcional)',
       seccion: colSeccion || '(Opcional)',
       departamento: colDepto || '(Opcional)',
       categoria: colCat || '(Opcional)',
       motivo: colMotivo || '(Opcional)',
-      mermaSoles: colMerma || '(No detectada)',
-      ventaSoles: colVenta || '(Opcional)',
-      unidades: colUnidades || '(Opcional)'
+      fecha: colFecha || '(Opcional)'
     }
 
     const items: ItemMerma[] = []
@@ -143,16 +154,35 @@ export function parsearArchivoMerma(
     let acumuladoVenta = 0
 
     filasJson.forEach((row, idx) => {
-      const rawTienda = colTienda ? row[colTienda] : ''
+      // Local / Tienda
+      const rawTienda = colLocalDesc && row[colLocalDesc] ? row[colLocalDesc] : (colTienda ? row[colTienda] : '')
       const codTienda = normalizarCodigoTienda(rawTienda || '103')
       tiendasSet.add(codTienda)
 
       const tiendaInfo = TIENDAS_ZONA_B_INFO.find(t => t.codigo === codTienda)
-      const nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : `Tienda ${codTienda}`
+      let nombreTienda = colLocalDesc && row[colLocalDesc] ? String(row[colLocalDesc]).trim() : ''
+      if (!nombreTienda || nombreTienda.length < 2) {
+        nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : `Tienda ${codTienda}`
+      }
 
-      const mermaVal = colMerma ? limpiarNumero(row[colMerma]) : 0
+      // Cálculo de Merma S/:
+      const costoExtVal = colCostoExtendido ? limpiarNumero(row[colCostoExtendido]) : 0
+      const unidadesVal = colUnidadesMerma ? limpiarNumero(row[colUnidadesMerma]) : 0
+      const costoUnitVal = colCostoUnitario ? limpiarNumero(row[colCostoUnitario]) : 0
+      const mermaDirectaVal = colMermaDirecta ? limpiarNumero(row[colMermaDirecta]) : 0
+
+      // Prioridad 1: Costo extendido
+      let mermaVal = costoExtVal
+      // Prioridad 2: Si costo extendido es 0, multiplicar unidades de merma * costo unitario
+      if (mermaVal === 0 && unidadesVal > 0 && costoUnitVal > 0) {
+        mermaVal = unidadesVal * costoUnitVal
+      }
+      // Prioridad 3: Columna directa de merma (si no está en cero)
+      if (mermaVal === 0 && mermaDirectaVal > 0) {
+        mermaVal = mermaDirectaVal
+      }
+
       const ventaVal = colVenta ? limpiarNumero(row[colVenta]) : 0
-      const unidadesVal = colUnidades ? limpiarNumero(row[colUnidades]) : undefined
       const skuVal = colSku ? String(row[colSku]).trim() : `SKU-${idx}`
       if (skuVal) skusSet.add(skuVal)
 
@@ -173,6 +203,7 @@ export function parsearArchivoMerma(
         categoria: colCat ? String(row[colCat]).trim().toUpperCase() : undefined,
         motivo: colMotivo ? String(row[colMotivo]).trim() : 'Merma General',
         mermaSoles: mermaVal,
+        costoSoles: costoUnitVal > 0 ? costoUnitVal : undefined,
         ventaSoles: ventaVal > 0 ? ventaVal : undefined,
         unidades: unidadesVal,
         mes: periodoNombre
@@ -212,6 +243,7 @@ export function parsearArchivoMerma(
 
 /**
  * Parsea el archivo de Ventas Día por Día
+ * Soporta columna 'local desc', 'venta extendida' y 'unidades * precio unitario'
  */
 export function parsearArchivoVentas(
   arrayBuffer: ArrayBuffer,
@@ -240,18 +272,22 @@ export function parsearArchivoVentas(
 
     const headers = Object.keys(filasJson[0])
 
-    const colTienda = encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /unidad/i, /sucursal/i, /cod.*tienda/i])
+    const colLocalDesc = encontrarHeader(headers, [/local.*desc/i, /local_desc/i, /desclocal/i, /desc.*local/i, /nombre.*local/i, /tienda.*desc/i])
+    const colTienda = colLocalDesc || encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /unidad/i, /sucursal/i, /cod.*tienda/i])
+    
     const colFecha = encontrarHeader(headers, [/fecha/i, /date/i, /d[ií]a/i])
-    const colSku = encontrarHeader(headers, [/sku/i, /material/i, /art[ií]culo/i, /c[oó]digo.*prod/i, /^c[oó]digo$/i])
+    const colSku = encontrarHeader(headers, [/sku/i, /material/i, /art[ií]culo/i, /c[oó]digo.*prod/i, /^c[oó]digo$/i, /^cod$/i])
     const colDescripcion = encontrarHeader(headers, [/descripci[oó]n/i, /producto/i, /nombre.*prod/i, /detalle/i, /denominaci[oó]n/i])
     const colSeccion = encontrarHeader(headers, [/secci[oó]n/i, /divisi[oó]n/i, /negocio/i, /gerencia/i])
     const colDepto = encontrarHeader(headers, [/departamento/i, /depto/i, /categor[ií]a/i, /rubro/i])
     const colCat = encontrarHeader(headers, [/subcategor[ií]a/i, /subrubro/i, /clase/i, /l[ií]nea/i])
-    const colVenta = encontrarHeader(headers, [/venta.*s/i, /venta.*sol/i, /venta.*neta/i, /venta.*total/i, /^venta$/i, /monto/i, /importe/i])
-    const colUnidades = encontrarHeader(headers, [/unidades/i, /cantidad/i, /cant/i, /piezas/i, /volumen/i])
+    
+    const colVenta = encontrarHeader(headers, [/venta.*extend/i, /venta.*ext/i, /venta.*s/i, /venta.*sol/i, /venta.*neta/i, /venta.*total/i, /^venta$/i, /monto/i, /importe/i])
+    const colPrecio = encontrarHeader(headers, [/precio.*unit/i, /precio/i, /pvp/i])
+    const colUnidades = encontrarHeader(headers, [/unidades.*vend/i, /cant.*vend/i, /unidades/i, /cantidad/i, /cant/i, /piezas/i, /volumen/i])
 
     const columnasMapeadas: Record<string, string> = {
-      tienda: colTienda || '(No detectada)',
+      tienda: colLocalDesc || colTienda || '(No detectada)',
       fecha: colFecha || '(Opcional)',
       sku: colSku || '(No detectada)',
       descripcion: colDescripcion || '(Opcional)',
@@ -267,15 +303,24 @@ export function parsearArchivoVentas(
     let totalUnidades = 0
 
     filasJson.forEach((row, idx) => {
-      const rawTienda = colTienda ? row[colTienda] : ''
+      const rawTienda = colLocalDesc && row[colLocalDesc] ? row[colLocalDesc] : (colTienda ? row[colTienda] : '')
       const codTienda = normalizarCodigoTienda(rawTienda || '103')
       tiendasSet.add(codTienda)
 
       const tiendaInfo = TIENDAS_ZONA_B_INFO.find(t => t.codigo === codTienda)
-      const nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : `Tienda ${codTienda}`
+      let nombreTienda = colLocalDesc && row[colLocalDesc] ? String(row[colLocalDesc]).trim() : ''
+      if (!nombreTienda || nombreTienda.length < 2) {
+        nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : `Tienda ${codTienda}`
+      }
 
-      const ventaVal = colVenta ? limpiarNumero(row[colVenta]) : 0
+      let ventaVal = colVenta ? limpiarNumero(row[colVenta]) : 0
       const unidadesVal = colUnidades ? limpiarNumero(row[colUnidades]) : 0
+      const precioVal = colPrecio ? limpiarNumero(row[colPrecio]) : 0
+
+      if (ventaVal === 0 && unidadesVal > 0 && precioVal > 0) {
+        ventaVal = unidadesVal * precioVal
+      }
+
       const skuVal = colSku ? String(row[colSku]).trim() : `SKU-${idx}`
       if (skuVal) skusSet.add(skuVal)
 
@@ -353,7 +398,8 @@ export function parsearArchivoObjetivos(
 
     const headers = Object.keys(filasJson[0])
 
-    const colTienda = encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /sucursal/i, /cod.*tienda/i])
+    const colLocalDesc = encontrarHeader(headers, [/local.*desc/i, /local_desc/i, /desclocal/i, /desc.*local/i, /nombre.*local/i, /tienda.*desc/i])
+    const colTienda = colLocalDesc || encontrarHeader(headers, [/tienda/i, /local/i, /centro/i, /sucursal/i, /cod.*tienda/i])
     const colJerarquia = encontrarHeader(headers, [/jerarqu[ií]a/i, /secci[oó]n/i, /rubro/i, /departamento/i, /categor[ií]a/i, /divisi[oó]n/i, /área/i, /area/i])
     const colRatio = encontrarHeader(headers, [/ratio/i, /meta/i, /objetivo/i, /%/i, /target/i, /presupuesto/i])
 
@@ -362,7 +408,7 @@ export function parsearArchivoObjetivos(
     const jerarquiasSet = new Set<string>()
 
     filasJson.forEach((row, idx) => {
-      const rawTienda = colTienda ? row[colTienda] : 'TODAS'
+      const rawTienda = colLocalDesc && row[colLocalDesc] ? row[colLocalDesc] : (colTienda ? row[colTienda] : 'TODAS')
       const codTienda = rawTienda && String(rawTienda).toLowerCase() !== 'todas' && String(rawTienda).toLowerCase() !== 'zona b'
         ? normalizarCodigoTienda(rawTienda)
         : 'TODAS'
@@ -496,6 +542,5 @@ export function generarCruceMermaVentas(
     })
   })
 
-  // Ordenar por mayor merma en soles
   return resultado.sort((a, b) => b.mermaSoles - a.mermaSoles)
 }

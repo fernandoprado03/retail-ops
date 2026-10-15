@@ -122,7 +122,24 @@ export const TIENDAS_ZONA_B_INFO: { codigo: string; nombre: string; lider: strin
 export function normalizarCodigoTienda(raw: any): string {
   if (!raw) return '103'
   const str = String(raw).trim()
+  
+  // 1. Coincidencia directa por código numérico de 3 dígitos
   const match = str.match(/\b(103|107|110|118|155|175|193|311|314|335|357)\b/)
   if (match) return match[1]
+
+  // 2. Coincidencia por texto / descripción del local (local desc)
+  const lower = str.toLowerCase()
+  if (lower.includes('mega') || lower.includes('plaza')) return '103'
+  if (lower.includes('atocongo')) return '107'
+  if (lower.includes('huaylas')) return '110'
+  if (lower.includes('bellavista centro') || (lower.includes('bella') && lower.includes('centro'))) return '193'
+  if (lower.includes('bellavista') || lower.includes('bella')) return '118'
+  if (lower.includes('santa anita') || lower.includes('anita')) return '155'
+  if (lower.includes('san juan') || lower.includes('miraflores') || lower.includes('sjm')) return '175'
+  if (lower.includes('chorrillos')) return '311'
+  if (lower.includes('san isidro') || lower.includes('isidro')) return '314'
+  if (lower.includes('fontana')) return '335'
+  if (lower.includes('santa maria') || lower.includes('santa maría') || lower.includes('maria')) return '357'
+
   return str
 }
