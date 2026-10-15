@@ -93,9 +93,11 @@ export interface CruceSkuAnalisis {
   seccion: string
   departamento?: string
   categoria?: string
-  mermaSoles: number
+  mermaSoles: number // Costo extendido total
+  costoExtendido?: number // Costo extendido equivalente
+  costoUnitario?: number // Costo unitario
   ventaSoles: number
-  unidadesMerma: number
+  unidadesMerma: number // Unidades mermadas
   unidadesVenta: number
   ratioMermaVenta: number // (mermaSoles / ventaSoles) * 100
   mermaMayorQueVenta: boolean // mermaSoles > ventaSoles
@@ -103,6 +105,7 @@ export interface CruceSkuAnalisis {
   metaRatio?: number
   dentroDeRatio?: boolean // ratioMermaVenta <= metaRatio
   desvioPuntos?: number // ratioMermaVenta - metaRatio
+  fecha?: string
 }
 
 export const TIENDAS_ZONA_B_INFO: { codigo: string; nombre: string; lider: string }[] = [

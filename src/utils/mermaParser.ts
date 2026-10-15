@@ -464,7 +464,8 @@ export function generarCruceMermaVentas(
   const ventasMap = new Map<string, { ventaSoles: number; unidades: number; desc?: string; seccion?: string; depto?: string; cat?: string }>()
 
   ventas.forEach(v => {
-    const key = `${v.tienda}_${v.sku}`
+    const codTienda = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
+    const key = `${codTienda}_${v.sku}`
     const existing = ventasMap.get(key) || { ventaSoles: 0, unidades: 0 }
     ventasMap.set(key, {
       ventaSoles: existing.ventaSoles + v.ventaSoles,
@@ -477,26 +478,60 @@ export function generarCruceMermaVentas(
   })
 
   // Agrupación de Merma por clave compuesta (Tienda_SKU)
-  const mermasMap = new Map<string, { mermaSoles: number; unidades: number; tienda: string; nombreTienda: string; sku: string; desc?: string; seccion?: string; depto?: string; cat?: string }>()
+  const mermasMap = new Map<string, {
+    mermaSoles: number
+    unidades: number
+    tienda: string
+    nombreTienda: string
+    sku: string
+    desc?: string
+    seccion?: string
+    depto?: string
+    cat?: string
+    costoUnitario?: number
+    fecha?: string
+  }>()
 
   mermas.forEach(m => {
-    const key = `${m.tienda}_${m.sku || 'SIN_SKU'}`
+    const codTienda = normalizarCodigoTienda(m.tienda || m.nombreTienda || '103')
+    const tiendaInfo = TIENDAS_ZONA_B_INFO.find(t => t.codigo === codTienda)
+    const nombreTienda = tiendaInfo ? tiendaInfo.nombre.split(' - ')[1] : (m.nombreTienda || `Tienda ${codTienda}`)
+    
+    // Auto-cálculo si mermaSoles viene en 0 pero hay unidades y costo unitario
+    let mermaMonto = m.mermaSoles || 0
+    const unid = m.unidades || 0
+    const costoUnit = m.costoSoles || 0
+    if (mermaMonto === 0 && unid > 0 && costoUnit > 0) {
+      mermaMonto = unid * costoUnit
+    }
+
+    const key = `${codTienda}_${m.sku || 'SIN_SKU'}`
     const existing = mermasMap.get(key) || {
       mermaSoles: 0,
       unidades: 0,
-      tienda: m.tienda,
-      nombreTienda: m.nombreTienda || `Tienda ${m.tienda}`,
-      sku: m.sku || 'SIN_SKU'
+      tienda: codTienda,
+      nombreTienda,
+      sku: m.sku || 'SIN_SKU',
+      costoUnitario: costoUnit > 0 ? costoUnit : undefined,
+      fecha: m.fecha
     }
+
+    const totalUnidades = existing.unidades + unid
+    const totalMerma = existing.mermaSoles + mermaMonto
+    const costoUnitarioFinal = totalUnidades > 0 && totalMerma > 0
+      ? totalMerma / totalUnidades
+      : (costoUnit > 0 ? costoUnit : existing.costoUnitario)
 
     mermasMap.set(key, {
       ...existing,
-      mermaSoles: existing.mermaSoles + m.mermaSoles,
-      unidades: existing.unidades + (m.unidades || 0),
+      mermaSoles: totalMerma,
+      unidades: totalUnidades,
+      costoUnitario: costoUnitarioFinal,
       desc: m.descripcion || existing.desc,
       seccion: m.seccion || existing.seccion,
       depto: m.departamento || existing.depto,
-      cat: m.categoria || existing.cat
+      cat: m.categoria || existing.cat,
+      fecha: m.fecha || existing.fecha
     })
   })
 
@@ -530,6 +565,8 @@ export function generarCruceMermaVentas(
       departamento: mermaData.depto || ventaData?.depto,
       categoria: mermaData.cat || ventaData?.cat,
       mermaSoles: mermaData.mermaSoles,
+      costoExtendido: mermaData.mermaSoles,
+      costoUnitario: mermaData.costoUnitario,
       ventaSoles,
       unidadesMerma: mermaData.unidades,
       unidadesVenta,
@@ -538,7 +575,8 @@ export function generarCruceMermaVentas(
       diferenciaSoles: mermaData.mermaSoles - ventaSoles,
       metaRatio,
       dentroDeRatio,
-      desvioPuntos
+      desvioPuntos,
+      fecha: mermaData.fecha
     })
   })
 

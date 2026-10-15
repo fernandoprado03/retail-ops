@@ -28,6 +28,26 @@ export const ESTADO_INICIAL_MERMA: BaseDatosMermaZonaB = {
 export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
   const supabase = createClient()
   
+  const autoSanarBase = (base: BaseDatosMermaZonaB): BaseDatosMermaZonaB => {
+    base.lotes = base.lotes || []
+    base.lotesVentas = base.lotesVentas || []
+    base.objetivos = base.objetivos || []
+    base.itemsConsolidados = (base.itemsConsolidados || []).map(item => {
+      let merma = item.mermaSoles || 0
+      const unid = item.unidades || 0
+      const costoUnit = item.costoSoles || 0
+      if (merma === 0 && unid > 0 && costoUnit > 0) {
+        merma = unid * costoUnit
+      }
+      return {
+        ...item,
+        mermaSoles: merma
+      }
+    })
+    base.ventasConsolidadas = base.ventasConsolidadas || []
+    return base
+  }
+
   try {
     const { data, error } = await supabase
       .from('semanas_planificadas')
@@ -36,14 +56,8 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
       .maybeSingle()
 
     if (!error && data && data.data_reporte) {
-      const baseRemota = data.data_reporte as BaseDatosMermaZonaB
+      const baseRemota = autoSanarBase(data.data_reporte as BaseDatosMermaZonaB)
       baseRemota.id = data.id
-      // Asegurar arrays no nulos
-      baseRemota.lotes = baseRemota.lotes || []
-      baseRemota.lotesVentas = baseRemota.lotesVentas || []
-      baseRemota.objetivos = baseRemota.objetivos || []
-      baseRemota.itemsConsolidados = baseRemota.itemsConsolidados || []
-      baseRemota.ventasConsolidadas = baseRemota.ventasConsolidadas || []
 
       if (typeof window !== 'undefined') {
         try {
@@ -58,17 +72,12 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
     console.warn('No se pudo conectar a Supabase para cargar Merma, revisando caché local:', err)
   }
 
-  // Fallback a localStorage
+  // Fallback a localStorage (v2 o v1)
   if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem(LOCAL_STORAGE_KEY)
+    const cached = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem('merma_zona_b_cache')
     if (cached) {
       try {
-        const parsed = JSON.parse(cached)
-        parsed.lotes = parsed.lotes || []
-        parsed.lotesVentas = parsed.lotesVentas || []
-        parsed.objetivos = parsed.objetivos || []
-        parsed.itemsConsolidados = parsed.itemsConsolidados || []
-        parsed.ventasConsolidadas = parsed.ventasConsolidadas || []
+        const parsed = autoSanarBase(JSON.parse(cached))
         return parsed
       } catch (e) {}
     }
@@ -87,21 +96,29 @@ export async function guardarLoteMerma(
   const supabase = createClient()
   const baseActual = await cargarBaseDatosMerma()
 
+  // Evitar duplicar items en el lote para no sobrecargar el tamaño del JSON
+  const loteResumen: CargaMermaLote = {
+    ...nuevoLote,
+    items: [] // Los items van consolidados en itemsConsolidados
+  }
+
   let nuevosLotes: CargaMermaLote[] = []
   let itemsFinales: ItemMerma[] = []
 
   if (modo === 'reemplazar_todo') {
-    nuevosLotes = [nuevoLote]
+    nuevosLotes = [loteResumen]
     itemsFinales = [...nuevoLote.items]
   } else {
     const loteIndex = baseActual.lotes.findIndex(l => l.id === nuevoLote.id || l.periodo === nuevoLote.periodo)
     if (loteIndex >= 0) {
       nuevosLotes = [...baseActual.lotes]
-      nuevosLotes[loteIndex] = nuevoLote
+      nuevosLotes[loteIndex] = loteResumen
     } else {
-      nuevosLotes = [nuevoLote, ...baseActual.lotes]
+      nuevosLotes = [loteResumen, ...baseActual.lotes]
     }
-    itemsFinales = nuevosLotes.flatMap(l => l.items)
+    // Filtrar items previos del mismo lote si existía y sumar los nuevos
+    const itemsOtrosLotes = baseActual.itemsConsolidados.filter(i => i.loteId !== nuevoLote.id)
+    itemsFinales = [...nuevoLote.items, ...itemsOtrosLotes]
   }
 
   const baseActualizada: BaseDatosMermaZonaB = {
@@ -125,21 +142,27 @@ export async function guardarLoteVentas(
   const supabase = createClient()
   const baseActual = await cargarBaseDatosMerma()
 
+  const loteResumen: CargaVentaLote = {
+    ...nuevoLote,
+    items: [] // Los items van consolidados en ventasConsolidadas
+  }
+
   let nuevosLotesVenta: CargaVentaLote[] = []
   let ventasFinales: ItemVenta[] = []
 
   if (modo === 'reemplazar_todo') {
-    nuevosLotesVenta = [nuevoLote]
+    nuevosLotesVenta = [loteResumen]
     ventasFinales = [...nuevoLote.items]
   } else {
     const loteIndex = baseActual.lotesVentas.findIndex(l => l.id === nuevoLote.id || l.periodo === nuevoLote.periodo)
     if (loteIndex >= 0) {
       nuevosLotesVenta = [...baseActual.lotesVentas]
-      nuevosLotesVenta[loteIndex] = nuevoLote
+      nuevosLotesVenta[loteIndex] = loteResumen
     } else {
-      nuevosLotesVenta = [nuevoLote, ...baseActual.lotesVentas]
+      nuevosLotesVenta = [loteResumen, ...baseActual.lotesVentas]
     }
-    ventasFinales = nuevosLotesVenta.flatMap(l => l.items)
+    const ventasOtrosLotes = baseActual.ventasConsolidadas.filter(i => i.loteId !== nuevoLote.id)
+    ventasFinales = [...nuevoLote.items, ...ventasOtrosLotes]
   }
 
   const baseActualizada: BaseDatosMermaZonaB = {
@@ -180,7 +203,7 @@ export async function eliminarLoteMerma(loteId: string): Promise<BaseDatosMermaZ
   const baseActual = await cargarBaseDatosMerma()
 
   const nuevosLotes = baseActual.lotes.filter(l => l.id !== loteId)
-  const itemsFinales = nuevosLotes.flatMap(l => l.items)
+  const itemsFinales = baseActual.itemsConsolidados.filter(i => i.loteId !== loteId)
 
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
@@ -201,7 +224,7 @@ export async function eliminarLoteVentas(loteId: string): Promise<BaseDatosMerma
   const baseActual = await cargarBaseDatosMerma()
 
   const nuevosLotes = baseActual.lotesVentas.filter(l => l.id !== loteId)
-  const ventasFinales = nuevosLotes.flatMap(l => l.items)
+  const ventasFinales = baseActual.ventasConsolidadas.filter(i => i.loteId !== loteId)
 
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
@@ -238,17 +261,29 @@ async function persistirBaseDatos(supabase: any, base: BaseDatosMermaZonaB) {
     }
 
     if (existente?.id) {
-      await supabase
+      const { error: updErr } = await supabase
         .from('semanas_planificadas')
         .update(payload)
         .eq('id', existente.id)
+      if (updErr) {
+        console.error('Error al actualizar en Supabase:', updErr)
+        throw new Error(updErr.message)
+      }
     } else {
-      await supabase
+      const { error: insErr } = await supabase
         .from('semanas_planificadas')
         .insert(payload)
+      if (insErr) {
+        console.error('Error al insertar en Supabase:', insErr)
+        throw new Error(insErr.message)
+      }
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error al persistir en Supabase:', err)
+    // No silenciar si es error fatal para que el caller pueda notificar
+    if (typeof window === 'undefined') {
+      throw err
+    }
   }
 
   if (typeof window !== 'undefined') {

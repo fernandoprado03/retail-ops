@@ -291,11 +291,14 @@ export default function MermaAdminClient() {
             {copiado ? '¡Copiado!' : 'Copiar Link Público'}
           </Button>
 
-          <Link href="/merma-zona-b" target="_blank">
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm">
-              <ExternalLink className="w-4 h-4" />
-              Ver Portal Público (/merma-zona-b)
-            </Button>
+          <Link
+            href="/merma-zona-b"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Ver Portal Público (/merma-zona-b)
           </Link>
         </div>
       </div>
