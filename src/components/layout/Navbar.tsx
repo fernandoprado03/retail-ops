@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet, CalendarDays, AlertTriangle } from 'lucide-react'
+import { ClipboardList, Camera, BarChart3, Users, CalendarRange, Menu, FileSpreadsheet, CalendarDays, AlertTriangle, TrendingDown } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
@@ -30,7 +30,7 @@ export function Navbar() {
     checkUser()
   }, [])
 
-  if (pathname === '/login') return null
+  if (pathname === '/login' || pathname?.startsWith('/merma-zona-b')) return null
 
   // Si aún no cargó permisos, por defecto mostramos elementos básicos para evitar layout shift
   const canSeeKpis = isAdmin || (permisos ? permisos.kpis.ver : true)
@@ -109,6 +109,15 @@ export function Navbar() {
               <Link href="/" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
                 <AlertTriangle className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
                 <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Incidencias</span>
+              </Link>
+            </li>
+          )}
+
+          {isAdmin && (
+            <li className="shrink-0 md:w-full">
+              <Link href="/merma" className={`flex flex-col items-center justify-center py-1 px-1.5 md:py-3 md:px-4 text-slate-500 hover:text-green-600 active:text-green-700 transition-colors md:flex-row md:justify-start md:rounded-lg ${pathname === '/merma' ? 'text-green-600 md:bg-green-600 md:text-white font-semibold' : 'md:text-slate-400 md:hover:bg-slate-800 md:hover:text-slate-200'}`}>
+                <TrendingDown className={`h-5 w-5 mb-0.5 md:mb-0 shrink-0 ${pathname === '/merma' ? 'text-green-600 md:text-white' : ''} ${isSidebarOpen ? 'md:mr-3' : 'md:mr-0 md:mx-auto'}`} />
+                <span className={`text-[9px] font-medium md:text-sm md:font-semibold transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'md:w-auto md:opacity-100' : 'md:w-0 md:opacity-0 md:hidden'}`}>Merma</span>
               </Link>
             </li>
           )}

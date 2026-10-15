@@ -120,7 +120,12 @@ export default async function AdminUsuarios() {
                                 🎫 Incidencias {perms.incidencias.editar ? '(Ver+Editar)' : '(Lectura)'}
                               </span>
                             )}
-                            {!perms.boletin_j06.ver && !perms.horarios_pro.ver && !(perms.malla_multifuncional?.ver ?? perms.apoyo?.ver) && !perms.kpis.ver && !perms.incidencias.ver && (
+                            {perms.merma?.ver && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200">
+                                📉 Merma {perms.merma.editar ? '(Ver+Editar)' : '(Lectura)'}
+                              </span>
+                            )}
+                            {!perms.boletin_j06.ver && !perms.horarios_pro.ver && !(perms.malla_multifuncional?.ver ?? perms.apoyo?.ver) && !perms.kpis.ver && !perms.incidencias.ver && !perms.merma?.ver && (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">
                                 🚫 Sin módulos asignados
                               </span>

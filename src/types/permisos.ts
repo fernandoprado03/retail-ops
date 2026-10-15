@@ -11,6 +11,7 @@ export interface PermisosUsuario {
   apoyo: PermisosModulo // Retrocompatible
   kpis: { ver: boolean; editar?: boolean }
   incidencias: PermisosModulo
+  merma: PermisosModulo
 }
 
 export const PERMISOS_DEFAULT_ADMIN: PermisosUsuario = {
@@ -20,7 +21,8 @@ export const PERMISOS_DEFAULT_ADMIN: PermisosUsuario = {
   horario_comercial: { ver: true, editar: true },
   apoyo: { ver: true, editar: true },
   kpis: { ver: true, editar: false },
-  incidencias: { ver: true, editar: true }
+  incidencias: { ver: true, editar: true },
+  merma: { ver: true, editar: true }
 }
 
 export const PERMISOS_DEFAULT_JEFE: PermisosUsuario = {
@@ -30,7 +32,8 @@ export const PERMISOS_DEFAULT_JEFE: PermisosUsuario = {
   horario_comercial: { ver: true, editar: true },
   apoyo: { ver: true, editar: false },
   kpis: { ver: true, editar: false },
-  incidencias: { ver: false, editar: false }
+  incidencias: { ver: false, editar: false },
+  merma: { ver: false, editar: false }
 }
 
 export function normalizarPermisos(permisosRaw: any, rol?: string): PermisosUsuario {
@@ -78,6 +81,10 @@ export function normalizarPermisos(permisosRaw: any, rol?: string): PermisosUsua
     incidencias: {
       ver: permisosRaw.incidencias?.ver ?? (rol === 'admin'),
       editar: permisosRaw.incidencias?.editar ?? (rol === 'admin'),
+    },
+    merma: {
+      ver: permisosRaw.merma?.ver ?? (rol === 'admin'),
+      editar: permisosRaw.merma?.editar ?? (rol === 'admin'),
     },
   }
 }

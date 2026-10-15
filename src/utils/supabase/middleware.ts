@@ -35,7 +35,18 @@ export async function updateSession(request: NextRequest) {
   // Protect routes based on authentication
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/auth/callback')
   
-  if (!user && !isAuthRoute) {
+  // Rutas públicas que no requieren autenticación (acceso libre)
+  const isPublicRoute = request.nextUrl.pathname.startsWith('/merma-zona-b')
+
+  // Soporte para subdominio si se conecta dominio (ej. merma-zona-b.tudominio.com)
+  const host = request.headers.get('host') || ''
+  if (host.startsWith('merma-zona-b.') && !request.nextUrl.pathname.startsWith('/merma-zona-b')) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/merma-zona-b${request.nextUrl.pathname === '/' ? '' : request.nextUrl.pathname}`
+    return NextResponse.rewrite(url)
+  }
+
+  if (!user && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

@@ -17,7 +17,8 @@ import {
   ClipboardList,
   Sparkles,
   Lock,
-  CalendarDays
+  CalendarDays,
+  TrendingDown
 } from 'lucide-react'
 import { PermisosUsuario, normalizarPermisos } from '@/types/permisos'
 import { actualizarPermisosUsuario } from '@/actions/usuarios'
@@ -64,7 +65,8 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         horario_comercial: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: true, editar: false },
-        incidencias: { ver: false, editar: false }
+        incidencias: { ver: false, editar: false },
+        merma: { ver: false, editar: false }
       })
     } else if (tipo === 'lectura') {
       setPermisos({
@@ -74,7 +76,8 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         horario_comercial: { ver: true, editar: false },
         apoyo: { ver: true, editar: false },
         kpis: { ver: true, editar: false },
-        incidencias: { ver: false, editar: false }
+        incidencias: { ver: false, editar: false },
+        merma: { ver: false, editar: false }
       })
     } else if (tipo === 'solo_boletin') {
       setPermisos({
@@ -84,7 +87,8 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         horario_comercial: { ver: false, editar: false },
         apoyo: { ver: false, editar: false },
         kpis: { ver: false, editar: false },
-        incidencias: { ver: false, editar: false }
+        incidencias: { ver: false, editar: false },
+        merma: { ver: false, editar: false }
       })
     } else if (tipo === 'solo_horarios') {
       setPermisos({
@@ -94,7 +98,8 @@ export default function GestionarPermisosModal({ usuario }: Props) {
         horario_comercial: { ver: true, editar: true },
         apoyo: { ver: true, editar: true },
         kpis: { ver: false, editar: false },
-        incidencias: { ver: false, editar: false }
+        incidencias: { ver: false, editar: false },
+        merma: { ver: false, editar: false }
       })
     }
   }
@@ -614,6 +619,81 @@ export default function GestionarPermisosModal({ usuario }: Props) {
                               ...prev,
                               incidencias: {
                                 ...prev.incidencias,
+                                editar: e.target.checked
+                              }
+                            }))
+                          }}
+                          className="w-4 h-4 rounded text-green-600 focus:ring-green-500 border-slate-300 disabled:opacity-50"
+                        />
+                        <span>Editar</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. MERMA ZONA B */}
+                <div
+                  className={`border rounded-xl p-3.5 transition-all ${
+                    permisos.merma?.ver
+                      ? 'border-red-200 bg-red-50/20'
+                      : 'border-slate-200 bg-slate-50/50 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                        <TrendingDown className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-slate-900 text-sm">
+                            Control de Merma (Zona B)
+                          </h4>
+                          <span className="text-[10px] text-slate-400 font-mono">/merma</span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Carga de archivos Excel/CSV y consolidación histórica de merma
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-slate-700 select-none">
+                        <input
+                          type="checkbox"
+                          checked={permisos.merma?.ver ?? false}
+                          onChange={(e) => {
+                            const val = e.target.checked
+                            setPermisos((prev) => ({
+                              ...prev,
+                              merma: {
+                                ver: val,
+                                editar: val ? (prev.merma?.editar ?? false) : false
+                              }
+                            }))
+                          }}
+                          className="w-4 h-4 rounded text-green-600 focus:ring-green-500 border-slate-300"
+                        />
+                        <span>Ver</span>
+                      </label>
+
+                      <label
+                        className={`flex items-center gap-1.5 text-xs font-medium select-none ${
+                          permisos.merma?.ver
+                            ? 'cursor-pointer text-slate-700'
+                            : 'cursor-not-allowed text-slate-400'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={!permisos.merma?.ver}
+                          checked={permisos.merma?.editar ?? false}
+                          onChange={(e) => {
+                            setPermisos((prev) => ({
+                              ...prev,
+                              merma: {
+                                ...prev.merma,
+                                ver: true,
                                 editar: e.target.checked
                               }
                             }))

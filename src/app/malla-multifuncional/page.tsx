@@ -158,6 +158,7 @@ export default function MallaMultifuncionalPage() {
         const { data, error } = await supabase
           .from('semanas_planificadas')
           .select('id, nombre_semana')
+          .not('nombre_semana', 'ilike', 'MERMA%')
           .order('created_at', { ascending: false })
         
         if (error) {

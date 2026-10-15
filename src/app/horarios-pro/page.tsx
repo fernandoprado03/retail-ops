@@ -116,7 +116,7 @@ export default function HorariosPro() {
 
   const cargarSemanas = async () => {
     try {
-      const { data } = await supabase.from('semanas_planificadas').select('id, nombre_semana').order('created_at', { ascending: false })
+      const { data } = await supabase.from('semanas_planificadas').select('id, nombre_semana').not('nombre_semana', 'ilike', 'MERMA%').order('created_at', { ascending: false })
       if (data) setSemanasGuardadas(data)
     } catch(e) {}
   }
