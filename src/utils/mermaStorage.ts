@@ -324,12 +324,15 @@ export async function guardarLoteVentas(
     }
   })
 
-  const ventasConsolidadasAgrupadas = Array.from(skuVentasMap.values())
+  const skusConMermaSet = new Set((baseActual.itemsConsolidados || []).map(i => normalizarSku(i.sku)))
+  const ventasConsolidadasFiltradas = skusConMermaSet.size > 0
+    ? Array.from(skuVentasMap.values()).filter(v => skusConMermaSet.has(normalizarSku(v.sku)))
+    : Array.from(skuVentasMap.values()).slice(0, 3000)
 
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
     lotesVentas: nuevosLotesVenta,
-    ventasConsolidadas: ventasConsolidadasAgrupadas,
+    ventasConsolidadas: ventasConsolidadasFiltradas,
     ventasPorTienda: ventasPorTiendaActualizadas,
     ultimaActualizacion: new Date().toISOString()
   }
