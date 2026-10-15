@@ -193,6 +193,22 @@ export default function MermaPublicClient() {
       }
     })
 
+    // 4. LocalStorage fallback para visualización garantizada
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedV = localStorage.getItem('merma_zona_b_ventas_tiendas')
+        if (cachedV) {
+          const parsedV = JSON.parse(cachedV)
+          Object.entries(parsedV).forEach(([cod, monto]: [string, any]) => {
+            const num = Number(monto)
+            if (num > 0 && (!ventasConsolidadasPorTienda[cod] || ventasConsolidadasPorTienda[cod] === 0)) {
+              ventasConsolidadasPorTienda[cod] = num
+            }
+          })
+        }
+      } catch (e) {}
+    }
+
     // Ranking por Tienda (sin líderes, nombre oficial de tienda)
     const tiendaMap: Record<string, { merma: number; unidades: number; venta: number; count: number; nombre: string }> = {}
 

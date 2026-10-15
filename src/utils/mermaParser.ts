@@ -473,7 +473,7 @@ export function parsearArchivoObjetivos(
   }
 }
 
-function normalizarSku(sku: any): string {
+export function normalizarSku(sku: any): string {
   if (!sku) return 'SIN_SKU'
   const str = String(sku).trim()
   const sinCeros = str.replace(/^0+/, '')

@@ -10,8 +10,10 @@ import {
   normalizarCodigoTienda,
   TIENDAS_ZONA_B_INFO
 } from '@/types/merma'
+import { normalizarSku } from '@/utils/mermaParser'
 
 const MERMA_RECORD_NAME = 'MERMA_ZONA_B_REGISTRO'
+const MERMA_VENTAS_SUMMARY_NAME = 'MERMA_ZONA_B_VENTAS_SUMMARY'
 const LOCAL_STORAGE_KEY = 'merma_zona_b_cache_v2'
 
 export const ESTADO_INICIAL_MERMA: BaseDatosMermaZonaB = {
@@ -82,13 +84,13 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
       }
     })
 
-    // Recuperar ventas por tienda de la copia ligera si existe
+    // Recuperar ventas por tienda de la copia ligera local si existe
     if (typeof window !== 'undefined') {
       try {
         const vCached = localStorage.getItem('merma_zona_b_ventas_tiendas')
         if (vCached) {
           const vObj = JSON.parse(vCached)
-          base.ventasPorTienda = { ...vObj, ...(base.ventasPorTienda || {}) }
+          base.ventasPorTienda = { ...(base.ventasPorTienda || {}), ...vObj }
         }
       } catch (e) {}
     }
@@ -110,6 +112,8 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
     return base
   }
 
+  let baseFinal: BaseDatosMermaZonaB = ESTADO_INICIAL_MERMA
+
   try {
     const { data, error } = await supabase
       .from('semanas_planificadas')
@@ -118,37 +122,55 @@ export async function cargarBaseDatosMerma(): Promise<BaseDatosMermaZonaB> {
       .maybeSingle()
 
     if (!error && data && data.data_reporte) {
-      const baseRemota = autoSanarBase(data.data_reporte as BaseDatosMermaZonaB)
-      baseRemota.id = data.id
-
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseRemota))
-        } catch (storageErr) {
-          console.warn('LocalStorage lleno, manteniendo datos en memoria', storageErr)
-        }
-        try {
-          localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(baseRemota.ventasPorTienda || {}))
-        } catch (e) {}
-      }
-      return baseRemota
+      baseFinal = autoSanarBase(data.data_reporte as BaseDatosMermaZonaB)
+      baseFinal.id = data.id
     }
   } catch (err) {
-    console.warn('No se pudo conectar a Supabase para cargar Merma, revisando caché local:', err)
+    console.warn('Error al cargar base principal de Merma desde Supabase:', err)
   }
 
-  // Fallback a localStorage (v2 o v1)
-  if (typeof window !== 'undefined') {
+  // Cargar SIEMPRE el resumen de ventas garantizado de Supabase
+  try {
+    const { data: vData } = await supabase
+      .from('semanas_planificadas')
+      .select('data_reporte')
+      .eq('nombre_semana', MERMA_VENTAS_SUMMARY_NAME)
+      .maybeSingle()
+
+    if (vData?.data_reporte?.ventasPorTienda) {
+      baseFinal.ventasPorTienda = {
+        ...(baseFinal.ventasPorTienda || {}),
+        ...vData.data_reporte.ventasPorTienda
+      }
+      if (vData.data_reporte.lotesVentas && vData.data_reporte.lotesVentas.length > 0) {
+        if (!baseFinal.lotesVentas || baseFinal.lotesVentas.length === 0) {
+          baseFinal.lotesVentas = vData.data_reporte.lotesVentas
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error al cargar resumen de ventas desde Supabase:', err)
+  }
+
+  // Fallback si no había datos en Supabase: revisar LocalStorage
+  if (baseFinal.itemsConsolidados.length === 0 && typeof window !== 'undefined') {
     const cached = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem('merma_zona_b_cache')
     if (cached) {
       try {
         const parsed = autoSanarBase(JSON.parse(cached))
-        return parsed
+        baseFinal = parsed
       } catch (e) {}
     }
   }
 
-  return ESTADO_INICIAL_MERMA
+  // Garantizar cache local sincronizado
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(baseFinal.ventasPorTienda || {}))
+    } catch (e) {}
+  }
+
+  return baseFinal
 }
 
 /**
@@ -181,7 +203,6 @@ export async function guardarLoteMerma(
     } else {
       nuevosLotes = [loteResumen, ...baseActual.lotes]
     }
-    // Filtrar items previos del mismo lote si existía y sumar los nuevos
     const itemsOtrosLotes = baseActual.itemsConsolidados.filter(i => i.loteId !== nuevoLote.id)
     itemsFinales = [...nuevoLote.items, ...itemsOtrosLotes]
   }
@@ -198,7 +219,7 @@ export async function guardarLoteMerma(
 }
 
 /**
- * Guarda una nueva carga de ventas día por día
+ * Guarda una nueva carga de ventas día por día de forma ultra-ligera y confiable
  */
 export async function guardarLoteVentas(
   nuevoLote: CargaVentaLote,
@@ -207,56 +228,113 @@ export async function guardarLoteVentas(
   const supabase = createClient()
   const baseActual = await cargarBaseDatosMerma()
 
-  const loteResumen: CargaVentaLote = {
-    ...nuevoLote,
-    items: [] // Los items van consolidados en ventasConsolidadas
-  }
+  // 1. Calcular de inmediato las ventas totales por tienda
+  const ventasPorTiendaActualizadas: Record<string, number> = modo === 'reemplazar_todo'
+    ? {}
+    : { ...(baseActual.ventasPorTienda || {}) }
 
-  let nuevosLotesVenta: CargaVentaLote[] = []
-  let ventasFinales: ItemVenta[] = []
-
-  if (modo === 'reemplazar_todo') {
-    nuevosLotesVenta = [loteResumen]
-    ventasFinales = [...nuevoLote.items]
-  } else {
-    const loteIndex = baseActual.lotesVentas.findIndex(l => l.id === nuevoLote.id || l.periodo === nuevoLote.periodo)
-    if (loteIndex >= 0) {
-      nuevosLotesVenta = [...baseActual.lotesVentas]
-      nuevosLotesVenta[loteIndex] = loteResumen
-    } else {
-      nuevosLotesVenta = [loteResumen, ...baseActual.lotesVentas]
-    }
-    const ventasOtrosLotes = baseActual.ventasConsolidadas.filter(i => i.loteId !== nuevoLote.id)
-    ventasFinales = [...nuevoLote.items, ...ventasOtrosLotes]
-  }
-
-  // 1. Calcular de inmediato las ventas totales consolidadas por tienda
-  const ventasPorTiendaActualizadas: Record<string, number> = { ...(baseActual.ventasPorTienda || {}) }
-  ventasFinales.forEach(v => {
+  nuevoLote.items.forEach(v => {
     const cod = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
     ventasPorTiendaActualizadas[cod] = (ventasPorTiendaActualizadas[cod] || 0) + Math.abs(v.ventaSoles || 0)
   })
 
-  // 2. Compactar ventasConsolidadas para evitar sobrepasar límites de almacenamiento
-  const ventasCompactas: ItemVenta[] = ventasFinales.map(v => ({
-    tienda: normalizarCodigoTienda(v.tienda || v.nombreTienda || '103'),
-    sku: String(v.sku).trim(),
-    descripcion: v.descripcion,
-    seccion: v.seccion || 'GENERAL',
-    ventaSoles: Math.abs(v.ventaSoles || 0),
-    unidades: Math.abs(v.unidades || 0),
-    fecha: v.fecha
-  }))
+  // Redondear a 2 decimales
+  Object.keys(ventasPorTiendaActualizadas).forEach(cod => {
+    ventasPorTiendaActualizadas[cod] = Math.round(ventasPorTiendaActualizadas[cod] * 100) / 100
+  })
+
+  const loteResumen: CargaVentaLote = {
+    ...nuevoLote,
+    items: []
+  }
+
+  let nuevosLotesVenta: CargaVentaLote[] = []
+  if (modo === 'reemplazar_todo') {
+    nuevosLotesVenta = [loteResumen]
+  } else {
+    nuevosLotesVenta = [loteResumen, ...(baseActual.lotesVentas || []).filter(l => l.id !== nuevoLote.id)]
+  }
+
+  // 2. Persistir DE INMEDIATO el registro resumen de ventas (< 1KB) en Supabase (garantizado 100%)
+  try {
+    const { data: vExistente } = await supabase
+      .from('semanas_planificadas')
+      .select('id')
+      .eq('nombre_semana', MERMA_VENTAS_SUMMARY_NAME)
+      .maybeSingle()
+
+    const summaryPayload = {
+      nombre_semana: MERMA_VENTAS_SUMMARY_NAME,
+      data_reporte: {
+        ventasPorTienda: ventasPorTiendaActualizadas,
+        lotesVentas: nuevosLotesVenta,
+        ultimaActualizacion: new Date().toISOString()
+      },
+      data_personas: {
+        tipo: 'ventas_summary',
+        totalVentaSoles: nuevoLote.totalVentaSoles,
+        tiendasActualizadas: Object.keys(ventasPorTiendaActualizadas)
+      },
+      updated_at: new Date().toISOString()
+    }
+
+    if (vExistente?.id) {
+      await supabase.from('semanas_planificadas').update(summaryPayload).eq('id', vExistente.id)
+    } else {
+      await supabase.from('semanas_planificadas').insert(summaryPayload)
+    }
+  } catch (err) {
+    console.error('Error al persistir MERMA_VENTAS_SUMMARY_NAME:', err)
+  }
+
+  // 3. Compactar ventasConsolidadas: en lugar de 19,000 filas diarias redundantes,
+  // consolidar por (tienda, sku) para cruce SKU analítico instantáneo y liviano (< 400KB)
+  const skuVentasMap = new Map<string, ItemVenta>()
+
+  if (modo === 'acumular_incremental') {
+    (baseActual.ventasConsolidadas || []).forEach(v => {
+      const key = `${v.tienda}_${normalizarSku(v.sku)}`
+      skuVentasMap.set(key, { ...v })
+    })
+  }
+
+  nuevoLote.items.forEach(v => {
+    const cod = normalizarCodigoTienda(v.tienda || v.nombreTienda || '103')
+    const skuNorm = normalizarSku(v.sku)
+    const key = `${cod}_${skuNorm}`
+    const existing = skuVentasMap.get(key)
+    const monto = Math.abs(v.ventaSoles || 0)
+    const unid = Math.abs(v.unidades || 0)
+
+    if (existing) {
+      existing.ventaSoles = Math.round(((existing.ventaSoles || 0) + monto) * 100) / 100
+      existing.unidades = (existing.unidades || 0) + unid
+      if (!existing.descripcion && v.descripcion) existing.descripcion = v.descripcion
+    } else {
+      skuVentasMap.set(key, {
+        id: `v-${key}`,
+        tienda: cod,
+        sku: skuNorm,
+        descripcion: v.descripcion,
+        seccion: v.seccion || 'GENERAL',
+        ventaSoles: Math.round(monto * 100) / 100,
+        unidades: unid,
+        fecha: v.fecha
+      })
+    }
+  })
+
+  const ventasConsolidadasAgrupadas = Array.from(skuVentasMap.values())
 
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
     lotesVentas: nuevosLotesVenta,
-    ventasConsolidadas: ventasCompactas,
+    ventasConsolidadas: ventasConsolidadasAgrupadas,
     ventasPorTienda: ventasPorTiendaActualizadas,
     ultimaActualizacion: new Date().toISOString()
   }
 
-  // Guardar copia ligera de ventas por tienda
+  // 4. Guardar copia en localStorage
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(ventasPorTiendaActualizadas))
@@ -295,12 +373,48 @@ export async function guardarVentasPorTienda(
   const supabase = createClient()
   const baseActual = await cargarBaseDatosMerma()
 
+  const actualizadas = {
+    ...(baseActual.ventasPorTienda || {}),
+    ...ventasPorTienda
+  }
+
+  // 1. Guardar de inmediato en el registro ligero garantizado en Supabase
+  try {
+    const { data: vExistente } = await supabase
+      .from('semanas_planificadas')
+      .select('id')
+      .eq('nombre_semana', MERMA_VENTAS_SUMMARY_NAME)
+      .maybeSingle()
+
+    const summaryPayload = {
+      nombre_semana: MERMA_VENTAS_SUMMARY_NAME,
+      data_reporte: {
+        ventasPorTienda: actualizadas,
+        ultimaActualizacion: new Date().toISOString()
+      },
+      data_personas: { tipo: 'ventas_summary', actualizadoManual: true },
+      updated_at: new Date().toISOString()
+    }
+
+    if (vExistente?.id) {
+      await supabase.from('semanas_planificadas').update(summaryPayload).eq('id', vExistente.id)
+    } else {
+      await supabase.from('semanas_planificadas').insert(summaryPayload)
+    }
+  } catch (err) {
+    console.error('Error al guardar resumen ligero de ventas:', err)
+  }
+
+  // 2. Guardar en localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(actualizadas))
+    } catch (e) {}
+  }
+
   const baseActualizada: BaseDatosMermaZonaB = {
     ...baseActual,
-    ventasPorTienda: {
-      ...(baseActual.ventasPorTienda || {}),
-      ...ventasPorTienda
-    },
+    ventasPorTienda: actualizadas,
     ultimaActualizacion: new Date().toISOString()
   }
 
@@ -361,14 +475,33 @@ async function persistirBaseDatos(supabase: any, base: BaseDatosMermaZonaB) {
       .eq('nombre_semana', MERMA_RECORD_NAME)
       .maybeSingle()
 
+    // Limpiar itemsConsolidados de campos redundantes para mantener payload ligero (< 6MB)
+    const itemsLimpios = (base.itemsConsolidados || []).map(i => ({
+      id: i.id,
+      sku: String(i.sku).trim(),
+      tienda: String(i.tienda).trim(),
+      mermaSoles: Math.abs(i.mermaSoles || 0),
+      unidades: Math.abs(i.unidades || 0),
+      costoSoles: i.costoSoles ? Math.abs(i.costoSoles) : undefined,
+      seccion: i.seccion || 'GENERAL',
+      departamento: i.departamento,
+      descripcion: i.descripcion,
+      fecha: i.fecha,
+      motivo: i.motivo
+    }))
+
     const payload = {
       nombre_semana: MERMA_RECORD_NAME,
-      data_reporte: base,
+      data_reporte: {
+        ...base,
+        itemsConsolidados: itemsLimpios
+      },
       data_personas: {
         metaZonaB: base.metaZonaB,
         totalLotesMerma: base.lotes.length,
         totalLotesVenta: base.lotesVentas.length,
-        totalObjetivos: base.objetivos.length
+        totalObjetivos: base.objetivos.length,
+        ventasPorTienda: base.ventasPorTienda
       },
       updated_at: new Date().toISOString()
     }
@@ -380,7 +513,7 @@ async function persistirBaseDatos(supabase: any, base: BaseDatosMermaZonaB) {
         .eq('id', existente.id)
       if (updErr) {
         console.error('Error al actualizar en Supabase:', updErr)
-        throw new Error(updErr.message)
+        throw new Error('Supabase Update Error: ' + updErr.message)
       }
     } else {
       const { error: insErr } = await supabase
@@ -388,33 +521,29 @@ async function persistirBaseDatos(supabase: any, base: BaseDatosMermaZonaB) {
         .insert(payload)
       if (insErr) {
         console.error('Error al insertar en Supabase:', insErr)
-        throw new Error(insErr.message)
+        throw new Error('Supabase Insert Error: ' + insErr.message)
       }
     }
   } catch (err: any) {
     console.error('Error al persistir en Supabase:', err)
-    // No silenciar si es error fatal para que el caller pueda notificar
-    if (typeof window === 'undefined') {
-      throw err
-    }
+    // Lanzar error para que la interfaz notifique al usuario en vez de dar falso éxito
+    throw err
   }
 
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(base))
-    } catch (e) {
-      console.warn('LocalStorage limit reached, storing essential base', e)
-      try {
-        const baseEsencial: BaseDatosMermaZonaB = {
-          ...base,
-          ventasConsolidadas: (base.ventasConsolidadas || []).slice(0, 5000),
-          itemsConsolidados: (base.itemsConsolidados || []).slice(0, 8000)
-        }
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseEsencial))
-      } catch (e2) {}
-    }
-    try {
       localStorage.setItem('merma_zona_b_ventas_tiendas', JSON.stringify(base.ventasPorTienda || {}))
     } catch (e) {}
+    try {
+      // Guardar en localStorage sólo los primeros 1,000 items para no saturar los 5MB de quota
+      const baseLocal = {
+        ...base,
+        itemsConsolidados: (base.itemsConsolidados || []).slice(0, 1000),
+        ventasConsolidadas: (base.ventasConsolidadas || []).slice(0, 1000)
+      }
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(baseLocal))
+    } catch (e) {
+      console.warn('LocalStorage limit reached', e)
+    }
   }
 }

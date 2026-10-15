@@ -200,10 +200,10 @@ export default function MermaAdminClient() {
       setDb(res)
       setParseoVenta(null)
       setArchivoVentaNombre('')
-      if (fileInputVentaRef.current) fileInputVentaRef.current.value = ''
-      toast.success('Datos de Ventas guardados exitosamente para el cruce de SKU.')
+      const tiendasContadas = Object.keys(res.ventasPorTienda || {}).length
+      toast.success(`¡Ventas guardadas con éxito! S/ ${nuevoLote.totalVentaSoles.toLocaleString('es-PE', { minimumFractionDigits: 2 })} asignadas a ${tiendasContadas} tiendas.`)
     } catch (e: any) {
-      toast.error('Error al guardar ventas: ' + e.message)
+      toast.error('Error al guardar ventas: ' + (e?.message || 'Error desconocido'))
     } finally {
       setGuardando(false)
     }
