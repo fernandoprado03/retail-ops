@@ -342,7 +342,14 @@ export interface FilaAppVencimientoTienda {
   codigo: string
   nombre: string
   lider: string
-  dias: { fecha: string; porcentaje: number }[]
+  dias: {
+    fecha: string
+    porcentaje: number | null
+    sinAlertas?: boolean
+    manana?: number
+    tarde?: number
+    noId?: number
+  }[]
   totalPorcentaje: number
 }
 
@@ -653,27 +660,183 @@ const DATOS_EJEMPLO_DDF_SEM_41: FilaDDFTienda[] = TIENDAS_ZONA_B.map(t => {
   }
 })
 
-// Datos de muestra App Vencimiento (Chimbote con 56.4%, resto con 100%)
-const DATOS_EJEMPLO_VENCIMIENTO: FilaAppVencimientoTienda[] = TIENDAS_ZONA_B.map(t => {
-  const esChimbote = t.codigo === '335'
-  const totalPorcentaje = esChimbote ? 56.4 : 100.0
-  const dias = [
-    { fecha: '2026-10-05', porcentaje: 100 },
-    { fecha: '2026-10-06', porcentaje: 100 },
-    { fecha: '2026-10-07', porcentaje: 100 },
-    { fecha: '2026-10-08', porcentaje: 100 },
-    { fecha: '2026-10-09', porcentaje: 100 },
-    { fecha: '2026-10-10', porcentaje: esChimbote ? 0 : 100 },
-    { fecha: '2026-10-11', porcentaje: esChimbote ? 0 : 100 },
-  ]
-  return {
+// Reporte Web oficial de Alertas de Vencimiento (Semana 42)
+export const TEXTO_REPORTE_WEB_VENCIMIENTO_SEM_42 = `Local\tDía\t% Mañana\t% Tarde\t% No Identificado
+103-Mega Plaza\t2026-10-16\t🟢 100%\t🔴 0%\t🔴 0%
+103-Mega Plaza\t2026-10-14\t🟢 100%\t🔴 0%\t🔴 0%
+103-Mega Plaza\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+103-Mega Plaza\t2026-10-12\t🟢 100%\t🔴 0%\t🔴 0%
+103-Mega Plaza\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+107-Atocongo\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+107-Atocongo\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+107-Atocongo\t2026-10-15\t🟢 100%\t🔴 0%\t🔴 0%
+107-Atocongo\t2026-10-12\t🟢 100%\t🔴 0%\t🔴 0%
+110-Huaylas\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+110-Huaylas\t2026-10-15\t🟢 100%\t🔴 0%\t🔴 0%
+110-Huaylas\t2026-10-16\t🟢 100%\t🔴 0%\t🔴 0%
+110-Huaylas\t2026-10-14\t🔴 85.7%\t🔴 14.3%\t🔴 0%
+110-Huaylas\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+110-Huaylas\t2026-10-12\t🟢 100%\t🔴 0%\t🔴 0%
+118-Bellavista\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+118-Bellavista\t2026-10-14\t🟢 100%\t🔴 0%\t🔴 0%
+118-Bellavista\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+118-Bellavista\t2026-10-16\t🟢 100%\t🔴 0%\t🔴 0%
+118-Bellavista\t2026-10-12\t🟢 100%\t🔴 0%\t🔴 0%
+118-Bellavista\t2026-10-15\t🟢 100%\t🔴 0%\t🔴 0%
+155-Santa Anita\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+155-Santa Anita\t2026-10-12\t🔴 50%\t🔴 50%\t🔴 0%
+155-Santa Anita\t2026-10-14\t🟢 100%\t🔴 0%\t🔴 0%
+155-Santa Anita\t2026-10-16\t🟢 100%\t🔴 0%\t🔴 0%
+155-Santa Anita\t2026-10-15\t🟢 100%\t🔴 0%\t🔴 0%
+155-Santa Anita\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+175-Lima Sur\t2026-10-12\t🔴 0%\t🟢 100%\t🔴 0%
+175-Lima Sur\t2026-10-18\t🔴 0%\t🟢 100%\t🔴 0%
+175-Lima Sur\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+175-Lima Sur\t2026-10-14\t🔴 0%\t🟢 100%\t🔴 0%
+175-Lima Sur\t2026-10-15\t🔴 0%\t🟢 100%\t🔴 0%
+193-Puruchuco\t2026-10-12\t🟢 100%\t🔴 0%\t🔴 0%
+193-Puruchuco\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+193-Puruchuco\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+193-Puruchuco\t2026-10-16\t🔴 0%\t🟢 100%\t🔴 0%
+311-Trujillo 1\t2026-10-13\t🟢 100%\t🔴 0%\t🔴 0%
+311-Trujillo 1\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+311-Trujillo 1\t2026-10-15\t🟢 100%\t🔴 0%\t🔴 0%
+311-Trujillo 1\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+314-Trujillo 2\t2026-10-13\t🔴 0%\t🟢 100%\t🔴 0%
+314-Trujillo 2\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+314-Trujillo 2\t2026-10-15\t🔴 0%\t🟢 100%\t🔴 0%
+335-Chimbote\t2026-10-13\t🟢 100%\t🔴 0%\t🔴 0%
+335-Chimbote\t2026-10-16\t🔴 0%\t🟢 100%\t🔴 0%
+335-Chimbote\t2026-10-12\t🔴 0%\t🔴 0%\t🟢 100%
+335-Chimbote\t2026-10-17\t🟢 100%\t🔴 0%\t🔴 0%
+335-Chimbote\t2026-10-18\t🟢 100%\t🔴 0%\t🔴 0%
+357-Cusco La Cultura\t2026-10-12\t🟢 100%\t🔴 0%\t🔴 0%
+357-Cusco La Cultura\t2026-10-18\t🔴 0%\t🟢 100%\t🔴 0%
+357-Cusco La Cultura\t2026-10-14\t🟢 100%\t🔴 0%\t🔴 0%`
+
+// Función para parsear el reporte web de cumplimiento de alertas (Evolutivo x Local)
+export function parsearReporteWebAlertas(rawText: string): FilaAppVencimientoTienda[] | null {
+  if (!rawText || rawText.trim().length === 0) return null
+
+  const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+  const registrosPorTienda: Record<string, Record<string, { manana: number; tarde: number; noId: number; cump: number }>> = {}
+  const fechasDetectadas = new Set<string>()
+
+  for (let i = 0; i < lineas.length; i++) {
+    const l = lineas[i]
+    let matchT = identificarTienda(l)
+    if (!matchT && (l.includes('\t') || l.includes('  '))) {
+      const col0 = l.split(/[\t]+|\s{2,}/)[0]?.trim()
+      if (col0) matchT = identificarTienda(col0)
+    }
+    if (!matchT) continue
+
+    let combined = l
+    let matchFecha = combined.match(/\b(\d{4}-\d{2}-\d{2}|\d{2}[/-]\d{2}[/-]\d{4})\b/)
+    let pcts = Array.from(combined.matchAll(/(\d+(?:\.\d+)?)\s*%/g)).map(m => parseFloat(m[1]))
+
+    let offset = 1
+    while ((!matchFecha || pcts.length < 3) && i + offset < lineas.length && offset <= 5) {
+      combined += ' ' + lineas[i + offset]
+      if (!matchFecha) {
+        matchFecha = combined.match(/\b(\d{4}-\d{2}-\d{2}|\d{2}[/-]\d{2}[/-]\d{4})\b/)
+      }
+      pcts = Array.from(combined.matchAll(/(\d+(?:\.\d+)?)\s*%/g)).map(m => parseFloat(m[1]))
+      offset++
+    }
+
+    if (matchFecha && pcts.length >= 3) {
+      let fecha = matchFecha[1]
+      if (/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(fecha)) {
+        const [d, m, y] = fecha.split(/[/-]/)
+        fecha = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+      }
+
+      fechasDetectadas.add(fecha)
+      const manana = pcts[0]
+      const tarde = pcts[1]
+      const noId = pcts[2]
+
+      // Regla de negocio:
+      // "cuando sale en % No Identificado con 100% quiere decir que ese día no se trabajó ni en la mañana ni en la tarde (0%)"
+      let cump = 100
+      if (noId >= 99.9) {
+        cump = 0
+      } else if (noId <= 0.1) {
+        cump = 100
+      } else {
+        cump = Math.max(0, Math.min(100, Math.round((100 - noId) * 10) / 10))
+      }
+
+      if (!registrosPorTienda[matchT.codigo]) {
+        registrosPorTienda[matchT.codigo] = {}
+      }
+      registrosPorTienda[matchT.codigo][fecha] = { manana, tarde, noId, cump }
+    }
+  }
+
+  if (Object.keys(registrosPorTienda).length === 0) return null
+
+  const fechasOrdenadas = Array.from(fechasDetectadas).sort()
+
+  return TIENDAS_ZONA_B.map(t => {
+    const tiendaRegs = registrosPorTienda[t.codigo] || {}
+    const diasConReporte = Object.values(tiendaRegs)
+
+    let totalPorcentaje = 100.0
+    if (diasConReporte.length > 0) {
+      const suma = diasConReporte.reduce((acc, d) => acc + d.cump, 0)
+      totalPorcentaje = parseFloat((suma / diasConReporte.length).toFixed(1))
+    }
+
+    const dias = fechasOrdenadas.map(f => {
+      const reg = tiendaRegs[f]
+      if (reg) {
+        return {
+          fecha: f,
+          porcentaje: reg.cump,
+          sinAlertas: false,
+          manana: reg.manana,
+          tarde: reg.tarde,
+          noId: reg.noId,
+        }
+      } else {
+        return {
+          fecha: f,
+          porcentaje: null,
+          sinAlertas: true,
+        }
+      }
+    })
+
+    return {
+      codigo: t.codigo,
+      nombre: t.nombre,
+      lider: t.lider,
+      dias,
+      totalPorcentaje,
+    }
+  })
+}
+
+// Datos de muestra App Vencimiento (Semana 42 cargada por default)
+const DATOS_EJEMPLO_VENCIMIENTO: FilaAppVencimientoTienda[] =
+  parsearReporteWebAlertas(TEXTO_REPORTE_WEB_VENCIMIENTO_SEM_42) ||
+  TIENDAS_ZONA_B.map(t => ({
     codigo: t.codigo,
     nombre: t.nombre,
     lider: t.lider,
-    dias,
-    totalPorcentaje,
-  }
-})
+    dias: [
+      { fecha: '2026-10-12', porcentaje: 100 },
+      { fecha: '2026-10-13', porcentaje: 100 },
+      { fecha: '2026-10-14', porcentaje: 100 },
+      { fecha: '2026-10-15', porcentaje: 100 },
+      { fecha: '2026-10-16', porcentaje: 100 },
+      { fecha: '2026-10-17', porcentaje: 100 },
+      { fecha: '2026-10-18', porcentaje: 100 },
+    ],
+    totalPorcentaje: 100.0,
+  }))
 
 // Datos de muestra Calidad Auditoría (Valores del reporte Excel de Septiembre con arrastre a Octubre)
 const DATOS_EJEMPLO_CALIDAD_AUDITORIA: FilaCalidadAuditoriaTienda[] = [
@@ -791,7 +954,7 @@ export default function BoletinJ06Page() {
 
   // Estado App Vencimiento
   const [datosVencimiento, setDatosVencimiento] = useState<FilaAppVencimientoTienda[]>(DATOS_EJEMPLO_VENCIMIENTO)
-  const [textoPegadoVencimiento, setTextoPegadoVencimiento] = useState<string>('')
+  const [textoPegadoVencimiento, setTextoPegadoVencimiento] = useState<string>(TEXTO_REPORTE_WEB_VENCIMIENTO_SEM_42)
   const [copiadoVencimiento, setCopiadoVencimiento] = useState(false)
 
   // Estado Calidad Auditoría
@@ -826,7 +989,7 @@ export default function BoletinJ06Page() {
     generarDatosEjemploNegativos(CUOTAS_NEGATIVOS_DEFAULT)
   )
 
-  const [semanaSeleccionada, setSemanaSeleccionada] = useState<string>('Semana 41')
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState<string>('Semana 42')
 
   // Procesar Texto Pegado del reporte web de App de Vencimiento
   const procesarTextoPegadoVencimiento = (rawText: string) => {
@@ -836,6 +999,19 @@ export default function BoletinJ06Page() {
     }
 
     try {
+      // 1. Intentar procesar como Reporte Web de Alertas (Evolutivo x Local con % Mañana, % Tarde, % No Identificado)
+      const resWeb = parsearReporteWebAlertas(rawText)
+      if (resWeb && resWeb.length > 0) {
+        setDatosVencimiento(resWeb)
+        setTextoPegadoVencimiento(rawText)
+        const totalAlertas = resWeb.reduce((acc, t) => acc + t.dias.filter(d => !d.sinAlertas).length, 0)
+        const numFechas = resWeb[0]?.dias?.length || 0
+        toast.success(
+          `¡Reporte Web de Alertas procesado! ${resWeb.length} tiendas, ${numFechas} fechas (${totalAlertas} evaluaciones de alertas).`
+        )
+        return
+      }
+
       const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
 
       // Identificar tiendas en el texto
@@ -2701,11 +2877,18 @@ export default function BoletinJ06Page() {
                     Pegar Reporte Web: Evolutivo de cumplimiento de Alertas - Semanal x Local
                   </h2>
                   <p className="text-xs text-slate-500">
-                    En la web de Alertas, selecciona la tabla, presiona <strong>Ctrl + C</strong> y pega directamente aquí. Se extraerá automáticamente la columna <strong>Total</strong> de cada tienda.
+                    Copia y pega la tabla de <strong>Evolutivo de cumplimiento de Alertas - Semanal x Local</strong> (columnas <em>Local, Día, % Mañana, % Tarde, % No Identificado</em>). Si <strong>% No Identificado es 100%</strong>, el sistema detecta que ese día <strong>no se trabajó (0%)</strong>.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => procesarTextoPegadoVencimiento(TEXTO_REPORTE_WEB_VENCIMIENTO_SEM_42)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-300 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Cargar Reporte S42
+                  </button>
                   <button
                     onClick={handlePegarVencimientoPortapapeles}
                     className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
@@ -2741,7 +2924,7 @@ export default function BoletinJ06Page() {
               <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <p>
-                  El sistema extrae el porcentaje de la columna <strong>Total</strong> para cada tienda (Meta: <strong>100%</strong>) y lo traslada automáticamente a la columna <strong>App vencimiento</strong> de tu Boletín.
+                  <strong>Lógica de Alertas de Vencimiento:</strong> Se evalúa cada fecha registrada. Si <em>% No Identificado es 100%</em>, significa que ese día <strong>no se trabajó alertas ni en la mañana ni en la tarde (0%)</strong>. Si es 0%, el día tuvo 100% de atención. Las fechas sin alertas programadas se representan con guión (<strong>—</strong>) y no penalizan el promedio de la tienda. El promedio final se traslada automáticamente a la columna <strong>App vencimiento</strong> del Boletín Oficial.
                 </p>
               </div>
             </div>
@@ -2827,14 +3010,26 @@ export default function BoletinJ06Page() {
                     <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
                       <th className="py-2.5 px-3 text-left border-r border-emerald-800">Local</th>
                       <th className="py-2.5 px-3 text-left border-r border-emerald-800">Líder J06</th>
-                      {datosVencimiento[0]?.dias?.map((dia, dIdx) => (
-                        <th
-                          key={dIdx}
-                          className="py-2.5 px-2 text-center border-r border-emerald-800 bg-[#2e7d32] font-mono text-[11px]"
-                        >
-                          {dia.fecha.includes('-') ? dia.fecha.slice(5) : dia.fecha}
-                        </th>
-                      ))}
+                      {datosVencimiento[0]?.dias?.map((dia, dIdx) => {
+                        let headerTexto = dia.fecha
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(dia.fecha)) {
+                          const parts = dia.fecha.split('-')
+                          const anio = parseInt(parts[0])
+                          const mes = parseInt(parts[1]) - 1
+                          const diaNum = parseInt(parts[2])
+                          const dt = new Date(anio, mes, diaNum)
+                          const nombresDias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+                          headerTexto = `${nombresDias[dt.getDay()]} ${parts[2]}/${parts[1]}`
+                        }
+                        return (
+                          <th
+                            key={dIdx}
+                            className="py-2.5 px-2 text-center border-r border-emerald-800 bg-[#2e7d32] font-mono text-[11px]"
+                          >
+                            {headerTexto}
+                          </th>
+                        )
+                      })}
                       <th className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[100px]">
                         Total %
                       </th>
@@ -2859,22 +3054,39 @@ export default function BoletinJ06Page() {
                           <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
                             {item.lider}
                           </td>
-                          {item.dias?.map((d, dIdx) => (
-                            <td
-                              key={dIdx}
-                              className="py-2.5 px-2 text-center border-r border-slate-200 whitespace-nowrap font-medium"
-                            >
-                              <span
-                                className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold ${
-                                  d.porcentaje === 100
-                                    ? 'bg-emerald-50 text-emerald-800'
-                                    : 'bg-rose-100 text-rose-800 font-extrabold'
-                                }`}
+                          {item.dias?.map((d, dIdx) => {
+                            const sinAlertas = d.sinAlertas || d.porcentaje === null
+                            return (
+                              <td
+                                key={dIdx}
+                                className="py-2.5 px-2 text-center border-r border-slate-200 whitespace-nowrap font-medium"
                               >
-                                {d.porcentaje === 100 ? '🟢 100%' : `🔴 ${d.porcentaje}%`}
-                              </span>
-                            </td>
-                          ))}
+                                {sinAlertas ? (
+                                  <span
+                                    className="inline-block px-2 py-0.5 rounded text-[11px] font-bold text-slate-400 bg-slate-100 border border-slate-200 select-none"
+                                    title="Sin alertas registradas este día (no penaliza)"
+                                  >
+                                    —
+                                  </span>
+                                ) : (
+                                  <span
+                                    className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                                      d.porcentaje === 100
+                                        ? 'bg-emerald-50 text-emerald-800'
+                                        : 'bg-rose-100 text-rose-800 font-extrabold'
+                                    }`}
+                                    title={
+                                      d.manana !== undefined || d.tarde !== undefined || d.noId !== undefined
+                                        ? `Turno Mañana: ${d.manana ?? 0}% | Turno Tarde: ${d.tarde ?? 0}% | No Identificado: ${d.noId ?? 0}%`
+                                        : undefined
+                                    }
+                                  >
+                                    {d.porcentaje === 100 ? '🟢 100%' : `🔴 ${d.porcentaje}%`}
+                                  </span>
+                                )}
+                              </td>
+                            )
+                          })}
                           <td className="py-2.5 px-4 text-center font-black border-r border-slate-200 whitespace-nowrap">
                             <span
                               className={`inline-block px-3 py-1 rounded-md text-xs font-bold border ${
