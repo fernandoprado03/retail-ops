@@ -978,16 +978,21 @@ export default function BoletinJ06Page() {
 
   // Estado Disponibilidad
   const [datosDisponibilidad, setDatosDisponibilidad] = useState<FilaDisponibilidadTienda[]>(DATOS_EJEMPLO_DISPONIBILIDAD)
+  const [textoPegadoDisponibilidad, setTextoPegadoDisponibilidad] = useState<string>('')
   const [copiadoDisponibilidad, setCopiadoDisponibilidad] = useState(false)
 
   // Estado Ajustes
   const [datosAjustes, setDatosAjustes] = useState<FilaAjusteTienda[]>(DATOS_EJEMPLO_AJUSTES_SEM_40)
+  const [textoPegadoAjustes, setTextoPegadoAjustes] = useState<string>('')
+  const [copiadoAjustes, setCopiadoAjustes] = useState(false)
 
   // Estado Negativos
   const [cuotasNegativos, setCuotasNegativos] = useState<Record<string, number>>(CUOTAS_NEGATIVOS_DEFAULT)
   const [datosNegativos, setDatosNegativos] = useState<FilaNegativoTienda[]>(() =>
     generarDatosEjemploNegativos(CUOTAS_NEGATIVOS_DEFAULT)
   )
+  const [textoPegadoNegativos, setTextoPegadoNegativos] = useState<string>('')
+  const [copiadoNegativos, setCopiadoNegativos] = useState(false)
 
   const [semanaSeleccionada, setSemanaSeleccionada] = useState<string>('Semana 42')
 
@@ -1815,6 +1820,282 @@ export default function BoletinJ06Page() {
     )
   }
 
+  // ==========================================
+  // DISPONIBILIDAD (Tab 6: ResumGTda / Looker)
+  // ==========================================
+  const procesarTextoPegadoDisponibilidad = (rawText: string) => {
+    if (!rawText || rawText.trim().length === 0) {
+      toast.error('El texto pegado está vacío.')
+      return
+    }
+    try {
+      const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      const nuevasFilas = [...datosDisponibilidad]
+      let conteo = 0
+
+      lineas.forEach(l => {
+        const t = identificarTienda(l)
+        if (!t) return
+
+        const sinCodigo = l.replace(new RegExp(`\\b${t.codigo}\\b`, 'g'), '')
+        const nums = Array.from(sinCodigo.matchAll(/([+\-]?\d+(?:\.\d+)?)/g)).map(m => parseFloat(m[1]))
+
+        if (nums.length >= 1) {
+          const idx = nuevasFilas.findIndex(item => item.codigo === t.codigo)
+          if (idx !== -1) {
+            let nsg = nums[0]
+            let bodega = 0.0
+            let quiebre = 0.0
+            if (nums.length >= 3) {
+              bodega = nums[1]
+              quiebre = nums[2]
+            } else if (nums.length === 2) {
+              quiebre = nums[1]
+              bodega = Math.max(0, Math.round((100 - nsg - quiebre) * 100) / 100)
+            } else {
+              quiebre = Math.max(0, Math.round((100 - nsg) * 100) / 100)
+            }
+            nuevasFilas[idx] = {
+              ...nuevasFilas[idx],
+              nsg,
+              bodega,
+              quiebre,
+            }
+            conteo++
+          }
+        }
+      })
+
+      if (conteo > 0) {
+        setDatosDisponibilidad(nuevasFilas)
+        setTextoPegadoDisponibilidad(rawText)
+        toast.success(`¡Disponibilidad procesada para ${conteo} tiendas!`)
+      } else {
+        toast.warning('No se reconocieron tiendas o valores en el texto pegado.')
+      }
+    } catch {
+      toast.error('Error al procesar disponibilidad.')
+    }
+  }
+
+  const handlePegarDisponibilidadPortapapeles = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto) procesarTextoPegadoDisponibilidad(texto)
+      else toast.warning('El portapapeles está vacío.')
+    } catch {
+      toast.info('Pega el texto directamente en el recuadro inferior.')
+    }
+  }
+
+  const handleUpdateDisponibilidad = (codigo: string, campo: 'nsg' | 'bodega' | 'quiebre', valor: number) => {
+    setDatosDisponibilidad(prev =>
+      prev.map(t => (t.codigo === codigo ? { ...t, [campo]: valor } : t))
+    )
+  }
+
+  // ==========================================
+  // NEGATIVOS LOOKER (Tab 7)
+  // ==========================================
+  const procesarTextoPegadoNegativos = (rawText: string) => {
+    if (!rawText || rawText.trim().length === 0) {
+      toast.error('El texto pegado está vacío.')
+      return
+    }
+    try {
+      const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      const nuevasFilas = [...datosNegativos]
+      let conteo = 0
+
+      lineas.forEach(l => {
+        const t = identificarTienda(l)
+        if (!t) return
+
+        const sinCodigo = l.replace(new RegExp(`\\b${t.codigo}\\b`, 'g'), '')
+        const nums = Array.from(sinCodigo.matchAll(/([+\-]?\d+(?:\.\d+)?)/g)).map(m => parseFloat(m[1]))
+
+        if (nums.length >= 1) {
+          const idx = nuevasFilas.findIndex(item => item.codigo === t.codigo)
+          if (idx !== -1) {
+            const filaActual = nuevasFilas[idx]
+            const cuota = filaActual.cuota
+            const nuevosDias = filaActual.dias.map((d, dIdx) => {
+              const monto = nums[dIdx] !== undefined ? nums[dIdx] : d.monto
+              const cumple = monto === null || monto >= cuota
+              return { ...d, monto, cumple }
+            })
+            const diasCumplidos = nuevosDias.filter(d => d.cumple).length
+            const totalDias = nuevosDias.length
+            const cumplimientoPorcentaje = parseFloat(((diasCumplidos / totalDias) * 100).toFixed(2))
+
+            nuevasFilas[idx] = {
+              ...filaActual,
+              dias: nuevosDias,
+              diasCumplidos,
+              cumplimientoPorcentaje,
+            }
+            conteo++
+          }
+        }
+      })
+
+      if (conteo > 0) {
+        setDatosNegativos(nuevasFilas)
+        setTextoPegadoNegativos(rawText)
+        toast.success(`¡Negativos Looker procesados para ${conteo} tiendas!`)
+      } else {
+        toast.warning('No se reconocieron tiendas o montos en el texto pegado.')
+      }
+    } catch {
+      toast.error('Error al procesar negativos.')
+    }
+  }
+
+  const handlePegarNegativosPortapapeles = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto) procesarTextoPegadoNegativos(texto)
+      else toast.warning('El portapapeles está vacío.')
+    } catch {
+      toast.info('Pega el texto directamente en el recuadro inferior.')
+    }
+  }
+
+  const handleUpdateCuotaNegativo = (codigo: string, cuota: number) => {
+    setCuotasNegativos(prev => ({ ...prev, [codigo]: cuota }))
+    setDatosNegativos(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const nuevosDias = t.dias.map(d => ({
+          ...d,
+          cumple: d.monto === null || d.monto >= cuota,
+        }))
+        const diasCumplidos = nuevosDias.filter(d => d.cumple).length
+        const totalDias = nuevosDias.length
+        return {
+          ...t,
+          cuota,
+          dias: nuevosDias,
+          diasCumplidos,
+          cumplimientoPorcentaje: parseFloat(((diasCumplidos / totalDias) * 100).toFixed(2)),
+        }
+      })
+    )
+  }
+
+  const handleUpdateMontoDiaNegativo = (codigo: string, diaIdx: number, nuevoMonto: number | null) => {
+    setDatosNegativos(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const nuevosDias = t.dias.map((d, idx) => {
+          if (idx !== diaIdx) return d
+          const cumple = nuevoMonto === null || nuevoMonto >= t.cuota
+          return { ...d, monto: nuevoMonto, cumple }
+        })
+        const diasCumplidos = nuevosDias.filter(d => d.cumple).length
+        const totalDias = nuevosDias.length
+        return {
+          ...t,
+          dias: nuevosDias,
+          diasCumplidos,
+          cumplimientoPorcentaje: parseFloat(((diasCumplidos / totalDias) * 100).toFixed(2)),
+        }
+      })
+    )
+  }
+
+  // ==========================================
+  // AJUSTES LOOKER (Tab 8)
+  // ==========================================
+  const procesarTextoPegadoAjustes = (rawText: string) => {
+    if (!rawText || rawText.trim().length === 0) {
+      toast.error('El texto pegado está vacío.')
+      return
+    }
+    try {
+      const lineas = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      const nuevasFilas = [...datosAjustes]
+      let conteo = 0
+
+      lineas.forEach(l => {
+        const t = identificarTienda(l)
+        if (!t) return
+
+        const sinCodigo = l.replace(new RegExp(`\\b${t.codigo}\\b`, 'g'), '')
+        let montos: (number | null)[] = []
+        if (l.includes('\t')) {
+          const cols = l.split('\t').slice(1)
+          montos = cols.map(c => {
+            const v = c.trim().replace(/[^\d.\-+]/g, '')
+            return v !== '' && !isNaN(Number(v)) ? parseFloat(v) : null
+          })
+        } else {
+          const nums = Array.from(sinCodigo.matchAll(/([+\-]?\d+(?:\.\d+)?)/g)).map(m => parseFloat(m[1]))
+          montos = nums
+        }
+
+        if (montos.length >= 1) {
+          const idx = nuevasFilas.findIndex(item => item.codigo === t.codigo)
+          if (idx !== -1) {
+            const filaActual = nuevasFilas[idx]
+            const nuevosDias = filaActual.dias.map((d, dIdx) => ({
+              ...d,
+              monto: montos[dIdx] !== undefined ? montos[dIdx] : d.monto,
+            }))
+            const diasConAjuste = nuevosDias.filter(d => d.monto !== null).length
+            const totalDias = nuevosDias.length
+            const cumplimientoPorcentaje = parseFloat(((diasConAjuste / totalDias) * 100).toFixed(2))
+
+            nuevasFilas[idx] = {
+              ...filaActual,
+              dias: nuevosDias,
+              diasConAjuste,
+              cumplimientoPorcentaje,
+            }
+            conteo++
+          }
+        }
+      })
+
+      if (conteo > 0) {
+        setDatosAjustes(nuevasFilas)
+        setTextoPegadoAjustes(rawText)
+        toast.success(`¡Ajustes Looker procesados para ${conteo} tiendas!`)
+      } else {
+        toast.warning('No se reconocieron tiendas o montos en el texto pegado.')
+      }
+    } catch {
+      toast.error('Error al procesar ajustes.')
+    }
+  }
+
+  const handlePegarAjustesPortapapeles = async () => {
+    try {
+      const texto = await navigator.clipboard.readText()
+      if (texto) procesarTextoPegadoAjustes(texto)
+      else toast.warning('El portapapeles está vacío.')
+    } catch {
+      toast.info('Pega el texto directamente en el recuadro inferior.')
+    }
+  }
+
+  const handleUpdateMontoDiaAjuste = (codigo: string, diaIdx: number, nuevoMonto: number | null) => {
+    setDatosAjustes(prev =>
+      prev.map(t => {
+        if (t.codigo !== codigo) return t
+        const nuevosDias = t.dias.map((d, idx) => (idx === diaIdx ? { ...d, monto: nuevoMonto } : d))
+        const diasConAjuste = nuevosDias.filter(d => d.monto !== null).length
+        const totalDias = nuevosDias.length
+        return {
+          ...t,
+          dias: nuevosDias,
+          diasConAjuste,
+          cumplimientoPorcentaje: parseFloat(((diasConAjuste / totalDias) * 100).toFixed(2)),
+        }
+      })
+    )
+  }
+
   // Estadísticas DDF
   const promedioDDF =
     datosDDF.length > 0
@@ -1849,6 +2130,46 @@ export default function BoletinJ06Page() {
   const tiendas100AC = datosRegistroAC.filter(t => t.cumplimientoPorcentaje === 100).length
   const tiendasObservadasAC = datosRegistroAC.filter(t => t.cumplimientoPorcentaje < 100).length
   const totalRegistrosCompletados = datosRegistroAC.reduce((acc, t) => acc + t.registrosCumplidos, 0)
+
+  // Estadísticas Disponibilidad (Tab 6)
+  const promedioNSG =
+    datosDisponibilidad.length > 0
+      ? (datosDisponibilidad.reduce((acc, t) => acc + t.nsg, 0) / datosDisponibilidad.length).toFixed(2)
+      : '0.00'
+  const promedioQuiebre =
+    datosDisponibilidad.length > 0
+      ? (datosDisponibilidad.reduce((acc, t) => acc + t.quiebre, 0) / datosDisponibilidad.length).toFixed(2)
+      : '0.00'
+  const promedioBodega =
+    datosDisponibilidad.length > 0
+      ? (datosDisponibilidad.reduce((acc, t) => acc + t.bodega, 0) / datosDisponibilidad.length).toFixed(2)
+      : '0.00'
+  const tiendasCumplenNSG = datosDisponibilidad.filter(t => t.nsg >= 95).length
+  const tiendasQuiebreCritico = datosDisponibilidad.filter(t => t.quiebre >= 5).length
+
+  // Estadísticas Negativos (Tab 7)
+  const promedioNegativos =
+    datosNegativos.length > 0
+      ? (datosNegativos.reduce((acc, t) => acc + t.cumplimientoPorcentaje, 0) / datosNegativos.length).toFixed(2)
+      : '0.00'
+  const tiendas100Negativos = datosNegativos.filter(t => t.cumplimientoPorcentaje === 100).length
+  const tiendasObservadasNegativos = datosNegativos.filter(t => t.cumplimientoPorcentaje < 100).length
+  const montoTotalNegativos = datosNegativos.reduce((acc, t) => {
+    const sumaTienda = t.dias.reduce((sum, d) => sum + (d.monto || 0), 0)
+    return acc + sumaTienda
+  }, 0)
+
+  // Estadísticas Ajustes (Tab 8)
+  const promedioAjustes =
+    datosAjustes.length > 0
+      ? (datosAjustes.reduce((acc, t) => acc + t.cumplimientoPorcentaje, 0) / datosAjustes.length).toFixed(2)
+      : '0.00'
+  const tiendas100Ajustes = datosAjustes.filter(t => t.cumplimientoPorcentaje === 100).length
+  const tiendasObservadasAjustes = datosAjustes.filter(t => t.cumplimientoPorcentaje < 100).length
+  const montoTotalAjustes = datosAjustes.reduce((acc, t) => {
+    const sumaTienda = t.dias.reduce((sum, d) => sum + (d.monto || 0), 0)
+    return acc + sumaTienda
+  }, 0)
 
   // Ingesta y Procesamiento de Ventas (% Logro y % Crecimiento)
   const procesarTextoPegadoVentas = (rawText: string) => {
@@ -4080,32 +4401,716 @@ export default function BoletinJ06Page() {
           </div>
         )}
 
-        {/* TAB 3: DISPONIBILIDAD */}
+        {/* TAB 6: DISPONIBILIDAD (RESUMGTDA) */}
         {activeTab === 'disponibilidad' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h2 className="text-base font-bold text-slate-900">Disponibilidad (NSG, Bodega, Quiebre)</h2>
-              <p className="text-xs text-slate-500">Procesado desde ResumGTda_data.csv con arrastre de última auditoría.</p>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                    Disponibilidad Operativa (NSG, Bodega y Quiebre)
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Copia y pega el reporte de Disponibilidad desde Looker o ResumGTda (columnas: <em>Tienda, NSG%, Bodega%, Quiebre%</em>). También puedes editar las cifras manualmente en la tabla inferior.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setDatosDisponibilidad(DATOS_EJEMPLO_DISPONIBILIDAD)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-300 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Restablecer
+                  </button>
+                  <button
+                    onClick={handlePegarDisponibilidadPortapapeles}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <ClipboardPaste className="w-4 h-4" />
+                    Pegar desde Portapapeles
+                  </button>
+                </div>
+              </div>
+
+              {/* Textarea para pegar */}
+              <div className="relative">
+                <textarea
+                  value={textoPegadoDisponibilidad}
+                  onChange={e => {
+                    setTextoPegadoDisponibilidad(e.target.value)
+                    procesarTextoPegadoDisponibilidad(e.target.value)
+                  }}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text')
+                    if (pasted) {
+                      e.preventDefault()
+                      setTextoPegadoDisponibilidad(pasted)
+                      procesarTextoPegadoDisponibilidad(pasted)
+                    }
+                  }}
+                  placeholder="Pega aquí el reporte de Disponibilidad copiado de Looker o Excel (ej: 103 - Mega Plaza  92.7%  0.0%  7.3%)..."
+                  rows={3}
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none bg-slate-50/50 resize-y"
+                />
+              </div>
+
+              <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Metas Oficiales de Disponibilidad:</strong> NSG (Nivel de Servicio de Góndola) <strong>&gt;95%</strong>, Bodega <strong>&lt;1%</strong> y Quiebre <strong>&lt;5%</strong>. El valor de NSG alimenta directamente el indicador de Disponibilidad en el Desempeño de Líderes.
+                </p>
+              </div>
+            </div>
+
+            {/* Tarjetas Resumen */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Promedio NSG Zona B</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioNSG}%</p>
+                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Meta: &gt;95%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                  %
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas en Meta NSG</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {tiendasCumplenNSG} <span className="text-sm font-medium text-slate-400">/ {datosDisponibilidad.length}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">Cumplen meta &gt;95%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Promedio Quiebre</p>
+                  <p className="text-2xl font-black text-rose-600 mt-1">{promedioQuiebre}%</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Meta: &lt;5%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center font-bold text-lg">
+                  !
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Quiebre Crítico (&gt;5%)</p>
+                  <p className="text-2xl font-black text-rose-600 mt-1">
+                    {tiendasQuiebreCritico} <span className="text-sm font-medium text-slate-400">/ {datosDisponibilidad.length}</span>
+                  </p>
+                  <p className="text-xs text-rose-600 mt-0.5 font-medium">Tiendas observadas</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Interactiva y Editable */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    Tabla de Disponibilidad por Tienda (Zona B)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Edita directamente en las celdas numéricas si necesitas corregir o ingresar manualmente.
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Local</th>
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Líder J06</th>
+                      <th className="py-2.5 px-3 text-center border-r border-emerald-800 bg-[#2e7d32]">
+                        NSG Góndola (&gt;95%)
+                      </th>
+                      <th className="py-2.5 px-3 text-center border-r border-emerald-800 bg-[#2e7d32]">
+                        Bodega (&lt;1%)
+                      </th>
+                      <th className="py-2.5 px-3 text-center border-r border-emerald-800 bg-[#2e7d32]">
+                        Quiebre (&lt;5%)
+                      </th>
+                      <th className="py-2.5 px-4 bg-[#1b5e20]">
+                        Estado NSG
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosDisponibilidad.map((item, idx) => {
+                      const cumpleNSG = item.nsg >= 95.0
+                      const cumpleQuiebre = item.quiebre < 5.0
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {item.lider}
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-200">
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.nsg}
+                                onChange={e => handleUpdateDisponibilidad(item.codigo, 'nsg', parseFloat(e.target.value) || 0)}
+                                className={`w-20 px-2 py-1 text-center font-bold text-xs rounded border outline-none ${
+                                  cumpleNSG
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : 'bg-rose-50 text-rose-900 border-rose-300'
+                                }`}
+                              />
+                              <span className="text-slate-500 font-semibold">%</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-200">
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.bodega}
+                                onChange={e => handleUpdateDisponibilidad(item.codigo, 'bodega', parseFloat(e.target.value) || 0)}
+                                className="w-16 px-2 py-1 text-center font-medium text-xs rounded border border-slate-300 outline-none bg-white"
+                              />
+                              <span className="text-slate-500 font-semibold">%</span>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-200">
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.quiebre}
+                                onChange={e => handleUpdateDisponibilidad(item.codigo, 'quiebre', parseFloat(e.target.value) || 0)}
+                                className={`w-16 px-2 py-1 text-center font-bold text-xs rounded border outline-none ${
+                                  cumpleQuiebre
+                                    ? 'bg-slate-50 text-slate-800 border-slate-300'
+                                    : 'bg-rose-50 text-rose-900 border-rose-300'
+                                }`}
+                              />
+                              <span className="text-slate-500 font-semibold">%</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                            {cumpleNSG ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                🟢 En Meta ({item.nsg.toFixed(2)}%)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                🔴 Desvío ({item.nsg.toFixed(2)}%)
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 4: NEGATIVOS */}
+        {/* TAB 7: NEGATIVOS (LOOKER) */}
         {activeTab === 'negativos' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h2 className="text-base font-bold text-slate-900">Control de Negativos Looker</h2>
-              <p className="text-xs text-slate-500">Evaluado día a día contra cuotas máximas permitidas.</p>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-rose-600" />
+                    Control de Negativos Looker (Saldos Diarios vs Cuota)
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Copia y pega la matriz de negativos de Looker o ingresa los montos diarios. Si el saldo diario en soles es mayor o igual a la cuota permitida (ej: S/ -150 vs cuota S/ -250), se considera <strong>Cumplido</strong>.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setDatosNegativos(generarDatosEjemploNegativos(cuotasNegativos))}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-300 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Valores Referencia
+                  </button>
+                  <button
+                    onClick={handlePegarNegativosPortapapeles}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <ClipboardPaste className="w-4 h-4" />
+                    Pegar desde Portapapeles
+                  </button>
+                </div>
+              </div>
+
+              {/* Textarea para pegar */}
+              <div className="relative">
+                <textarea
+                  value={textoPegadoNegativos}
+                  onChange={e => {
+                    setTextoPegadoNegativos(e.target.value)
+                    procesarTextoPegadoNegativos(e.target.value)
+                  }}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text')
+                    if (pasted) {
+                      e.preventDefault()
+                      setTextoPegadoNegativos(pasted)
+                      procesarTextoPegadoNegativos(pasted)
+                    }
+                  }}
+                  placeholder="Pega aquí el reporte de Negativos copiado de Looker o Excel (ej: 103 - Mega Plaza  -527  -771  -944  -1748  -1572  -714  -444)..."
+                  rows={3}
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none bg-slate-50/50 resize-y"
+                />
+              </div>
+
+              <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Regla de Evaluación de Negativos:</strong> El cumplimiento diario se evalúa contra la <em>Cuota individual</em> de cada tienda. Si el monto en negativo supera la cuota máxima (es más negativo), el día se marca en rojo. La columna <strong>Negativos</strong> del Boletín refleja el % de días en cuota (ej: 7/7 = 100%, 6/7 = 85.71%).
+                </p>
+              </div>
+            </div>
+
+            {/* Tarjetas Resumen */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplimiento Zonal</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioNegativos}%</p>
+                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Meta: 100%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                  %
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas al 100% (7/7)</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {tiendas100Negativos} <span className="text-sm font-medium text-slate-400">/ {datosNegativos.length}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">Cumplieron cuota todos los días</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas con Desvío</p>
+                  <p className="text-2xl font-black text-rose-600 mt-1">
+                    {tiendasObservadasNegativos} <span className="text-sm font-medium text-slate-400">/ {datosNegativos.length}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">Menos de 7 días en cuota</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Monto Total Negativos</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">S/ {Math.abs(montoTotalNegativos).toLocaleString('es-PE')}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Acumulado Zona B</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                  S/
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Interactiva y Editable */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    Tabla Diaria de Negativos por Tienda
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Puedes modificar la cuota o editar directamente el monto en soles de cada día.
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Local</th>
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Líder J06</th>
+                      <th className="py-2.5 px-2 text-center border-r border-emerald-800 bg-[#2e7d32] min-w-[90px]">
+                        Cuota (S/)
+                      </th>
+                      {datosNegativos[0]?.dias?.map((dia, dIdx) => {
+                        let header = `Día ${dIdx + 1}`
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(dia.fecha)) {
+                          const parts = dia.fecha.split('-')
+                          const anio = parseInt(parts[0])
+                          const mes = parseInt(parts[1]) - 1
+                          const diaNum = parseInt(parts[2])
+                          const dt = new Date(anio, mes, diaNum)
+                          const nombresDias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+                          header = `${nombresDias[dt.getDay()]} ${parts[2]}/${parts[1]}`
+                        }
+                        return (
+                          <th
+                            key={dIdx}
+                            className="py-2.5 px-2 text-center border-r border-emerald-800 bg-[#2e7d32] font-mono text-[11px] min-w-[75px]"
+                          >
+                            {header}
+                          </th>
+                        )
+                      })}
+                      <th className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[90px]">
+                        Días en Cuota
+                      </th>
+                      <th className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[90px]">
+                        Cumpl. %
+                      </th>
+                      <th className="py-2.5 px-4 bg-[#1b5e20] min-w-[110px]">
+                        Estado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosNegativos.map((item, idx) => {
+                      const es100 = item.cumplimientoPorcentaje === 100
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {item.lider}
+                          </td>
+                          <td className="py-2 px-2 text-center border-r border-slate-200">
+                            <input
+                              type="number"
+                              value={item.cuota}
+                              onChange={e => handleUpdateCuotaNegativo(item.codigo, parseFloat(e.target.value) || 0)}
+                              className="w-18 px-1.5 py-1 text-center font-bold text-xs rounded border border-slate-300 outline-none bg-slate-50"
+                            />
+                          </td>
+                          {item.dias.map((d, dIdx) => (
+                            <td
+                              key={dIdx}
+                              className="py-1.5 px-1.5 text-center border-r border-slate-200"
+                            >
+                              <input
+                                type="number"
+                                value={d.monto !== null ? d.monto : ''}
+                                onChange={e => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value)
+                                  handleUpdateMontoDiaNegativo(item.codigo, dIdx, val)
+                                }}
+                                className={`w-16 px-1 py-0.5 text-center font-semibold text-[11px] rounded border outline-none ${
+                                  d.cumple
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : 'bg-rose-50 text-rose-900 border-rose-300 font-bold'
+                                }`}
+                              />
+                            </td>
+                          ))}
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-800 border-r border-slate-200">
+                            {item.diasCumplidos} / {item.totalDias}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-black border-r border-slate-200">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-xs font-bold border ${
+                                es100
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                              }`}
+                            >
+                              {item.cumplimientoPorcentaje.toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                            {es100 ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                🟢 Cumple
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                🔴 Desvío ({item.cumplimientoPorcentaje.toFixed(1)}%)
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 5: AJUSTES */}
+        {/* TAB 8: AJUSTES (LOOKER) */}
         {activeTab === 'ajustes' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h2 className="text-base font-bold text-slate-900">Ajustes Looker Diarios</h2>
-              <p className="text-xs text-slate-500">Evaluación de los 7 días de posteo de ajustes.</p>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-indigo-600" />
+                    Ajustes Looker Diarios (Posteo 7 de 7 Días)
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Copia y pega la tabla de posteo diario de ajustes o ingresa los montos. La tienda debe postear ajustes los <strong>7 días de la semana</strong> (Meta: 100%). Cada día sin posteo reduce el cumplimiento.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setDatosAjustes(DATOS_EJEMPLO_AJUSTES_SEM_40)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-300 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Valores Referencia
+                  </button>
+                  <button
+                    onClick={handlePegarAjustesPortapapeles}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <ClipboardPaste className="w-4 h-4" />
+                    Pegar desde Portapapeles
+                  </button>
+                </div>
+              </div>
+
+              {/* Textarea para pegar */}
+              <div className="relative">
+                <textarea
+                  value={textoPegadoAjustes}
+                  onChange={e => {
+                    setTextoPegadoAjustes(e.target.value)
+                    procesarTextoPegadoAjustes(e.target.value)
+                  }}
+                  onPaste={e => {
+                    const pasted = e.clipboardData.getData('text')
+                    if (pasted) {
+                      e.preventDefault()
+                      setTextoPegadoAjustes(pasted)
+                      procesarTextoPegadoAjustes(pasted)
+                    }
+                  }}
+                  placeholder="Pega aquí el reporte de Ajustes copiado de Looker o Excel (ej: 103 - Mega Plaza  -759  718  -589  171  150  -362  -753)..."
+                  rows={3}
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none bg-slate-50/50 resize-y"
+                />
+              </div>
+
+              <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Regla de Posteo de Ajustes:</strong> Las tiendas deben postear ajustes diariamente (7 días = 100%, 6 días = 85.71%, 5 días = 71.43%). Dejar una celda vacía o en blanco computa como <em>Día sin posteo</em>. El porcentaje final se traslada a la columna <strong>Ajustes</strong> del Boletín Oficial.
+                </p>
+              </div>
+            </div>
+
+            {/* Tarjetas Resumen */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cumplimiento Zonal</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{promedioAjustes}%</p>
+                  <p className="text-xs text-emerald-600 font-semibold mt-0.5">Meta: 100%</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">
+                  %
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tiendas 7/7 Días</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {tiendas100Ajustes} <span className="text-sm font-medium text-slate-400">/ {datosAjustes.length}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">100% posteo diario</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Días Faltantes</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">
+                    {tiendasObservadasAjustes} <span className="text-sm font-medium text-slate-400">/ {datosAjustes.length}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">Tiendas con menos de 7 días</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Neto Ajustes (S/)</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">S/ {montoTotalAjustes.toLocaleString('es-PE')}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Suma total Zona B</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                  S/
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla Interactiva y Editable */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#1b5e20]"></span>
+                    Tabla de Posteo Diario de Ajustes por Tienda
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Ingresa el monto del ajuste en soles de cada día. Dejar en blanco marca el día como sin posteo.
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#1b5e20] text-white font-bold text-center border-b border-emerald-900">
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Local</th>
+                      <th className="py-2.5 px-3 text-left border-r border-emerald-800">Líder J06</th>
+                      {datosAjustes[0]?.dias?.map((dia, dIdx) => {
+                        let header = `Día ${dIdx + 1}`
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(dia.fecha)) {
+                          const parts = dia.fecha.split('-')
+                          const anio = parseInt(parts[0])
+                          const mes = parseInt(parts[1]) - 1
+                          const diaNum = parseInt(parts[2])
+                          const dt = new Date(anio, mes, diaNum)
+                          const nombresDias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+                          header = `${nombresDias[dt.getDay()]} ${parts[2]}/${parts[1]}`
+                        }
+                        return (
+                          <th
+                            key={dIdx}
+                            className="py-2.5 px-2 text-center border-r border-emerald-800 bg-[#2e7d32] font-mono text-[11px] min-w-[75px]"
+                          >
+                            {header}
+                          </th>
+                        )
+                      })}
+                      <th className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[90px]">
+                        Días Posteados
+                      </th>
+                      <th className="py-2.5 px-3 bg-[#1b5e20] border-r border-emerald-800 min-w-[90px]">
+                        Cumpl. %
+                      </th>
+                      <th className="py-2.5 px-4 bg-[#1b5e20] min-w-[120px]">
+                        Estado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {datosAjustes.map((item, idx) => {
+                      const es100 = item.cumplimientoPorcentaje === 100
+                      return (
+                        <tr
+                          key={item.codigo}
+                          className={`hover:bg-slate-50/80 transition-colors ${
+                            idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                            {item.nombre}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 whitespace-nowrap">
+                            {item.lider}
+                          </td>
+                          {item.dias.map((d, dIdx) => (
+                            <td
+                              key={dIdx}
+                              className="py-1.5 px-1.5 text-center border-r border-slate-200"
+                            >
+                              <input
+                                type="number"
+                                placeholder="-"
+                                value={d.monto !== null ? d.monto : ''}
+                                onChange={e => {
+                                  const val = e.target.value === '' ? null : parseFloat(e.target.value)
+                                  handleUpdateMontoDiaAjuste(item.codigo, dIdx, val)
+                                }}
+                                className={`w-16 px-1 py-0.5 text-center font-semibold text-[11px] rounded border outline-none ${
+                                  d.monto !== null
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : 'bg-slate-100 text-slate-400 border-slate-300'
+                                }`}
+                              />
+                            </td>
+                          ))}
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-800 border-r border-slate-200">
+                            {item.diasConAjuste} / {item.totalDias}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-black border-r border-slate-200">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-xs font-bold border ${
+                                es100
+                                  ? 'bg-[#c8e6c9] text-[#1b5e20] border-[#a5d6a7]'
+                                  : 'bg-[#ffcdd2] text-[#b71c1c] border-[#ef9a9a]'
+                              }`}
+                            >
+                              {item.cumplimientoPorcentaje.toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                            {es100 ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                🟢 100% Diario
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                ⚠️ Faltan {item.totalDias - item.diasConAjuste} días
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -4136,7 +5141,7 @@ export default function BoletinJ06Page() {
           const amabilidadBanner = esSemana40 ? '101.90%' : '101.90%'
           const mopBanner = esSemana40 ? '102.00%' : '102.00%'
           const prodBanner = esSemana40 ? '105%' : '105%'
-          const nsgBanner = esSemana40 ? '91.82%' : '91.82%'
+          const nsgBanner = esSemana40 ? '91.82%' : `${promedioNSG}%`
           const calidadBanner = esSemana40 ? '92.10%' : `${promedioCalidad}%`
 
           // Datos de Tabla Ventas Semanales
