@@ -261,6 +261,16 @@ export const EVOLUTIVO_LIDERES_HISTORICO: Record<
   '357': { s36: 98.42, s37: 88.30, s38: 93.02, s39: 95.68, s40: 92.56 },
 }
 
+// Semanas disponibles para selección en el boletín
+export const SEMANAS_DISPONIBLES = [
+  'Semana 40',
+  'Semana 41',
+  'Semana 42',
+  'Semana 43',
+  'Semana 44',
+  'Semana 45',
+]
+
 // Interfaces Ajustes
 export interface RegistroAjusteDia {
   fecha: string
@@ -2022,15 +2032,18 @@ export default function BoletinJ06Page() {
                 onChange={e => {
                   const s = e.target.value
                   setSemanaSeleccionada(s)
-                  if (s.includes('40') || s.includes('41') || s.includes('42') || s.includes('43')) {
+                  const num = parseInt(s.replace(/\D/g, ''))
+                  if (num >= 40 && num <= 44) {
                     setMesObjetivoAuditoria('octubre')
+                  } else if (num >= 45) {
+                    setMesObjetivoAuditoria('noviembre')
                   }
                 }}
                 className="bg-transparent font-semibold text-slate-900 border-none focus:outline-none cursor-pointer"
               >
-                <option value="Semana 40">Semana 40</option>
-                <option value="Semana 41">Semana 41</option>
-                <option value="Semana 42">Semana 42</option>
+                {SEMANAS_DISPONIBLES.map(sem => (
+                  <option key={sem} value={sem}>{sem}</option>
+                ))}
               </select>
             </div>
 
@@ -3888,6 +3901,16 @@ export default function BoletinJ06Page() {
         {/* TAB 9: VISTA PREVIA BOLETÍN J06 (RÉPLICA EXACTA DE LA PLANTILLA EXCEL OFICIAL) */}
         {activeTab === 'boletin_preview' && (() => {
           const esSemana40 = semanaSeleccionada === 'Semana 40'
+          const semNum = parseInt(semanaSeleccionada.replace(/\D/g, '')) || 41
+          const semCols = esSemana40
+            ? ['Semana 36', 'Semana 37', 'Semana 38', 'Semana 39', 'Semana 40']
+            : [
+                `Semana ${semNum - 4}`,
+                `Semana ${semNum - 3}`,
+                `Semana ${semNum - 2}`,
+                `Semana ${semNum - 1}`,
+                `Semana ${semNum}`,
+              ]
 
           // Valores del Banner Superior
           const ventaTotalBanner = esSemana40
@@ -4144,7 +4167,7 @@ export default function BoletinJ06Page() {
             })
             tsv += `\n`
 
-            tsv += `Evolutivo Gestión de Líderes\t\tSemana 36\tSemana 37\tSemana 38\tSemana 39\tSemana 40\tSem\t\t\n`
+            tsv += `Evolutivo Gestión de Líderes\t\t${semCols[0]}\t${semCols[1]}\t${semCols[2]}\t${semCols[3]}\t${semCols[4]}\tSem\t\t\n`
             tsv += `Tienda\tLíder J03\tTotal\tTotal8\tTotal9\tTotal10\tTotal11\tAnt.\tPromedio\tDesempeño\n`
             filasEvolutivoFinales.forEach(e => {
               tsv += `${e.nombre}\t${e.lider}\t${e.s1.toFixed(2)}%\t${e.s2.toFixed(2)}%\t${e.s3.toFixed(2)}%\t${e.s4.toFixed(2)}%\t${e.s5.toFixed(2)}%\t${e.semAnt.toFixed(2)}%\t${e.promedio.toFixed(2)}%\t${e.desempeno}\n`
@@ -4224,7 +4247,7 @@ export default function BoletinJ06Page() {
                   `${k.appVenc.toFixed(2)}%`,
                 ]),
                 [],
-                ['Evolutivo Gestión de Líderes', '', 'Semana 36', 'Semana 37', 'Semana 38', 'Semana 39', 'Semana 40', 'Sem Ant.', 'Promedio', 'Desempeño'],
+                ['Evolutivo Gestión de Líderes', '', semCols[0], semCols[1], semCols[2], semCols[3], semCols[4], 'Sem Ant.', 'Promedio', 'Desempeño'],
                 ['Tienda', 'Líder J06', 'Total', 'Total8', 'Total9', 'Total10', 'Total11', 'Ant.', 'Promedio', 'Desempeño'],
                 ...filasEvolutivoFinales.map(e => [
                   e.nombre,
@@ -4274,7 +4297,7 @@ export default function BoletinJ06Page() {
                           ? 'bg-amber-100 text-amber-900 border border-amber-200'
                           : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
                       }`}>
-                        {esSemana40 ? 'Plantilla Oficial (Semana 40)' : 'Datos en Vivo Sincronizados (Semana 41)'}
+                        {esSemana40 ? 'Plantilla Oficial (Semana 40)' : `Datos en Vivo Sincronizados (${semanaSeleccionada})`}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500">
@@ -4324,14 +4347,18 @@ export default function BoletinJ06Page() {
                       onChange={e => {
                         const s = e.target.value
                         setSemanaSeleccionada(s)
-                        if (s.includes('40') || s.includes('41')) {
+                        const num = parseInt(s.replace(/\D/g, ''))
+                        if (num >= 40 && num <= 44) {
                           setMesObjetivoAuditoria('octubre')
+                        } else if (num >= 45) {
+                          setMesObjetivoAuditoria('noviembre')
                         }
                       }}
                       className="w-full text-xs font-bold text-slate-900 px-3 py-1 bg-white border-none focus:outline-none cursor-pointer"
                     >
-                      <option value="Semana 40">Semana 40</option>
-                      <option value="Semana 41">Semana 41</option>
+                      {SEMANAS_DISPONIBLES.map(sem => (
+                        <option key={sem} value={sem}>{sem}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -4876,19 +4903,19 @@ export default function BoletinJ06Page() {
                             Evolutivo Gestión de Líderes
                           </th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold">
-                            {esSemana40 ? 'Semana 36' : 'Semana 37'}
+                            {semCols[0]}
                           </th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold">
-                            {esSemana40 ? 'Semana 37' : 'Semana 38'}
+                            {semCols[1]}
                           </th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold">
-                            {esSemana40 ? 'Semana 38' : 'Semana 39'}
+                            {semCols[2]}
                           </th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold">
-                            {esSemana40 ? 'Semana 39' : 'Semana 40'}
+                            {semCols[3]}
                           </th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold">
-                            {esSemana40 ? 'Semana 40' : 'Semana 41'}
+                            {semCols[4]}
                           </th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold">Sem</th>
                           <th className="py-1 px-2 border-r border-slate-300 font-bold"></th>
