@@ -64,13 +64,13 @@ export function parseFechaReporte(fechaRaw: string, index = 0): { diaNombre: str
   let diaNombre = 'lunes'
   const dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
-  if (raw.includes('lun')) diaNombre = 'lunes'
-  else if (raw.includes('mar')) diaNombre = 'martes'
-  else if (raw.includes('mié') || raw.includes('mie')) diaNombre = 'miércoles'
-  else if (raw.includes('jue')) diaNombre = 'jueves'
-  else if (raw.includes('vie')) diaNombre = 'viernes'
-  else if (raw.includes('sáb') || raw.includes('sab')) diaNombre = 'sábado'
-  else if (raw.includes('dom')) diaNombre = 'domingo'
+  if (raw.includes('lun') || raw.startsWith('lu')) diaNombre = 'lunes'
+  else if (raw.includes('mar') || raw.startsWith('ma')) diaNombre = 'martes'
+  else if (raw.includes('mié') || raw.includes('mie') || raw.startsWith('mi')) diaNombre = 'miércoles'
+  else if (raw.includes('jue') || raw.startsWith('ju')) diaNombre = 'jueves'
+  else if (raw.includes('vie') || raw.startsWith('vi')) diaNombre = 'viernes'
+  else if (raw.includes('sáb') || raw.includes('sab') || raw.startsWith('sá') || raw.startsWith('sa')) diaNombre = 'sábado'
+  else if (raw.includes('dom') || raw.startsWith('do')) diaNombre = 'domingo'
   else diaNombre = dias[index % 7]
 
   let fechaStr = fechaRaw
@@ -79,7 +79,16 @@ export function parseFechaReporte(fechaRaw: string, index = 0): { diaNombre: str
     const dayNum = matchNum[1].padStart(2, '0')
     const year = 2026
     let month = '10'
+    if (raw.includes('ene')) month = '01'
+    if (raw.includes('feb')) month = '02'
+    if (raw.includes('mar') && !raw.includes('martes') && !raw.startsWith('ma.')) month = '03'
+    if (raw.includes('abr')) month = '04'
+    if (raw.includes('may')) month = '05'
+    if (raw.includes('jun')) month = '06'
+    if (raw.includes('jul')) month = '07'
+    if (raw.includes('ago')) month = '08'
     if (raw.includes('sep') || raw.includes('set')) month = '09'
+    if (raw.includes('oct')) month = '10'
     if (raw.includes('nov')) month = '11'
     if (raw.includes('dic')) month = '12'
     if (raw.includes('/')) {

@@ -65,6 +65,121 @@ const timeToFraction = (timeStr: string): number => {
   }
 }
 
+function findMatchingSheet(fechaDemanda: string, sheetNames: string[]): string | undefined {
+  const fLower = fechaDemanda.trim().toLowerCase()
+  const dayMatch = fLower.match(/\b0?(\d{1,2})\b/)
+  const dayNum = dayMatch ? parseInt(dayMatch[1], 10) : null
+
+  const monthMap: Record<string, string> = {
+    ene: 'ene', enero: 'ene',
+    feb: 'feb', febrero: 'feb',
+    mar: 'mar', marzo: 'mar',
+    abr: 'abr', abril: 'abr',
+    may: 'may', mayo: 'may',
+    jun: 'jun', junio: 'jun',
+    jul: 'jul', julio: 'jul',
+    ago: 'ago', agosto: 'ago',
+    sep: 'sep', set: 'sep', septiembre: 'sep', setiembre: 'sep',
+    oct: 'oct', octubre: 'oct',
+    nov: 'nov', noviembre: 'nov',
+    dic: 'dic', diciembre: 'dic'
+  }
+  let monthKey: string | null = null
+  for (const [key, val] of Object.entries(monthMap)) {
+    if (fLower.includes(key)) {
+      monthKey = val
+      break
+    }
+  }
+
+  const dowPatterns: [RegExp, string][] = [
+    [/\b(lu|lun|lunes)\b/i, 'lunes'],
+    [/\b(ma|mar|martes)\b/i, 'martes'],
+    [/\b(mi|mie|mié|miercoles|miércoles)\b/i, 'miércoles'],
+    [/\b(ju|jue|jueves)\b/i, 'jueves'],
+    [/\b(vi|vie|viernes)\b/i, 'viernes'],
+    [/\b(sa|sá|sab|sáb|sabado|sábado)\b/i, 'sábado'],
+    [/\b(do|dom|domingo)\b/i, 'domingo']
+  ]
+  let dowName: string | null = null
+  for (const [regex, name] of dowPatterns) {
+    if (regex.test(fLower) || fLower.startsWith(name.slice(0, 2))) {
+      dowName = name
+      break
+    }
+  }
+
+  if (dayNum !== null) {
+    // 1. Coincidir por número de día y mes (ej. día 2 y "nov")
+    const matchDayMonth = sheetNames.find(s => {
+      const sLower = s.toLowerCase()
+      const sDayMatch = sLower.match(/\b0?(\d{1,2})\b/)
+      const sDayNum = sDayMatch ? parseInt(sDayMatch[1], 10) : null
+      if (sDayNum !== dayNum) return false
+      if (monthKey) {
+        return sLower.includes(monthKey) || sLower.includes(monthKey.slice(0, 3))
+      }
+      return true
+    })
+    if (matchDayMonth) return matchDayMonth
+
+    // 2. Coincidir por número de día y día de la semana
+    if (dowName) {
+      const matchDayDow = sheetNames.find(s => {
+        const sLower = s.toLowerCase()
+        const sDayMatch = sLower.match(/\b0?(\d{1,2})\b/)
+        const sDayNum = sDayMatch ? parseInt(sDayMatch[1], 10) : null
+        return sDayNum === dayNum && (sLower.includes(dowName!) || sLower.includes(dowName!.slice(0, 3)) || sLower.includes(dowName!.slice(0, 2)))
+      })
+      if (matchDayDow) return matchDayDow
+    }
+  }
+
+  // 3. Coincidir por día de la semana si las hojas son "Lunes", "Martes", etc.
+  if (dowName) {
+    const matchDow = sheetNames.find(s => {
+      const sLower = s.toLowerCase()
+      return sLower.includes(dowName!) || sLower.includes(dowName!.slice(0, 3)) || sLower.startsWith(dowName!.slice(0, 2))
+    })
+    if (matchDow) return matchDow
+  }
+
+  return undefined
+}
+
+function calcularNumeroSemana(fechaStr?: string): number | null {
+  if (!fechaStr) return null
+  const raw = fechaStr.toLowerCase()
+  const matchNum = raw.match(/(\d{1,2})/)
+  if (!matchNum) return null
+  const day = parseInt(matchNum[1], 10)
+  
+  let month = 9 // 0-indexed: default October (9)
+  if (raw.includes('ene')) month = 0
+  else if (raw.includes('feb')) month = 1
+  else if (raw.includes('mar') && !raw.includes('martes') && !raw.startsWith('ma.')) month = 2
+  else if (raw.includes('abr')) month = 3
+  else if (raw.includes('may')) month = 4
+  else if (raw.includes('jun')) month = 5
+  else if (raw.includes('jul')) month = 6
+  else if (raw.includes('ago')) month = 7
+  else if (raw.includes('sep') || raw.includes('set')) month = 8
+  else if (raw.includes('oct')) month = 9
+  else if (raw.includes('nov')) month = 10
+  else if (raw.includes('dic')) month = 11
+
+  const year = 2026 // año operativo
+  const target = new Date(year, month, day)
+  const dayNr = (target.getDay() + 6) % 7
+  target.setDate(target.getDate() - dayNr + 3)
+  const firstThursday = target.valueOf()
+  target.setMonth(0, 1)
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7)
+  }
+  const weekNum = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000)
+  return isNaN(weekNum) ? null : weekNum
+}
 
 export default function HorariosPro() {
   const [permisoVer, setPermisoVer] = useState<boolean>(true)
@@ -81,6 +196,7 @@ export default function HorariosPro() {
   const [semanasGuardadas, setSemanasGuardadas] = useState<{id: string, nombre_semana: string}[]>([])
   const [semanaCargando, setSemanaCargando] = useState(false)
   const [currentSemanaId, setCurrentSemanaId] = useState<string | null>(null)
+  const [semanaSugerida, setSemanaSugerida] = useState<string>('')
   const [isModalMallaOpen, setIsModalMallaOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -134,6 +250,10 @@ export default function HorariosPro() {
     if (savedId) {
       setCurrentSemanaId(savedId)
     }
+    const savedSugerida = localStorage.getItem('horarios_pro_semana_sugerida')
+    if (savedSugerida) {
+      setSemanaSugerida(savedSugerida)
+    }
   }, [])
 
   useEffect(() => {
@@ -148,7 +268,12 @@ export default function HorariosPro() {
     } else {
       localStorage.removeItem('horarios_pro_current_semana_id')
     }
-  }, [reporte, currentSemanaId, mounted])
+    if (semanaSugerida) {
+      localStorage.setItem('horarios_pro_semana_sugerida', semanaSugerida)
+    } else {
+      localStorage.removeItem('horarios_pro_semana_sugerida')
+    }
+  }, [reporte, currentSemanaId, semanaSugerida, mounted])
 
 
   const processFiles = async () => {
@@ -166,8 +291,15 @@ export default function HorariosPro() {
 
       for (const row of dataDemanda) {
         if (!row || row.length === 0) continue
-        if (typeof row[0] === 'string' && row[0].includes('.')) {
-          currentDate = row[0].trim().toLowerCase()
+        const val0 = typeof row[0] === 'string' ? row[0].trim().toLowerCase() : ''
+        const esCabeceraFecha = val0 && (
+          val0.includes('.') || 
+          /^(lu|ma|mi|ju|vi|sa|sá|do|lun|mar|mié|mie|jue|vie|sáb|sab|dom|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/i.test(val0) ||
+          /^\d{1,2}[\/\-\.]\d{1,2}/.test(val0)
+        ) && !val0.includes('planificados') && !val0.includes('proyectados') && !val0.includes('tienda') && !val0.includes('sección')
+
+        if (esCabeceraFecha) {
+          currentDate = val0
           demandaMap[currentDate] = {}
         } else if (typeof row[0] === 'number' && currentDate) {
           const totalHours = Math.round(row[0] * 24)
@@ -183,10 +315,7 @@ export default function HorariosPro() {
       const timeRegex = /^\d{2}:\d{2}$/
 
       for (const [fechaDemanda, requeridoMap] of Object.entries(demandaMap)) {
-        const sheetName = wbMalla.SheetNames.find(s => {
-          const norm = s.toLowerCase().replace('lunes', 'lun.').replace('martes', 'mar.').replace('miércoles', 'mié.').replace('jueves', 'jue.').replace('viernes', 'vie.').replace('sábado', 'sáb.').replace('domingo', 'dom.')
-          return norm.includes(fechaDemanda.split(' ')[0]) && norm.includes(fechaDemanda.split(' ')[2])
-        })
+        const sheetName = findMatchingSheet(fechaDemanda, wbMalla.SheetNames)
 
         if (!sheetName) continue
 
@@ -308,15 +437,23 @@ export default function HorariosPro() {
         }
 
         reportes.push({
-
           fecha: fechaDemanda.toUpperCase(),
           requeridoPorHora: requeridoMap,
           empleados
         })
       }
 
+      if (reportes.length === 0) {
+        toast.error('No se encontraron hojas coincidentes entre el Requerimiento y la Malla de Horarios. Verifica los nombres de fechas u hojas.')
+        return
+      }
+
+      const numSem = calcularNumeroSemana(reportes[0]?.fecha)
+      const nomSem = numSem ? `Semana ${numSem}` : 'Semana 45'
+      setSemanaSugerida(nomSem)
+
       setReporte(reportes)
-      toast.success('Archivos procesados correctamente')
+      toast.success(`Archivos procesados correctamente (${reportes.length} días cargados - ${nomSem})`)
     } catch (e) {
       console.error(e)
       toast.error('Error procesando archivos')
@@ -933,7 +1070,7 @@ export default function HorariosPro() {
   const guardarSemana = async () => {
     let nombre = ''
     if (!currentSemanaId) {
-      const resp = prompt('¿Qué nombre le quieres dar a esta semana nueva? (Ej: Semana 42)')
+      const resp = prompt('¿Qué nombre le quieres dar a esta semana nueva? (Ej: Semana 45)', semanaSugerida || 'Semana 45')
       if (!resp) return
       nombre = resp
     }
@@ -961,6 +1098,7 @@ export default function HorariosPro() {
         }).select().single()
         if (error) throw error
         if (data) setCurrentSemanaId(data.id)
+        setSemanaSugerida(nombre)
         toast.success('Nueva semana guardada con éxito')
       }
       cargarSemanas()
@@ -997,6 +1135,9 @@ export default function HorariosPro() {
         setReporte(parsedReporte)
         setActiveTabIndex(0)
         setCurrentSemanaId(data.id)
+        if (data.nombre_semana) {
+          setSemanaSugerida(data.nombre_semana)
+        }
         if (data.data_personas) {
           localStorage.setItem('multifuncional_personas_area', JSON.stringify(data.data_personas))
           localStorage.setItem('apoyo_personas_area', JSON.stringify(data.data_personas))
@@ -1055,8 +1196,14 @@ export default function HorariosPro() {
               Semana Activa: {semanasGuardadas.find(s => s.id === currentSemanaId)?.nombre_semana || 'Desconocida'}
             </p>
           ) : (
-            <p className="text-sm text-slate-500">
-              {reporte.length > 0 ? "Semana sin guardar (Borrador temporal)" : "Sube tus archivos excel para comenzar"}
+            <p className={`text-sm font-medium inline-flex items-center px-2.5 py-1 rounded-md w-fit shadow-sm ${
+              reporte.length > 0 
+                ? "text-emerald-700 bg-emerald-50/80 border border-emerald-200" 
+                : "text-slate-500"
+            }`}>
+              {reporte.length > 0 
+                ? `${semanaSugerida || 'Semana'} (Borrador procesado listo para guardar)` 
+                : "Sube tus archivos excel para comenzar"}
             </p>
           )}
         </div>
