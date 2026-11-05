@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download, Users, Lock, Eye } from 'lucide-react'
+import { Upload, FileSpreadsheet, Plus, Trash2, ArrowUp, ArrowDown, Eraser, Download, Users, Lock, Eye, AlertCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { jsPDF } from 'jspdf'
@@ -197,6 +197,7 @@ export default function HorariosPro() {
   const [semanaCargando, setSemanaCargando] = useState(false)
   const [currentSemanaId, setCurrentSemanaId] = useState<string | null>(null)
   const [semanaSugerida, setSemanaSugerida] = useState<string>('')
+  const [avisoRequerimientoAlto, setAvisoRequerimientoAlto] = useState<number | null>(null)
   const [isModalMallaOpen, setIsModalMallaOpen] = useState<boolean>(false)
 
   useEffect(() => {
@@ -280,37 +281,162 @@ export default function HorariosPro() {
     if (!demandaFile || !mallaFile) return
     setIsProcessing(true)
     setCurrentSemanaId(null)
+    setAvisoRequerimientoAlto(null)
     
     try {
+      const mallaBuffer = await mallaFile.arrayBuffer()
+      const wbMalla = XLSX.read(mallaBuffer, { type: 'array' })
+
+      // 1. Detectar tienda de la malla para asociar a los turnos y filtrar requerimiento si aplica
+      let tiendaDetectada = '357-Cuzco La Cultura'
+      let storeCode = '357'
+      for (const sName of wbMalla.SheetNames) {
+        const ws = wbMalla.Sheets[sName]
+        const sampleData = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1 })
+        for (let r = 0; r < Math.min(10, sampleData.length); r++) {
+          const row = sampleData[r]
+          if (row) {
+            const cell0 = String(row[0] || '')
+            if (cell0.toLowerCase().includes('tienda')) {
+              tiendaDetectada = cell0.replace(/tienda\s*:\s*/i, '').trim()
+              const codeMatch = tiendaDetectada.match(/\b\d{3}\b/)
+              if (codeMatch) storeCode = codeMatch[0]
+              break
+            }
+          }
+        }
+        if (tiendaDetectada !== '357-Cuzco La Cultura') break
+      }
+
+      // 2. Procesar el archivo de demanda / requerimiento
       const demandaBuffer = await demandaFile.arrayBuffer()
       const wbDemanda = XLSX.read(demandaBuffer, { type: 'array' })
-      const dataDemanda = XLSX.utils.sheet_to_json<any[]>(wbDemanda.Sheets[wbDemanda.SheetNames[0]], { header: 1 })
-      
       const demandaMap: Record<string, Record<number, number>> = {}
-      let currentDate = ''
+      const diasCortos = ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sá']
+      const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
 
-      for (const row of dataDemanda) {
-        if (!row || row.length === 0) continue
-        const val0 = typeof row[0] === 'string' ? row[0].trim().toLowerCase() : ''
-        const esCabeceraFecha = val0 && (
-          val0.includes('.') || 
-          /^(lu|ma|mi|ju|vi|sa|sá|do|lun|mar|mié|mie|jue|vie|sáb|sab|dom|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/i.test(val0) ||
-          /^\d{1,2}[\/\-\.]\d{1,2}/.test(val0)
-        ) && !val0.includes('planificados') && !val0.includes('proyectados') && !val0.includes('tienda') && !val0.includes('sección')
+      // CASO A: Archivo maestro con "Foto Entrega" o "Actualización" (ej: 46.xlsb)
+      const sheetFotoName = wbDemanda.SheetNames.find(s => 
+        s.toLowerCase().includes('foto entrega') || 
+        s.toLowerCase().includes('actualización') || 
+        s.toLowerCase().includes('actualizacion')
+      )
 
-        if (esCabeceraFecha) {
-          currentDate = val0
-          demandaMap[currentDate] = {}
-        } else if (typeof row[0] === 'number' && currentDate) {
-          const totalHours = Math.round(row[0] * 24)
-          const hour = totalHours % 24
-          const requerido = row[3] ? Number(row[3]) : 0
-          demandaMap[currentDate][hour] = Math.ceil(requerido)
+      let fotoEntregaUsada = false
+
+      if (sheetFotoName) {
+        const wsFoto = wbDemanda.Sheets[sheetFotoName]
+        const dataFoto = XLSX.utils.sheet_to_json<any[]>(wsFoto, { header: 1 })
+        const header = dataFoto[0] || []
+        const idxTienda = header.findIndex(h => /tienda/i.test(String(h)))
+        const idxFuncion = header.findIndex(h => /funci[oó]n/i.test(String(h)))
+        const idxFecha = header.findIndex(h => /fecha/i.test(String(h)))
+        const idxPeriodo = header.findIndex(h => /per[ií]odo|hora/i.test(String(h)))
+        const idxPronostico = header.findIndex(h => /pronosticadas|proyectad/i.test(String(h)))
+
+        const filtered = dataFoto.filter(r => {
+          if (!r) return false
+          const t = String(r[idxTienda] || '')
+          const f = String(r[idxFuncion] || '')
+          return (t.includes(storeCode) || t.toLowerCase().includes(tiendaDetectada.toLowerCase())) && f.includes('701')
+        })
+
+        if (filtered.length > 0) {
+          fotoEntregaUsada = true
+          for (const r of filtered) {
+            const fechaRaw = String(r[idxFecha] || '').trim()
+            let dateKey = fechaRaw
+            const parts = fechaRaw.split(/[\/\-\.]/)
+            if (parts.length === 3) {
+              const day = parseInt(parts[0], 10)
+              const month = parseInt(parts[1], 10) - 1
+              const year = parseInt(parts[2], 10)
+              const d = new Date(year, month, day)
+              const dowCorto = diasCortos[d.getDay()]
+              const monthName = mesesCortos[month]
+              dateKey = `${dowCorto}. ${String(day).padStart(2, '0')} ${monthName}`
+            }
+
+            if (!demandaMap[dateKey]) demandaMap[dateKey] = {}
+            const horaStr = String(r[idxPeriodo] || '').trim()
+            const hour = parseInt(horaStr.split(':')[0], 10)
+            const pronostico = Number(r[idxPronostico]) || 0
+            demandaMap[dateKey][hour] = Math.ceil(pronostico * 1.2)
+          }
         }
       }
 
-      const mallaBuffer = await mallaFile.arrayBuffer()
-      const wbMalla = XLSX.read(mallaBuffer, { type: 'array' })
+      // CASO B: Hoja de Requerimiento estándar o tabla copiada (Hoja 1)
+      if (!fotoEntregaUsada) {
+        const dataDemanda = XLSX.utils.sheet_to_json<any[]>(wbDemanda.Sheets[wbDemanda.SheetNames[0]], { header: 1 })
+        let currentDate = ''
+
+        for (const row of dataDemanda) {
+          if (!row || row.length === 0) continue
+
+          // 1. Detectar fecha serial numérica de Excel (ej: 46335 = 09/11/2026)
+          if (typeof row[0] === 'number' && row[0] > 35000 && row[0] < 60000) {
+            const d = new Date((row[0] - 25569) * 86400 * 1000)
+            const dayPad = String(d.getUTCDate()).padStart(2, '0')
+            const month = mesesCortos[d.getUTCMonth()]
+            const dowCorto = diasCortos[d.getUTCDay()]
+            currentDate = `${dowCorto}. ${dayPad} ${month}`
+            demandaMap[currentDate] = {}
+            continue
+          }
+
+          // 2. Detectar fecha en texto (ej: "lu. 02 nov", "lun. 12 oct", "09-11-2026", etc.)
+          const val0 = typeof row[0] === 'string' ? row[0].trim().toLowerCase() : ''
+          const esCabeceraFecha = val0 && (
+            val0.includes('.') || 
+            /^(lu|ma|mi|ju|vi|sa|sá|do|lun|mar|mié|mie|jue|vie|sáb|sab|dom|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b/i.test(val0) ||
+            /^\d{1,2}[\/\-\.]\d{1,2}/.test(val0)
+          ) && !val0.includes('planificados') && !val0.includes('proyectados') && !val0.includes('tienda') && !val0.includes('sección')
+
+          if (esCabeceraFecha) {
+            currentDate = val0
+            demandaMap[currentDate] = {}
+            continue
+          }
+
+          // 3. Procesar fila de hora si hay fecha activa
+          if (currentDate) {
+            let hour = -1
+            if (typeof row[0] === 'number') {
+              if (row[0] > 0 && row[0] <= 1) {
+                // Fracción de día de Excel (ej. 0.29166 -> 7:00, 0.33333 -> 8:00)
+                hour = Math.round(row[0] * 24) % 24
+              } else if (row[0] >= 1 && row[0] <= 24) {
+                hour = Math.round(row[0]) % 24
+              }
+            } else if (typeof row[0] === 'string') {
+              const match = row[0].trim().match(/^(\d{1,2}):/)
+              if (match) {
+                hour = parseInt(match[1], 10) % 24
+              }
+            }
+
+            if (hour >= 0) {
+              const requerido = row[3] !== undefined && row[3] !== null && row[3] !== ''
+                ? Number(row[3])
+                : (row[2] ? Number(row[2]) * 1.2 : 0)
+              demandaMap[currentDate][hour] = Math.ceil(requerido)
+            }
+          }
+        }
+      }
+
+      // Validar si los requerimientos son sospechosamente altos (ej. filtro en "Todas las tiendas")
+      let maxRequeridoEncontrado = 0
+      for (const dayReq of Object.values(demandaMap)) {
+        for (const v of Object.values(dayReq)) {
+          if (v > maxRequeridoEncontrado) maxRequeridoEncontrado = v
+        }
+      }
+      if (maxRequeridoEncontrado > 25 && !fotoEntregaUsada) {
+        setAvisoRequerimientoAlto(maxRequeridoEncontrado)
+      }
+
       const reportes: ReporteDia[] = []
       const timeRegex = /^\d{2}:\d{2}$/
 
@@ -402,7 +528,7 @@ export default function HorariosPro() {
                 codigo,
                 contrato,
                 actividad,
-                tienda: '357-Cuzco La Cultura',
+                tienda: tiendaDetectada,
                 unidadTrabajo: 'Unidad de trabajo Cajas'
               })
             }
@@ -449,11 +575,15 @@ export default function HorariosPro() {
       }
 
       const numSem = calcularNumeroSemana(reportes[0]?.fecha)
-      const nomSem = numSem ? `Semana ${numSem}` : 'Semana 45'
+      const nomSem = numSem ? `Semana ${numSem}` : 'Semana 46'
       setSemanaSugerida(nomSem)
 
       setReporte(reportes)
-      toast.success(`Archivos procesados correctamente (${reportes.length} días cargados - ${nomSem})`)
+      if (fotoEntregaUsada) {
+        toast.success(`Archivo maestro procesado con requerimientos de ${tiendaDetectada} (${reportes.length} días - ${nomSem})`)
+      } else {
+        toast.success(`Archivos procesados correctamente (${reportes.length} días cargados - ${nomSem})`)
+      }
     } catch (e) {
       console.error(e)
       toast.error('Error procesando archivos')
@@ -1070,7 +1200,7 @@ export default function HorariosPro() {
   const guardarSemana = async () => {
     let nombre = ''
     if (!currentSemanaId) {
-      const resp = prompt('¿Qué nombre le quieres dar a esta semana nueva? (Ej: Semana 45)', semanaSugerida || 'Semana 45')
+      const resp = prompt(`¿Qué nombre le quieres dar a esta semana nueva? (Ej: ${semanaSugerida || 'Semana 46'})`, semanaSugerida || 'Semana 46')
       if (!resp) return
       nombre = resp
     }
@@ -1186,7 +1316,7 @@ export default function HorariosPro() {
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Programación Visual Pro</h1>
             {reporte.length > 0 && permisoEditar && (
-              <Button variant="outline" size="sm" onClick={() => setReporte([])} className="h-8 shadow-sm">
+              <Button variant="outline" size="sm" onClick={() => { setReporte([]); setAvisoRequerimientoAlto(null); }} className="h-8 shadow-sm">
                 Volver a subir archivos
               </Button>
             )}
@@ -1238,18 +1368,61 @@ export default function HorariosPro() {
         </div>
       </div>
 
+      {reporte.length > 0 && avisoRequerimientoAlto && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-amber-900 shadow-sm animate-in fade-in">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="font-bold text-sm text-amber-900">
+              Aviso sobre Requerimiento Alto (Hasta {avisoRequerimientoAlto} cajeros por hora)
+            </h4>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              La tabla de requerimiento cargada contiene los totales generales a nivel nacional (filtro <strong>(Todas)</strong> en la plantilla general).
+            </p>
+            <p className="text-xs text-amber-900 font-medium pt-0.5">
+              💡 <strong>Sugerencia:</strong> Puedes subir directamente tu archivo maestro <strong>.xlsb</strong> (ej: <code>46.xlsb</code>) en la casilla de Requerimiento y el sistema filtrará los cajeros de tu tienda automáticamente (2 a 13 cajeros), o volver a exportar la tabla filtrando por tu tienda en Excel.
+            </p>
+          </div>
+        </div>
+      )}
+
       {reporte.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
-            <CardHeader><CardTitle className="text-sm">Requerimiento</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Requerimiento</span>
+                <span className="text-[11px] font-normal text-slate-500">.xlsx / .xlsb</span>
+              </CardTitle>
+            </CardHeader>
             <CardContent>
-              <input type="file" accept=".xlsx" onChange={e => setDemandaFile(e.target.files?.[0] || null)} className="w-full text-sm" />
+              <input 
+                type="file" 
+                accept=".xlsx,.xlsb,.xls" 
+                onChange={e => setDemandaFile(e.target.files?.[0] || null)} 
+                className="w-full text-sm" 
+              />
+              <p className="text-[11px] text-slate-500 mt-2">
+                Acepta tu Excel de requerimiento (ej: <code>REQUERIMIENTO CAJEROS.xlsx</code>) o directamente el archivo maestro (ej: <code>46.xlsb</code>).
+              </p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle className="text-sm">Malla Actual</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Malla Actual</span>
+                <span className="text-[11px] font-normal text-slate-500">.xlsx / .xlsb</span>
+              </CardTitle>
+            </CardHeader>
             <CardContent>
-              <input type="file" accept=".xlsx" onChange={e => setMallaFile(e.target.files?.[0] || null)} className="w-full text-sm" />
+              <input 
+                type="file" 
+                accept=".xlsx,.xlsb,.xls" 
+                onChange={e => setMallaFile(e.target.files?.[0] || null)} 
+                className="w-full text-sm" 
+              />
+              <p className="text-[11px] text-slate-500 mt-2">
+                Archivo de seguimiento diario de turnos por día (ej: <code>ReporteMallaTurnoSeguimientoDiario.xlsx</code>).
+              </p>
             </CardContent>
           </Card>
           <Button onClick={processFiles} disabled={isProcessing || !demandaFile || !mallaFile} className="md:col-span-2 h-12 bg-slate-900">
