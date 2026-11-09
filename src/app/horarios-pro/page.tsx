@@ -241,19 +241,54 @@ export default function HorariosPro() {
   useEffect(() => {
     setMounted(true)
     cargarSemanas()
+    let initialReporte: ReporteDia[] = []
     const saved = localStorage.getItem('horarios_pro_reporte')
     if (saved) {
       try {
-        setReporte(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          initialReporte = parsed
+          setReporte(parsed)
+        }
       } catch (e) {}
     }
     const savedId = localStorage.getItem('horarios_pro_current_semana_id')
-    if (savedId) {
-      setCurrentSemanaId(savedId)
-    }
     const savedSugerida = localStorage.getItem('horarios_pro_semana_sugerida')
-    if (savedSugerida) {
-      setSemanaSugerida(savedSugerida)
+
+    if (initialReporte.length > 0 && initialReporte[0].fecha) {
+      const sNum = calcularNumeroSemana(initialReporte[0].fecha)
+      const expectedNom = sNum ? `Semana ${sNum}` : 'Semana 46'
+      setSemanaSugerida(expectedNom)
+
+      supabase.from('semanas_planificadas')
+        .select('id, nombre_semana')
+        .not('nombre_semana', 'ilike', 'MERMA%')
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setSemanasGuardadas(data)
+            const matchSem = data.find(s => s.nombre_semana === expectedNom)
+            if (matchSem) {
+              setCurrentSemanaId(matchSem.id)
+              localStorage.setItem('horarios_pro_current_semana_id', matchSem.id)
+            } else if (savedId && data.some(s => s.id === savedId)) {
+              const currentSem = data.find(s => s.id === savedId)
+              if (currentSem?.nombre_semana === expectedNom) {
+                setCurrentSemanaId(savedId)
+              } else {
+                setCurrentSemanaId(null)
+                localStorage.removeItem('horarios_pro_current_semana_id')
+              }
+            }
+          }
+        })
+    } else {
+      if (savedId) {
+        setCurrentSemanaId(savedId)
+      }
+      if (savedSugerida) {
+        setSemanaSugerida(savedSugerida)
+      }
     }
   }, [])
 
@@ -577,6 +612,44 @@ export default function HorariosPro() {
       const numSem = calcularNumeroSemana(reportes[0]?.fecha)
       const nomSem = numSem ? `Semana ${numSem}` : 'Semana 46'
       setSemanaSugerida(nomSem)
+      localStorage.setItem('horarios_pro_semana_sugerida', nomSem)
+
+      // Auto-enlazar o crear inmediatamente la semana en Supabase para sincronizar con Malla Multifuncional
+      try {
+        const { data: existingSemana } = await supabase
+          .from('semanas_planificadas')
+          .select('id, nombre_semana, data_personas')
+          .eq('nombre_semana', nomSem)
+          .maybeSingle()
+
+        let targetId = existingSemana?.id
+        const personasStr = localStorage.getItem('multifuncional_personas_area') || localStorage.getItem('apoyo_personas_area')
+        let personasObj = existingSemana?.data_personas || (personasStr ? JSON.parse(personasStr) : { PGC: 10, 'NON FOOD': 12, 'NO PROC': 4, ASISTENTE: 1 })
+
+        if (!targetId) {
+          const { data: newSem, error: insertErr } = await supabase
+            .from('semanas_planificadas')
+            .insert({
+              nombre_semana: nomSem,
+              data_reporte: reportes,
+              data_personas: personasObj
+            })
+            .select()
+            .single()
+
+          if (!insertErr && newSem) {
+            targetId = newSem.id
+          }
+        }
+
+        if (targetId) {
+          setCurrentSemanaId(targetId)
+          localStorage.setItem('horarios_pro_current_semana_id', targetId)
+          cargarSemanas()
+        }
+      } catch (err) {
+        console.error('Error auto-vinculando semana en Supabase:', err)
+      }
 
       setReporte(reportes)
       if (fotoEntregaUsada) {
@@ -1198,28 +1271,43 @@ export default function HorariosPro() {
   }
 
   const guardarSemana = async () => {
-    let nombre = ''
-    if (!currentSemanaId) {
-      const resp = prompt(`¿Qué nombre le quieres dar a esta semana nueva? (Ej: ${semanaSugerida || 'Semana 46'})`, semanaSugerida || 'Semana 46')
+    const numSem = calcularNumeroSemana(reporte[0]?.fecha)
+    const nomSem = numSem ? `Semana ${numSem}` : (semanaSugerida || 'Semana 46')
+
+    // Validar si el currentSemanaId actual corresponde a otra semana para evitar sobreescrituras cruzadas
+    let targetSemId = currentSemanaId
+    if (targetSemId) {
+      const semActual = semanasGuardadas.find(s => s.id === targetSemId)
+      if (semActual && semActual.nombre_semana !== nomSem) {
+        const matchSem = semanasGuardadas.find(s => s.nombre_semana === nomSem)
+        targetSemId = matchSem ? matchSem.id : null
+      }
+    }
+
+    let nombre = nomSem
+    if (!targetSemId) {
+      const resp = prompt(`¿Qué nombre le quieres dar a esta semana? (Ej: ${nomSem})`, nomSem)
       if (!resp) return
       nombre = resp
     }
     setSemanaCargando(true)
     try {
       const personasStr = localStorage.getItem('multifuncional_personas_area') || localStorage.getItem('apoyo_personas_area')
-      let personasObj = {}
+      let personasObj = { PGC: 10, 'NON FOOD': 12, 'NO PROC': 4, ASISTENTE: 1 }
       if (personasStr) {
         try { personasObj = JSON.parse(personasStr) } catch(e){}
       }
       
-      if (currentSemanaId) {
+      if (targetSemId) {
         const { error } = await supabase.from('semanas_planificadas').update({
           data_reporte: reporte,
           data_personas: personasObj,
           updated_at: new Date().toISOString()
-        }).eq('id', currentSemanaId)
+        }).eq('id', targetSemId)
         if (error) throw error
-        toast.success('Semana sobreescrita y guardada con éxito')
+        setCurrentSemanaId(targetSemId)
+        localStorage.setItem('horarios_pro_current_semana_id', targetSemId)
+        toast.success(`Semana ${nombre} guardada con éxito`)
       } else {
         const { data, error } = await supabase.from('semanas_planificadas').insert({
           nombre_semana: nombre,
@@ -1227,9 +1315,13 @@ export default function HorariosPro() {
           data_personas: personasObj
         }).select().single()
         if (error) throw error
-        if (data) setCurrentSemanaId(data.id)
+        if (data) {
+          setCurrentSemanaId(data.id)
+          localStorage.setItem('horarios_pro_current_semana_id', data.id)
+        }
         setSemanaSugerida(nombre)
-        toast.success('Nueva semana guardada con éxito')
+        localStorage.setItem('horarios_pro_semana_sugerida', nombre)
+        toast.success(`Nueva semana ${nombre} guardada con éxito`)
       }
       cargarSemanas()
     } catch (e: any) {

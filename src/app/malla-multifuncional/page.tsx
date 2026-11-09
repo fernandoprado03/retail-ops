@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { normalizarPermisos } from '@/types/permisos'
 import { toast } from 'sonner'
+import { calcularNumeroSemana } from '@/lib/utils'
 
 type Area = 'PGC' | 'NON FOOD' | 'NO PROC' | 'ASISTENTE'
 
@@ -132,11 +133,13 @@ export default function MallaMultifuncionalPage() {
   // Cargar datos al montar
   useEffect(() => {
     setMounted(true)
+    let localReporte: ReporteDia[] = []
     const saved = localStorage.getItem('horarios_pro_reporte')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) {
+          localReporte = parsed
           setReporte(parsed)
         }
       } catch (e) {}
@@ -150,6 +153,15 @@ export default function MallaMultifuncionalPage() {
 
     const currentId = localStorage.getItem('horarios_pro_current_semana_id')
     if (currentId) setCurrentSemanaId(currentId)
+
+    let targetWeekName = ''
+    if (localReporte.length > 0 && localReporte[0].fecha) {
+      const sNum = calcularNumeroSemana(localReporte[0].fecha)
+      if (sNum) targetWeekName = `Semana ${sNum}`
+    }
+    if (!targetWeekName) {
+      targetWeekName = localStorage.getItem('horarios_pro_semana_sugerida') || ''
+    }
 
     // Consultar semanas planificadas desde Supabase (Fuente de verdad)
     const fetchSemanas = async () => {
@@ -168,10 +180,50 @@ export default function MallaMultifuncionalPage() {
 
         if (data && data.length > 0) {
           setSemanas(data)
-          const targetId = (currentId && data.some(s => s.id === currentId)) ? currentId : data[0].id
           
-          // Cargar siempre la semana activa desde Supabase para garantizar datos frescos, autoritativos y compartidos
-          await loadSemana(targetId)
+          let targetId = ''
+
+          // 1. Prioridad: coincidir con la semana correspondiente a las fechas del reporte activo (ej. Semana 46)
+          if (targetWeekName) {
+            const matchSem = data.find(s => s.nombre_semana === targetWeekName)
+            if (matchSem) {
+              targetId = matchSem.id
+            }
+          }
+
+          // 2. Si currentId en localStorage coincide con una semana existente sin conflicto de semana
+          if (!targetId && currentId) {
+            const semById = data.find(s => s.id === currentId)
+            if (semById && (!targetWeekName || semById.nombre_semana === targetWeekName)) {
+              targetId = currentId
+            }
+          }
+
+          // 3. Si la semana detectada del reporte no existe aún en la base de datos pero tenemos datos locales, crearla
+          if (!targetId && targetWeekName && localReporte.length > 0) {
+            const { data: newSem } = await supabase
+              .from('semanas_planificadas')
+              .insert({
+                nombre_semana: targetWeekName,
+                data_reporte: localReporte,
+                data_personas: savedPersonas ? JSON.parse(savedPersonas) : { PGC: 10, 'NON FOOD': 12, 'NO PROC': 4, ASISTENTE: 1 }
+              })
+              .select()
+              .single()
+            if (newSem) {
+              targetId = newSem.id
+              setSemanas(prev => [newSem, ...prev])
+            }
+          }
+
+          // 4. Solo como último recurso si no hay borrador local ni semana detectada
+          if (!targetId) {
+            targetId = data[0].id
+          }
+
+          if (targetId) {
+            await loadSemana(targetId)
+          }
         }
       } catch (e) {
         console.error('Error cargando semanas de Supabase:', e)
@@ -395,18 +447,30 @@ export default function MallaMultifuncionalPage() {
   const loadSemana = async (id: string) => {
     if (!id) return
     setCurrentSemanaId(id)
+    localStorage.setItem('horarios_pro_current_semana_id', id)
     setCargandoSemana(true)
     try {
       const { data, error } = await supabase
         .from('semanas_planificadas')
-        .select('data_reporte, data_personas')
+        .select('data_reporte, data_personas, nombre_semana')
         .eq('id', id)
         .single()
       if (error) throw error
       if (data) {
-        if (data.data_reporte) setReporte(data.data_reporte)
-        if (data.data_personas) setPersonasArea(data.data_personas)
-        localStorage.setItem('horarios_pro_current_semana_id', id)
+        if (data.data_reporte) {
+          setReporte(data.data_reporte)
+          try { localStorage.setItem('horarios_pro_reporte', JSON.stringify(data.data_reporte)) } catch(e){}
+        }
+        if (data.data_personas) {
+          setPersonasArea(data.data_personas)
+          try {
+            localStorage.setItem('multifuncional_personas_area', JSON.stringify(data.data_personas))
+            localStorage.setItem('apoyo_personas_area', JSON.stringify(data.data_personas))
+          } catch(e){}
+        }
+        if (data.nombre_semana) {
+          try { localStorage.setItem('horarios_pro_semana_sugerida', data.nombre_semana) } catch(e){}
+        }
       }
     } catch (e) {
       console.error('Error cargando semana:', e)
